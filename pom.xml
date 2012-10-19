@@ -149,7 +149,7 @@
 		<dependency>
 			<groupId>com.denodo.commons</groupId>
 			<artifactId>denodo-util</artifactId>
-			<version>2.57</version>
+			<version>2.64</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
@@ -161,13 +161,13 @@
 		<dependency>
 			<groupId>com.denodo.vdp</groupId>
 			<artifactId>denodo-vdp-server-base</artifactId>
-			<version>5.0</version>
+			<version>5.0.0</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>com.denodo.vdp</groupId>
 			<artifactId>denodo-vdp-server-ext</artifactId>
-			<version>5.0</version>
+			<version>5.0.0</version>
 			<scope>provided</scope>
 		</dependency>
 		<!-- Odata4j 0.6 -->

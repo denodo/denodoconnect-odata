@@ -18,7 +18,7 @@
       <unpack>true</unpack>
       <scope>runtime</scope>
       <excludes>
-        <exclude>com.denodo.devkit:denodo-odata-wrapper</exclude>
+        <exclude>com.denodo.connect:denodo-odata-wrapper</exclude>
       </excludes>      
     </dependencySet>
   </dependencySets>

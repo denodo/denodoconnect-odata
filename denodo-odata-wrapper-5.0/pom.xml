@@ -6,9 +6,9 @@
 	<!-- BASIC PROJECT INFO -->
 	<!-- *************************** -->
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.denodo.devkit</groupId>
+	<groupId>com.denodo.connect</groupId>
 	<artifactId>denodo-odata-wrapper</artifactId>
-	<version>1.0</version>
+	<version>20140122</version>
 	<packaging>jar</packaging>
 	<name>denodo-odata-wrapper</name>
 
@@ -19,12 +19,18 @@
 
 		<resources>
 			<resource>
-				<directory>src/main/java</directory>
+				<directory>src/main/resources</directory>
 				<includes>
 					<include>**/*.properties</include>
-					<include>**/*.xml</include>
 				</includes>
 			</resource>
+            <resource>
+                <directory>src/main/java</directory>
+                <includes>
+                    <include>**/*.properties</include>
+                    <include>**/*.xml</include>
+                </includes>
+            </resource>
 			<resource>
 				<directory>.</directory>
 				<targetPath>META-INF</targetPath>
@@ -145,11 +151,11 @@
 		</dependency>
 
 
-		<!--Denodo Annotation library -->
+		<!--Denodo libraries -->
 		<dependency>
 			<groupId>com.denodo.commons</groupId>
 			<artifactId>denodo-util</artifactId>
-			<version>2.64</version>
+			<version>2.86</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
@@ -161,31 +167,36 @@
 		<dependency>
 			<groupId>com.denodo.vdp</groupId>
 			<artifactId>denodo-vdp-server-base</artifactId>
-			<version>5.0.0</version>
+			<version>5.0.0_7</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>com.denodo.vdp</groupId>
 			<artifactId>denodo-vdp-server-ext</artifactId>
-			<version>5.0.0</version>
+			<version>5.0.0_7</version>
 			<scope>provided</scope>
 		</dependency>
-		<!-- Odata4j 0.6 -->
+        
+        <dependency>
+            <groupId>joda-time</groupId>
+            <artifactId>joda-time</artifactId>
+            <version>2.1</version>
+            <scope>provided</scope>
+        </dependency>
+        
+		<!-- Odata4j 0.7 -->
 		<dependency>
 			<groupId>org.odata4j</groupId>
-			<artifactId>odata4j-dist</artifactId>
+			<artifactId>odata4j-core</artifactId>
 			<version>0.7.0</version>
+            <scope>compile</scope>
 		</dependency>
-		<!-- <dependency> <groupId>org.odata4j</groupId> <artifactId>odata4j-core</artifactId> 
-			<version>0.6.0</version> </dependency> <dependency> <groupId>org.odata4j</groupId> 
-			<artifactId>odata4j-jersey</artifactId> <version>0.6.0</version> </dependency> 
-			<dependency> <groupId>org.core4j</groupId> <artifactId>core4j</artifactId> 
-			<version>0.5</version> </dependency> <dependency> <groupId>javax.ws.rs</groupId> 
-			<artifactId>jsr311-api</artifactId> <version>1.1.1</version> </dependency> -->
-		<dependency>
-			<groupId>joda-time</groupId>
-			<artifactId>joda-time</artifactId>
-			<version>2.1</version>
-		</dependency>
+        <dependency>
+            <groupId>org.odata4j</groupId>
+            <artifactId>odata4j-cxf</artifactId>
+            <version>0.7.0</version>
+            <scope>compile</scope>
+        </dependency>
+				
 	</dependencies>
 </project>

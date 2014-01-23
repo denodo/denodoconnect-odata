@@ -1,4 +1,25 @@
-package com.denodo.devkit.odata.wrapper.util;
+/*
+ * =============================================================================
+ * 
+ *   This software is part of the denodo developer toolkit.
+ *   
+ *   Copyright (c) 2014, denodo technologies (http://www.denodo.com)
+ * 
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ * 
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ * 
+ * =============================================================================
+ */
+package com.denodo.connect.odata.wrapper.util;
 
 import java.sql.Types;
 import java.util.List;
@@ -18,13 +39,13 @@ import org.odata4j.edm.EdmNavigationProperty;
 import org.odata4j.edm.EdmProperty;
 import org.odata4j.edm.EdmSimpleType;
 
-import com.denodo.devkit.odata.wrapper.excpetions.PropertyNotFoundException;
+import com.denodo.connect.odata.wrapper.exceptions.PropertyNotFoundException;
 import com.denodo.vdb.engine.customwrapper.CustomWrapperSchemaParameter;
 
 public class ODataEntityUtil {
 
     @SuppressWarnings("rawtypes")
-    public static CustomWrapperSchemaParameter createSchemaParameter(EdmProperty property) {
+    public static CustomWrapperSchemaParameter createSchemaParameter(EdmProperty property, boolean isMandatory) {
         if (property.getType().isSimple()) {
 
             return new CustomWrapperSchemaParameter(
@@ -35,14 +56,14 @@ public class ODataEntityUtil {
                     CustomWrapperSchemaParameter.ASC_AND_DESC_SORT, 
                     true /* isUpdateable */, 
                     property.isNullable(), 
-                    false /* isMandatory */);
+                    isMandatory);
         }
         // Complex data types
         Enumerable<EdmProperty> complexProperties = ((EdmComplexType)property.getType()).getDeclaredProperties();
         CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[complexProperties.count()];
         int i = 0;
         for (EdmProperty complexProp:complexProperties) {
-            complexParams[i] = createSchemaParameter(complexProp);
+            complexParams[i] = createSchemaParameter(complexProp, isMandatory);
             i++;
         }
         return new CustomWrapperSchemaParameter(
@@ -53,7 +74,7 @@ public class ODataEntityUtil {
                 CustomWrapperSchemaParameter.NOT_SORTABLE, 
                 true /* isUpdateable */, 
                 property.isNullable(), 
-                false /* isMandatory */);
+                isMandatory);
     }
 
     private static int mapODataSimpleType(@SuppressWarnings("rawtypes") EdmSimpleType edmType) {
@@ -81,6 +102,7 @@ public class ODataEntityUtil {
         return Types.VARCHAR;
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public static Object getOutputValue(OProperty<?> p) {
         if (p.getType().isSimple()) {
             // Odata4j uses Joda time instead of Java.util.data. It needs to be casted
@@ -93,11 +115,14 @@ public class ODataEntityUtil {
         } 
         //  Build complex objets (register)
         List<OProperty<?>> complexValues = (List<OProperty<?>>) p.getValue();
-        Object[] complexOutput = new Object[complexValues.size()]; 
-        int i = 0;
-        for (OProperty complexProp : complexValues) {
-            complexOutput[i] = getOutputValue(complexProp);
-            i++;
+        Object[] complexOutput = null;
+        if(complexValues != null){
+            complexOutput = new Object[complexValues.size()]; 
+            int i = 0;
+            for (OProperty complexProp : complexValues) {
+                complexOutput[i] = getOutputValue(complexProp);
+                i++;
+            }
         }
         return complexOutput;
     }
@@ -114,7 +139,8 @@ public class ODataEntityUtil {
                 false /* isMandatory */);
     }
 
-    public static CustomWrapperSchemaParameter createSchemaFromNavigation(EdmNavigationProperty nav,  Map<String, EdmEntitySet> entitySets) {
+    public static CustomWrapperSchemaParameter createSchemaFromNavigation(EdmNavigationProperty nav,
+            Map<String, EdmEntitySet> entitySets, boolean isMandatory) {
         String relName = nav.getName(); // Field name
         EdmMultiplicity multiplicity = nav.getToRole().getMultiplicity(); // MANY to array, otherwise record
         String enityName = nav.getToRole().getType().getName(); // Entity related
@@ -125,7 +151,7 @@ public class ODataEntityUtil {
         CustomWrapperSchemaParameter[] schema = new CustomWrapperSchemaParameter[props.count()];
         int i = 0;
         for (EdmProperty property:props){
-            schema[i] = ODataEntityUtil.createSchemaParameter(property);
+            schema[i] = ODataEntityUtil.createSchemaParameter(property, isMandatory);
             i++;
         }
 
@@ -173,6 +199,7 @@ public class ODataEntityUtil {
         return null;
     }
 
+    @SuppressWarnings("rawtypes")
     public static Object[] getOutputValueForRelatedEntity(OEntity relatedEntity,  EdmEntityType type) {
         Object[] output = new Object[type.getDeclaredProperties().count()];
         for (OProperty prop:relatedEntity.getProperties()) {

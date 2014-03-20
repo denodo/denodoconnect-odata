@@ -646,7 +646,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_PASSWORD).getValue())) {
                 password = (String) getInputParameterValue(INPUT_PARAMETER_PASSWORD).getValue();
             }
-            // this allows HTTP Basic Autenthication
+            // this allows HTTP Basic Authentication
             builder.setClientBehaviors(OClientBehaviors.basicAuth(user, password));
         }
 

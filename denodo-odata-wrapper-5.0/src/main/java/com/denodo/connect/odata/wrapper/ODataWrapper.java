@@ -586,9 +586,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 .newBuilder((String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT)
                         .getValue());
         // Properties of the system are modified to pass the proxy properties,
-        // it is made in this way, because of how is implemented the class OdataCxfClient, that bleongs to the library
+        // it is made in this way, because of how is implemented the class OdataCxfClient, that belongs to the library
         // odata4j-cxf.
-        // This could be cause problems of concurrence in a stress enviroment.
+        // This could be cause concurrence problems in a stress enviroment.
         // If we would find with this problem, we have to modify the library odata4j-cxf
         final Properties props = new Properties(System.getProperties());
         String proxyHost;
@@ -646,6 +646,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_PASSWORD).getValue())) {
                 password = (String) getInputParameterValue(INPUT_PARAMETER_PASSWORD).getValue();
             }
+            // this allows HTTP Basic Autenthication
             builder.setClientBehaviors(OClientBehaviors.basicAuth(user, password));
         }
 

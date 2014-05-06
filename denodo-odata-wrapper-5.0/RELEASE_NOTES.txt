@@ -1,4 +1,4 @@
-20140320
+20140506
 ========
 -Adding basic authentication.
 -Adding possibility to connect to the OSata Server through a proxy, this connection allows authentication. 

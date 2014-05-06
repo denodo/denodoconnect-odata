@@ -15,10 +15,10 @@
       <directory>${basedir}/target/</directory>
       <outputDirectory>/dist</outputDirectory>
       <includes>
-        <include>denodo-odata-wrapper-${project.version}.jar</include>
-        <include>denodo-odata-wrapper-${project.version}-javadoc.jar</include>
-        <include>denodo-odata-wrapper-${project.version}-sources.jar</include>
-        <include>denodo-odata-wrapper-${project.version}-jar-with-dependencies.jar</include>
+        <include>${project.artifactId}-${project.version}.jar</include>
+        <include>${project.artifactId}-${project.version}-javadoc.jar</include>
+        <include>${project.artifactId}-${project.version}-sources.jar</include>
+        <include>${project.artifactId}-${project.version}-jar-with-dependencies.jar</include>
       </includes>
     </fileSet>
     <fileSet>

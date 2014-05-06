@@ -6,8 +6,8 @@
 	<!-- BASIC PROJECT INFO -->
 	<!-- *************************** -->
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.denodo.connect</groupId>
-	<artifactId>denodo-odata-wrapper</artifactId>
+	<groupId>com.denodo.connect.odata</groupId>
+	<artifactId>denodo-odata-wrapper-5.0</artifactId>
 	<version>20140506</version>
 	<packaging>jar</packaging>
 	<name>denodo-odata-wrapper</name>
@@ -106,7 +106,7 @@
 								<descriptor>${basedir}/src/assembly/jar-with-dependencies.xml</descriptor>
 							</descriptors>
 							<appendAssemblyId>true</appendAssemblyId>
-							<finalName>denodo-odata-wrapper-${project.version}</finalName>
+							<finalName>${project.artifactId}-${project.version}</finalName>
 						</configuration>
 					</execution>
 					<execution>
@@ -120,7 +120,7 @@
 								<descriptor>${basedir}/src/assembly/dist.xml</descriptor>
 							</descriptors>
 							<appendAssemblyId>true</appendAssemblyId>
-							<finalName>denodo-odata-wrapper-${project.version}</finalName>
+							<finalName>${project.artifactId}-${project.version}</finalName>
 						</configuration>
 					</execution>
 				</executions>

@@ -183,7 +183,7 @@
 		<dependency>
 			<groupId>commons-lang</groupId>
 			<artifactId>commons-lang</artifactId>
-			<version>2.4</version>
+			<version>2.6</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -192,7 +192,7 @@
 		<dependency>
 			<groupId>com.denodo.commons</groupId>
 			<artifactId>denodo-util</artifactId>
-			<version>2.86</version>
+			<version>2.94</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
@@ -204,13 +204,13 @@
 		<dependency>
 			<groupId>com.denodo.vdp</groupId>
 			<artifactId>denodo-vdp-server-base</artifactId>
-			<version>5.0.0_7</version>
+			<version>5.5.0</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>com.denodo.vdp</groupId>
 			<artifactId>denodo-vdp-server-ext</artifactId>
-			<version>5.0.0_7</version>
+			<version>5.5.0</version>
 			<scope>provided</scope>
 		</dependency>
         

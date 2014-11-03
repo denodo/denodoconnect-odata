@@ -8,7 +8,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.denodo.connect.odata</groupId>
 	<artifactId>denodo-odata-wrapper-5.0</artifactId>
-	<version>20140506</version>
+	<version>20141030</version>
 	<packaging>jar</packaging>
 	<name>denodo-odata-wrapper</name>
 
@@ -218,7 +218,16 @@
             <version>2.1</version>
             <scope>provided</scope>
         </dependency>
-        
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.2.6</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpcore</artifactId>
+            <version>4.2.5</version>
+        </dependency>
 		<!-- Odata4j 0.7 -->
 		<dependency>
 			<groupId>org.odata4j</groupId>
@@ -229,7 +238,7 @@
         <dependency>
             <groupId>org.odata4j</groupId>
             <artifactId>odata4j-cxf</artifactId>
-            <version>0.8.0-denodo-20140320</version>
+            <version>0.8.0-denodo-20141030</version>
         </dependency>
 				
 	</dependencies>

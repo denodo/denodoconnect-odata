@@ -75,6 +75,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
     private final static String INPUT_PARAMETER_ENTITY_COLLECTION = "Entity Collection *";
     private final static String INPUT_PARAMETER_ENDPOINT = "Service Endpoint *";
     private final static String INPUT_PARAMETER_EXPAND = "Expand Related Entities";
+    private final static String INPUT_PARAMETER_NTLM = "Use NTLM Authentication";
     private final static String INPUT_PARAMETER_FORMAT = "Service Format *";
     private final static String INPUT_PARAMETER_VERSION = "Service Version";
     private final static String INPUT_PARAMETER_LIMIT = "Enable Pagination";
@@ -88,13 +89,18 @@ public class ODataWrapper extends AbstractCustomWrapper {
     private final static String INPUT_PARAMETER_PASSWORD = "Password";
     private final static String INPUT_PARAMETER_PROXY_USER = "Proxy User";
     private final static String INPUT_PARAMETER_PROXY_PASSWORD = "Proxy Password";
+    private final static String INPUT_PARAMETER_NTLM_DOMAIN = "NTLM Domain";
 
     public final static String PAGINATION_FETCH = "fetch_size";
     public final static String PAGINATION_OFFSET = "offset_size";
+    public final static String USE_NTLM_AUTH = "http.ntlm.auth";
     public final static String HTTP_PROXY_HOST = "http.proxyHost";
     public final static String HTTP_PROXY_PORT = "http.proxyPort";
     public final static String HTTP_PROXY_USER = "http.proxyUser";
     public final static String HTTP_PROXY_PASSWORD = "http.proxyPassword";
+    public final static String NTLM_USER = "ntlm.user";
+    public final static String NTLM_PASS = "ntlm.pass";
+    public final static String NTLM_DOMAIN = "ntlm.domain";
 
     private static final Logger logger = Logger.getLogger(ODataWrapper.class);
 
@@ -116,6 +122,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
             new CustomWrapperInputParameter(INPUT_PARAMETER_EXPAND,
                     "If checked, related entities will be mapped as part of the output schema",
                     false, CustomWrapperInputParameterTypeFactory.booleanType(false)),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_NTLM,
+                    "If checked, NTLM authentication will be used",
+                    false, CustomWrapperInputParameterTypeFactory.booleanType(false)),
             new CustomWrapperInputParameter(
                     INPUT_PARAMETER_LIMIT,
                     "If checked, creates two optional input parameteres to specify fetch and offset sizes to eanble pagination in the source",
@@ -132,8 +141,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
             new CustomWrapperInputParameter(INPUT_PARAMETER_PROXY_USER, "Proxy User ", false,
                     CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_PROXY_PASSWORD, "Proxy Password", false,
+                    CustomWrapperInputParameterTypeFactory.passwordType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_NTLM_DOMAIN, "Domain used for NTLM authentication", false,
                     CustomWrapperInputParameterTypeFactory.passwordType())
-
     };
 
     @Override
@@ -585,7 +595,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
         final Builder builder = ODataCxfConsumer
                 .newBuilder((String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT)
                         .getValue());
-        // Properties of the system are modified to pass the proxy properties,
+        // Properties of the system are modified to pass the proxy properties and NTLM authentication 
         // it is made in this way, because of how is implemented the class OdataCxfClient, that belongs to the library
         // odata4j-cxf.
         // This could be cause concurrence problems in a stress enviroment.
@@ -595,6 +605,30 @@ public class ODataWrapper extends AbstractCustomWrapper {
         String proxyPort;
         String proxyUser;
         String proxyPassword;
+        
+        if (((Boolean) getInputParameterValue(INPUT_PARAMETER_NTLM).getValue()).booleanValue()) {
+            String user = "";
+            String password = "";
+            String domain = "";
+            if ((getInputParameterValue(INPUT_PARAMETER_USER) != null)
+                    && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_USER).getValue())) {
+                user = (String) getInputParameterValue(INPUT_PARAMETER_USER).getValue();
+                if ((getInputParameterValue(INPUT_PARAMETER_PASSWORD) != null)
+                        && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_PASSWORD).getValue())) {
+                    password = (String) getInputParameterValue(INPUT_PARAMETER_PASSWORD).getValue();
+                }
+            }
+            if ((getInputParameterValue(INPUT_PARAMETER_NTLM_DOMAIN) != null)
+                    && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_NTLM_DOMAIN).getValue())) {
+                domain = (String) getInputParameterValue(INPUT_PARAMETER_NTLM_DOMAIN).getValue();
+            }
+            logger.info("Setting credentials for NTLM: " + user + ":" + password);
+            props.setProperty(USE_NTLM_AUTH, Boolean.TRUE.toString());
+            props.setProperty(NTLM_USER, user);
+            props.setProperty(NTLM_PASS, password);
+            props.setProperty(NTLM_DOMAIN, domain);
+        }
+        
         if ((getInputParameterValue(INPUT_PARAMETER_PROXY_HOST) != null)
                 && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_PROXY_HOST).getValue())) {
             proxyHost = (String) getInputParameterValue(INPUT_PARAMETER_PROXY_HOST).getValue();
@@ -638,7 +672,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
             }
         }
         final String user;
-        if ((getInputParameterValue(INPUT_PARAMETER_USER) != null)
+        if (!((Boolean) getInputParameterValue(INPUT_PARAMETER_NTLM).getValue()).booleanValue() &&
+                (getInputParameterValue(INPUT_PARAMETER_USER) != null)
                 && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_USER).getValue())) {
             user = (String) getInputParameterValue(INPUT_PARAMETER_USER).getValue();
             String password = "";

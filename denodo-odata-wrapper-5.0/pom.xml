@@ -8,7 +8,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.denodo.connect.odata</groupId>
 	<artifactId>denodo-odata-wrapper-5.0</artifactId>
-	<version>20141030</version>
+	<version>20141124</version>
 	<packaging>jar</packaging>
 	<name>denodo-odata-wrapper</name>
 
@@ -233,7 +233,7 @@
 			<groupId>org.odata4j</groupId>
 			<artifactId>odata4j-core</artifactId>
 			<version>0.7.0</version>
-            <scope>compile</scope>
+            <scope>compile</scope> 
 		</dependency>
         <dependency>
             <groupId>org.odata4j</groupId>

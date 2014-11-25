@@ -1,3 +1,9 @@
+20141125
+========
+-Added NTLM authentication. 
+
+
+
 20140506
 ========
 -Adding basic authentication.

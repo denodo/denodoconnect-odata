@@ -143,7 +143,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
             new CustomWrapperInputParameter(INPUT_PARAMETER_PROXY_PASSWORD, "Proxy Password", false,
                     CustomWrapperInputParameterTypeFactory.passwordType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_NTLM_DOMAIN, "Domain used for NTLM authentication", false,
-                    CustomWrapperInputParameterTypeFactory.passwordType())
+                    CustomWrapperInputParameterTypeFactory.stringType())
     };
 
     @Override

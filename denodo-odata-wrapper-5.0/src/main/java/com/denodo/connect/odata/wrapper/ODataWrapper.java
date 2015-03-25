@@ -593,8 +593,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
     private ODataConsumer getConsumer() {
 
-        String uri = URIUtil.encodePath(((String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT)
-                        .getValue()).trim());
+        String uri = (String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT)
+                        .getValue();
         logger.info("URI: " + uri);
         final Builder builder = ODataCxfConsumer.newBuilder(uri);
         // Properties of the system are modified to pass the proxy properties and NTLM authentication 

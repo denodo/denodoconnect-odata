@@ -624,7 +624,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_NTLM_DOMAIN).getValue())) {
                 domain = (String) getInputParameterValue(INPUT_PARAMETER_NTLM_DOMAIN).getValue();
             }
-            logger.info("Setting credentials for NTLM: " + user + ":" + password);
+            logger.info("Setting credentials for NTLM: " + user + ":" + password + "/" + domain);
             props.setProperty(USE_NTLM_AUTH, Boolean.TRUE.toString());
             props.setProperty(NTLM_USER, user);
             props.setProperty(NTLM_PASS, password);
@@ -639,6 +639,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_PROXY_USER).getValue())) {
                 proxyUser = (String) getInputParameterValue(INPUT_PARAMETER_PROXY_USER).getValue();
                 props.setProperty(HTTP_PROXY_USER, proxyUser);
+                logger.info("Setting PROXY user: " + proxyUser);
             } else {
                 props.remove(HTTP_PROXY_USER);
             }
@@ -646,9 +647,11 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_PROXY_PASSWORD).getValue())) {
                 proxyPassword = (String) getInputParameterValue(INPUT_PARAMETER_PROXY_PASSWORD).getValue();
                 props.setProperty(HTTP_PROXY_PASSWORD, proxyPassword);
+                logger.info("Setting PROXY password: " + proxyPassword);
             } else {
                 props.remove(HTTP_PROXY_PASSWORD);
             }
+            logger.info("Setting PROXY: " + proxyHost + ":" + proxyPort);
             props.setProperty(HTTP_PROXY_HOST, proxyHost);
             props.setProperty(HTTP_PROXY_PORT, proxyPort);
 
@@ -684,14 +687,17 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 password = (String) getInputParameterValue(INPUT_PARAMETER_PASSWORD).getValue();
             }
             // this allows HTTP Basic Authentication
+            logger.info("Setting HTTP Basic Authentication credentials: " + user + ":" + password);
             builder.setClientBehaviors(OClientBehaviors.basicAuth(user, password));
         }
 
         final String format = (String) getInputParameterValue(INPUT_PARAMETER_FORMAT).getValue();
         if ((format != null) && !format.isEmpty() && INPUT_PARAMETER_FORMAT_JSON.equals(format)) {
             builder.setFormatType(FormatType.JSON);
+            logger.info("FORMAT: " + FormatType.JSON);
         } else {
             builder.setFormatType(FormatType.ATOM);
+            logger.info("FORMAT: " + FormatType.ATOM);
         }
 
         return builder.build();

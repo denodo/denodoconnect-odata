@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import com.denodo.connect.odata.wrapper.exceptions.PropertyNotFoundException;
+import com.denodo.vdb.engine.customwrapper.CustomWrapperSchemaParameter;
 import org.core4j.Enumerable;
 import org.joda.time.LocalDateTime;
 import org.odata4j.core.Guid;
@@ -38,9 +40,6 @@ import org.odata4j.edm.EdmMultiplicity;
 import org.odata4j.edm.EdmNavigationProperty;
 import org.odata4j.edm.EdmProperty;
 import org.odata4j.edm.EdmSimpleType;
-
-import com.denodo.connect.odata.wrapper.exceptions.PropertyNotFoundException;
-import com.denodo.vdb.engine.customwrapper.CustomWrapperSchemaParameter;
 
 public class ODataEntityUtil {
 

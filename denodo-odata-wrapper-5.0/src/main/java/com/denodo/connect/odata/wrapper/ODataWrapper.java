@@ -28,10 +28,23 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 
+import com.denodo.connect.odata.wrapper.util.DataTableColumnType;
+import com.denodo.connect.odata.wrapper.util.ODataEntityUtil;
+import com.denodo.connect.odata.wrapper.util.ODataQueryUtils;
+import com.denodo.vdb.engine.customwrapper.AbstractCustomWrapper;
+import com.denodo.vdb.engine.customwrapper.CustomWrapperConfiguration;
+import com.denodo.vdb.engine.customwrapper.CustomWrapperException;
+import com.denodo.vdb.engine.customwrapper.CustomWrapperInputParameter;
+import com.denodo.vdb.engine.customwrapper.CustomWrapperOrderByExpression;
+import com.denodo.vdb.engine.customwrapper.CustomWrapperResult;
+import com.denodo.vdb.engine.customwrapper.CustomWrapperSchemaParameter;
+import com.denodo.vdb.engine.customwrapper.condition.CustomWrapperCondition;
+import com.denodo.vdb.engine.customwrapper.condition.CustomWrapperConditionHolder;
+import com.denodo.vdb.engine.customwrapper.expression.CustomWrapperFieldExpression;
+import com.denodo.vdb.engine.customwrapper.input.type.CustomWrapperInputParameterTypeFactory;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.core4j.Enumerable;
-import org.eclipse.jetty.util.URIUtil;
 import org.odata4j.consumer.ODataClientRequest;
 import org.odata4j.consumer.ODataConsumer;
 import org.odata4j.consumer.ODataConsumer.Builder;
@@ -55,21 +68,6 @@ import org.odata4j.edm.EdmNavigationProperty;
 import org.odata4j.edm.EdmProperty;
 import org.odata4j.edm.EdmSchema;
 import org.odata4j.format.FormatType;
-
-import com.denodo.connect.odata.wrapper.util.DataTableColumnType;
-import com.denodo.connect.odata.wrapper.util.ODataEntityUtil;
-import com.denodo.connect.odata.wrapper.util.ODataQueryUtils;
-import com.denodo.vdb.engine.customwrapper.AbstractCustomWrapper;
-import com.denodo.vdb.engine.customwrapper.CustomWrapperConfiguration;
-import com.denodo.vdb.engine.customwrapper.CustomWrapperException;
-import com.denodo.vdb.engine.customwrapper.CustomWrapperInputParameter;
-import com.denodo.vdb.engine.customwrapper.CustomWrapperOrderByExpression;
-import com.denodo.vdb.engine.customwrapper.CustomWrapperResult;
-import com.denodo.vdb.engine.customwrapper.CustomWrapperSchemaParameter;
-import com.denodo.vdb.engine.customwrapper.condition.CustomWrapperCondition;
-import com.denodo.vdb.engine.customwrapper.condition.CustomWrapperConditionHolder;
-import com.denodo.vdb.engine.customwrapper.expression.CustomWrapperFieldExpression;
-import com.denodo.vdb.engine.customwrapper.input.type.CustomWrapperInputParameterTypeFactory;
 
 public class ODataWrapper extends AbstractCustomWrapper {
 

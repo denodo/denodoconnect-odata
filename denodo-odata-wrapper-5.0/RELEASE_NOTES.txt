@@ -1,14 +1,10 @@
 20150325
 ========
--Updated the encoding of the input URL to avoid problems with some characters. 
-
-
+-Improved logging
 
 20141125
 ========
 -Added NTLM authentication. 
-
-
 
 20140506
 ========

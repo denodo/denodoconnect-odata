@@ -31,6 +31,7 @@ import java.util.Properties;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.core4j.Enumerable;
+import org.eclipse.jetty.util.URIUtil;
 import org.odata4j.consumer.ODataClientRequest;
 import org.odata4j.consumer.ODataConsumer;
 import org.odata4j.consumer.ODataConsumer.Builder;
@@ -592,9 +593,10 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
     private ODataConsumer getConsumer() {
 
-        final Builder builder = ODataCxfConsumer
-                .newBuilder((String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT)
-                        .getValue());
+        String uri = URIUtil.encodePath(((String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT)
+                        .getValue()).trim());
+        logger.info("URI: " + uri);
+        final Builder builder = ODataCxfConsumer.newBuilder(uri);
         // Properties of the system are modified to pass the proxy properties and NTLM authentication 
         // it is made in this way, because of how is implemented the class OdataCxfClient, that belongs to the library
         // odata4j-cxf.

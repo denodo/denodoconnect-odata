@@ -622,7 +622,6 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_NTLM_DOMAIN).getValue())) {
                 domain = (String) getInputParameterValue(INPUT_PARAMETER_NTLM_DOMAIN).getValue();
             }
-            logger.info("Setting credentials for NTLM: " + user + ":" + password + "/" + domain);
             props.setProperty(USE_NTLM_AUTH, Boolean.TRUE.toString());
             props.setProperty(NTLM_USER, user);
             props.setProperty(NTLM_PASS, password);

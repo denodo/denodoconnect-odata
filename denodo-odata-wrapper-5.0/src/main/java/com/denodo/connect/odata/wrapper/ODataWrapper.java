@@ -636,7 +636,6 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_PROXY_USER).getValue())) {
                 proxyUser = (String) getInputParameterValue(INPUT_PARAMETER_PROXY_USER).getValue();
                 props.setProperty(HTTP_PROXY_USER, proxyUser);
-                logger.info("Setting PROXY user: " + proxyUser);
             } else {
                 props.remove(HTTP_PROXY_USER);
             }
@@ -644,7 +643,6 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_PROXY_PASSWORD).getValue())) {
                 proxyPassword = (String) getInputParameterValue(INPUT_PARAMETER_PROXY_PASSWORD).getValue();
                 props.setProperty(HTTP_PROXY_PASSWORD, proxyPassword);
-                logger.info("Setting PROXY password: " + proxyPassword);
             } else {
                 props.remove(HTTP_PROXY_PASSWORD);
             }
@@ -684,7 +682,6 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 password = (String) getInputParameterValue(INPUT_PARAMETER_PASSWORD).getValue();
             }
             // this allows HTTP Basic Authentication
-            logger.info("Setting HTTP Basic Authentication credentials: " + user + ":" + password);
             builder.setClientBehaviors(OClientBehaviors.basicAuth(user, password));
         }
 

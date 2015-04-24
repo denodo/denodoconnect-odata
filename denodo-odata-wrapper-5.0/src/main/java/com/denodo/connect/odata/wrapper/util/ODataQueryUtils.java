@@ -29,13 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.log4j.Logger;
-import org.odata4j.core.OProperties;
-import org.odata4j.core.OProperty;
-import org.odata4j.edm.EdmComplexType;
-import org.odata4j.edm.EdmProperty;
-
 import com.denodo.connect.odata.wrapper.ODataWrapper;
 import com.denodo.connect.odata.wrapper.exceptions.OperationNotSupportedException;
 import com.denodo.vdb.engine.customwrapper.CustomWrapperSchemaParameter;
@@ -47,6 +40,12 @@ import com.denodo.vdb.engine.customwrapper.condition.CustomWrapperSimpleConditio
 import com.denodo.vdb.engine.customwrapper.expression.CustomWrapperFieldExpression;
 import com.denodo.vdb.engine.customwrapper.expression.CustomWrapperSimpleExpression;
 import com.denodo.vdb.engine.customwrapper.value.CustomWrapperStruct;
+import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
+import org.odata4j.core.OProperties;
+import org.odata4j.core.OProperty;
+import org.odata4j.edm.EdmComplexType;
+import org.odata4j.edm.EdmProperty;
 
 public class ODataQueryUtils {
     

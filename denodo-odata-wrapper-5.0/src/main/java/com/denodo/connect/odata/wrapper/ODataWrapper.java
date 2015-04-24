@@ -28,10 +28,23 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 
+import com.denodo.connect.odata.wrapper.util.DataTableColumnType;
+import com.denodo.connect.odata.wrapper.util.ODataEntityUtil;
+import com.denodo.connect.odata.wrapper.util.ODataQueryUtils;
+import com.denodo.vdb.engine.customwrapper.AbstractCustomWrapper;
+import com.denodo.vdb.engine.customwrapper.CustomWrapperConfiguration;
+import com.denodo.vdb.engine.customwrapper.CustomWrapperException;
+import com.denodo.vdb.engine.customwrapper.CustomWrapperInputParameter;
+import com.denodo.vdb.engine.customwrapper.CustomWrapperOrderByExpression;
+import com.denodo.vdb.engine.customwrapper.CustomWrapperResult;
+import com.denodo.vdb.engine.customwrapper.CustomWrapperSchemaParameter;
+import com.denodo.vdb.engine.customwrapper.condition.CustomWrapperCondition;
+import com.denodo.vdb.engine.customwrapper.condition.CustomWrapperConditionHolder;
+import com.denodo.vdb.engine.customwrapper.expression.CustomWrapperFieldExpression;
+import com.denodo.vdb.engine.customwrapper.input.type.CustomWrapperInputParameterTypeFactory;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.core4j.Enumerable;
-import org.eclipse.jetty.util.URIUtil;
 import org.odata4j.consumer.ODataClientRequest;
 import org.odata4j.consumer.ODataConsumer;
 import org.odata4j.consumer.ODataConsumer.Builder;
@@ -55,21 +68,6 @@ import org.odata4j.edm.EdmNavigationProperty;
 import org.odata4j.edm.EdmProperty;
 import org.odata4j.edm.EdmSchema;
 import org.odata4j.format.FormatType;
-
-import com.denodo.connect.odata.wrapper.util.DataTableColumnType;
-import com.denodo.connect.odata.wrapper.util.ODataEntityUtil;
-import com.denodo.connect.odata.wrapper.util.ODataQueryUtils;
-import com.denodo.vdb.engine.customwrapper.AbstractCustomWrapper;
-import com.denodo.vdb.engine.customwrapper.CustomWrapperConfiguration;
-import com.denodo.vdb.engine.customwrapper.CustomWrapperException;
-import com.denodo.vdb.engine.customwrapper.CustomWrapperInputParameter;
-import com.denodo.vdb.engine.customwrapper.CustomWrapperOrderByExpression;
-import com.denodo.vdb.engine.customwrapper.CustomWrapperResult;
-import com.denodo.vdb.engine.customwrapper.CustomWrapperSchemaParameter;
-import com.denodo.vdb.engine.customwrapper.condition.CustomWrapperCondition;
-import com.denodo.vdb.engine.customwrapper.condition.CustomWrapperConditionHolder;
-import com.denodo.vdb.engine.customwrapper.expression.CustomWrapperFieldExpression;
-import com.denodo.vdb.engine.customwrapper.input.type.CustomWrapperInputParameterTypeFactory;
 
 public class ODataWrapper extends AbstractCustomWrapper {
 
@@ -624,7 +622,6 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_NTLM_DOMAIN).getValue())) {
                 domain = (String) getInputParameterValue(INPUT_PARAMETER_NTLM_DOMAIN).getValue();
             }
-            logger.info("Setting credentials for NTLM: " + user + ":" + password + "/" + domain);
             props.setProperty(USE_NTLM_AUTH, Boolean.TRUE.toString());
             props.setProperty(NTLM_USER, user);
             props.setProperty(NTLM_PASS, password);
@@ -639,7 +636,6 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_PROXY_USER).getValue())) {
                 proxyUser = (String) getInputParameterValue(INPUT_PARAMETER_PROXY_USER).getValue();
                 props.setProperty(HTTP_PROXY_USER, proxyUser);
-                logger.info("Setting PROXY user: " + proxyUser);
             } else {
                 props.remove(HTTP_PROXY_USER);
             }
@@ -647,7 +643,6 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_PROXY_PASSWORD).getValue())) {
                 proxyPassword = (String) getInputParameterValue(INPUT_PARAMETER_PROXY_PASSWORD).getValue();
                 props.setProperty(HTTP_PROXY_PASSWORD, proxyPassword);
-                logger.info("Setting PROXY password: " + proxyPassword);
             } else {
                 props.remove(HTTP_PROXY_PASSWORD);
             }
@@ -687,7 +682,6 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 password = (String) getInputParameterValue(INPUT_PARAMETER_PASSWORD).getValue();
             }
             // this allows HTTP Basic Authentication
-            logger.info("Setting HTTP Basic Authentication credentials: " + user + ":" + password);
             builder.setClientBehaviors(OClientBehaviors.basicAuth(user, password));
         }
 

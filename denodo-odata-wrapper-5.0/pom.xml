@@ -1,94 +1,94 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
-	<!-- *************************** -->
-	<!-- BASIC PROJECT INFO -->
-	<!-- *************************** -->
-	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.denodo.connect.odata</groupId>
-	<artifactId>denodo-odata-wrapper-5.0</artifactId>
-	<version>20150325</version>
-	<packaging>jar</packaging>
-	<name>denodo-odata-wrapper</name>
+  <!-- *************************** -->
+  <!-- BASIC PROJECT INFO -->
+  <!-- *************************** -->
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.denodo.connect.odata</groupId>
+  <artifactId>denodo-odata-wrapper-5.0</artifactId>
+  <version>20150408</version>
+  <packaging>jar</packaging>
+  <name>denodo-odata-wrapper</name>
 
-	<!-- *************************** -->
-	<!-- BUILD INFO -->
-	<!-- *************************** -->
-	<build>
+  <!-- *************************** -->
+  <!-- BUILD INFO -->
+  <!-- *************************** -->
+  <build>
 
-		<resources>
-			<resource>
-				<directory>src/main/resources</directory>
-				<includes>
-					<include>**/*.properties</include>
-				</includes>
-			</resource>
-            <resource>
-                <directory>src/main/java</directory>
-                <includes>
-                    <include>**/*.properties</include>
-                    <include>**/*.xml</include>
-                </includes>
-            </resource>
-			<resource>
-				<directory>.</directory>
-				<targetPath>META-INF</targetPath>
-				<includes>
-					<include>LICENSE.txt</include>
-					<include>NOTICE.txt</include>
-				</includes>
-			</resource>
-		</resources>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <includes>
+          <include>**/*.properties</include>
+        </includes>
+      </resource>
+      <resource>
+        <directory>src/main/java</directory>
+        <includes>
+          <include>**/*.properties</include>
+          <include>**/*.xml</include>
+        </includes>
+      </resource>
+      <resource>
+        <directory>.</directory>
+        <targetPath>META-INF</targetPath>
+        <includes>
+          <include>LICENSE.txt</include>
+          <include>NOTICE.txt</include>
+        </includes>
+      </resource>
+    </resources>
 
-		<!-- ============================================================== -->
-		<!-- Test-related directory locations -->
-		<!-- ============================================================== -->
+    <!-- ============================================================== -->
+    <!-- Test-related directory locations -->
+    <!-- ============================================================== -->
 
-		<testSourceDirectory>src/test/java</testSourceDirectory>
-		<testOutputDirectory>target/test-classes</testOutputDirectory>
+    <testSourceDirectory>src/test/java</testSourceDirectory>
+    <testOutputDirectory>target/test-classes</testOutputDirectory>
 
-		<testResources>
-			<testResource>
-				<directory>src/test/resources</directory>
-			</testResource>
-		</testResources>
+    <testResources>
+      <testResource>
+        <directory>src/test/resources</directory>
+      </testResource>
+    </testResources>
 
-		<plugins>
+    <plugins>
 
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<version>2.3.2</version>
-				<configuration>
-					<source>1.5</source>
-					<target>1.5</target>
-					<encoding>US-ASCII</encoding>
-				</configuration>
-			</plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>2.3.2</version>
+        <configuration>
+          <source>1.6</source>
+          <target>1.6</target>
+          <encoding>US-ASCII</encoding>
+        </configuration>
+      </plugin>
 
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-resources-plugin</artifactId>
-				<version>2.5</version>
-				<configuration>
-					<encoding>US-ASCII</encoding>
-				</configuration>
-			</plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>2.5</version>
+        <configuration>
+          <encoding>US-ASCII</encoding>
+        </configuration>
+      </plugin>
 
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-source-plugin</artifactId>
-				<version>2.1.2</version>
-				<executions>
-					<execution>
-						<phase>package</phase>
-						<goals>
-							<goal>jar</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>2.1.2</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -161,92 +161,92 @@
         </executions>
       </plugin>
 
-		</plugins>
+    </plugins>
 
-	</build>
-
-
+  </build>
 
 
-	<!-- ****************************************************************** -->
-	<!-- DEPENDENCIES -->
-	<!-- ****************************************************************** -->
-	<dependencies>
-		<dependency>
-			<groupId>log4j</groupId>
-			<artifactId>log4j</artifactId>
-			<version>1.2.15</version>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>commons-lang</groupId>
-			<artifactId>commons-lang</artifactId>
-			<version>2.4</version>
-			<scope>provided</scope>
-		</dependency>
 
 
-		<!--Denodo libraries -->
-		<dependency>
-			<groupId>com.denodo.commons</groupId>
-			<artifactId>denodo-util</artifactId>
-			<version>2.86</version>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>com.denodo.commons</groupId>
-			<artifactId>denodo-store</artifactId>
-			<version>1.4</version>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>com.denodo.vdp</groupId>
-			<artifactId>denodo-vdp-server-base</artifactId>
-			<version>5.0.0_7</version>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>com.denodo.vdp</groupId>
-			<artifactId>denodo-vdp-server-ext</artifactId>
-			<version>5.0.0_7</version>
-			<scope>provided</scope>
-		</dependency>
-        
-        <!-- Joda time -->
-        <dependency>
-            <groupId>joda-time</groupId>
-            <artifactId>joda-time</artifactId>
-            <version>2.1</version>
-            <scope>provided</scope>
-        </dependency>
-        
-        <!-- HTTP client -->
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-            <version>4.2.6</version>            
-            <scope>compile</scope> 
-        </dependency>
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpcore</artifactId>
-            <version>4.2.5</version>            
-            <scope>compile</scope> 
-        </dependency>
-        
-		<!-- Odata4j 0.7 -->
-		<dependency>
-			<groupId>org.odata4j</groupId>
-			<artifactId>odata4j-core</artifactId>
-			<version>0.7.0</version>
-            <scope>compile</scope> 
-		</dependency>
-        <dependency>
-            <groupId>org.odata4j</groupId>
-            <artifactId>odata4j-cxf</artifactId>
-            <version>0.8.0-denodo-20141030</version>            
-            <scope>compile</scope> 
-        </dependency>
-				
-	</dependencies>
+  <!-- ****************************************************************** -->
+  <!-- DEPENDENCIES -->
+  <!-- ****************************************************************** -->
+  <dependencies>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <version>1.2.15</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>commons-lang</groupId>
+      <artifactId>commons-lang</artifactId>
+      <version>2.4</version>
+      <scope>provided</scope>
+    </dependency>
+
+
+    <!--Denodo libraries -->
+    <dependency>
+      <groupId>com.denodo.commons</groupId>
+      <artifactId>denodo-util</artifactId>
+      <version>2.86</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.denodo.commons</groupId>
+      <artifactId>denodo-store</artifactId>
+      <version>1.4</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.denodo.vdp</groupId>
+      <artifactId>denodo-vdp-server-base</artifactId>
+      <version>5.0.0_7</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.denodo.vdp</groupId>
+      <artifactId>denodo-vdp-server-ext</artifactId>
+      <version>5.0.0_7</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- Joda time -->
+    <dependency>
+      <groupId>joda-time</groupId>
+      <artifactId>joda-time</artifactId>
+      <version>2.1</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- HTTP client -->
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+      <version>4.2.6</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpcore</artifactId>
+      <version>4.2.5</version>
+      <scope>compile</scope>
+    </dependency>
+
+    <!-- Odata4j 0.7 -->
+    <dependency>
+      <groupId>org.odata4j</groupId>
+      <artifactId>odata4j-core</artifactId>
+      <version>0.8.0-denodo-20150408</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.odata4j</groupId>
+      <artifactId>odata4j-cxf</artifactId>
+      <version>0.8.0-denodo-20150408</version>
+      <scope>compile</scope>
+    </dependency>
+
+  </dependencies>
 </project>

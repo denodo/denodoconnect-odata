@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+    xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+    xmlns:tx="http://www.springframework.org/schema/tx" xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+    xmlns:encryption="http://www.jasypt.org/schema/encryption"
+    xmlns:jaxrs="http://cxf.apache.org/jaxrs" xmlns:odata="http://www.apache.org/olingo/odata2/spring/odata"
+    xsi:schemaLocation="
+           http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+           http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.1.xsd
+           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd
+           http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.1.xsd
+           http://cxf.apache.org/jaxrs http://cxf.apache.org/schemas/jaxrs.xsd  
+           http://www.apache.org/olingo/odata2/spring/odata http://www.apache.org/olingo/odata2/spring/odata.xsd">
+
+
+
+    <!-- ******************************************************************* -->
+    <!-- PROPERTY PLACEHOLDER (configuration)                                -->
+    <!-- ******************************************************************* -->
+    <!-- The property placeholder will be in charge of reading the           -->
+    <!-- .properties files that contain environment-specific configuration   -->
+    <!-- and make their values available to the application context so that  -->
+    <!-- they can be assigned with "${propertyname}".                        -->
+    <!-- ******************************************************************* -->
+    <context:property-placeholder location="classpath:business.properties" />
+
+
+
+    <!-- ******************************************************************* -->
+    <!-- COMPONENT SCANNING                                                  -->
+    <!-- ******************************************************************* -->
+    <!-- Spring will be configured so that component beans are declared and  -->
+    <!-- wired together into the application context by using annotations    -->
+    <!-- (mainly @Component, @Repository and @Service for declaring beans,   -->
+    <!-- and @Autowired for wiring dependencies).                            -->
+    <!--                                                                     -->
+    <!-- Note that @Controller classes are explicity excluded so that if a   -->
+    <!-- Spring MVC controller layer is included, it can have its own XML    -->
+    <!-- bean configuration file only for its @Controllers, configuring      -->
+    <!-- <context:component-scan use-default-filters="false" ... /> and      -->
+    <!-- adding a <context:include-filter ... /> for @Controllers so that    -->
+    <!-- they are the only beans to be declared in the web-layer application -->
+    <!-- context.                                                            -->
+    <!-- ******************************************************************* -->
+    <context:component-scan 
+         annotation-config="true" 
+         base-package="com.denodo.connect">
+      <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+    </context:component-scan>
+
+
+    <!-- ******************************************************************* -->
+    <!-- SPRING DATA JPA REPOSITORY DECLARATION                              -->
+    <!-- ******************************************************************* -->
+    <!-- We declare the base package for the automatic creation of Spring    -->
+    <!-- Data JPA -based repositories.                                       -->
+    <!-- ******************************************************************* -->
+  <!--   <jpa:repositories base-package="com.denodo.connect"/>-->
+    
+
+    <!-- ******************************************************************* -->
+    <!-- DATASOURCE CONFIGURATION                                            -->
+    <!-- ******************************************************************* -->
+    <!-- The datasource can be both configured as application-managed (using -->
+    <!-- Apache Commons-DBCP) or as container-managed (referencing via JNDI  -->
+    <!-- to an already configured container datasource).                     -->
+    <!--                                                                     -->
+    <!-- Also, this datasource is in fact wrapped by a lazy proxy (supplied  -->
+    <!-- by Spring) which gets connections from the pool only when they are  -->
+    <!-- really needed to execute queries (thus avoiding that the behaviour  -->
+    <!-- of the open-session-in-view filter can use up all the available     -->
+    <!-- connections when they are not needed.                               -->
+    <!-- ******************************************************************* -->
+    <bean id="dataSourceTarget"
+        class="org.apache.commons.dbcp.BasicDataSource"
+        destroy-method="close" p:driverClassName="${datasource.driver}"
+        p:url="${datasource.url}" p:username="${datasource.username}"
+        p:password="${datasource.password}" />
+
+    <bean id="dataSource"
+        class="org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy"
+        p:targetDataSource-ref="dataSourceTarget">
+        <qualifier value="testDataSource" />
+    </bean>
+       <!-- ******************************************************************* -->
+    <!-- SPRING JDBC TEMPLATE                                                -->
+    <!-- ******************************************************************* -->
+    <bean id="denodoTemplate"
+        class="org.springframework.jdbc.core.JdbcTemplate"
+        p:dataSource-ref="dataSource"/>
+
+
+
+    <bean class="com.denodo.connect.JDBCServiceFactory" id="JDBCServiceFactory" />
+   
+   
+<!--     <bean id="rootLocator" class="org.apache.olingo.odata2.spring.OlingoRootLocator"> -->
+<!--         <property name="serviceFactory" ref="carServiceFactory" /> -->
+<!--     </bean> -->
+<!--     <bean id="exceptionhandler" -->
+<!--         class="org.apache.olingo.odata2.core.rest.ODataExceptionMapperImpl" /> -->
+<!--     <bean id="provider" -->
+<!--         class="org.apache.olingo.odata2.core.rest.app.ODataApplication.MyProvider" /> -->
+<!--     <jaxrs:server id="SomeIdForTheService" address="/OData.svc"> -->
+<!--         <jaxrs:serviceBeans> -->
+<!--             <ref bean="rootLocator" /> -->
+<!--             <ref bean="exceptionhandler" /> -->
+<!--             <ref bean="provider" /> -->
+<!--         </jaxrs:serviceBeans> -->
+<!--     </jaxrs:server> -->
+
+<odata:server address="/JDBCService.svc" factory="JDBCServiceFactory" id="SomeIdForTheService" />
+    
+
+    <!-- ******************************************************************* -->
+    <!-- TRANSACTION MANAGEMENT                                              -->
+    <!-- ******************************************************************* -->
+    <!-- Transactional behaviour will be applied to the JPA layer and        -->
+    <!-- configured in an annotation-driven fashion, so that methods in the  -->
+    <!-- Service implementations will be able to declare their               -->
+    <!-- transactionality by adding a @Transactional annotation.             -->
+    <!-- Defaults will be:                                                   -->
+    <!--      PROPAGATION  = Propagation.SUPPORTS                            -->
+    <!--      ISOLATION    = Isolation.DEFAULT                               -->
+    <!--      READ-ONLY    = false                                           -->
+    <!--      ROLLBACK FOR = java.lang.RuntimeException                      -->
+    <!-- ******************************************************************* -->
+<!--     <bean id="transactionManager" -->
+<!--           class="org.springframework.orm.jpa.JpaTransactionManager"> -->
+<!--         <property name="entityManagerFactory" ref="entityManagerFactory"/> -->
+<!--     </bean> -->
+        
+<!--     <tx:annotation-driven transaction-manager="transactionManager" /> -->
+
+
+    
+    <!-- ******************************************************************* -->
+    <!-- EXCEPTION TRANSLATION                                               -->
+    <!-- ******************************************************************* -->
+    <!-- Persistence-related exceptions arisen in repositories (classes with -->
+    <!-- the @Repository annotation) will be translated to the more semantic -->
+    <!-- org.springframework.dao.DataAccessException hierarchy.              -->
+    <!-- ******************************************************************* -->
+    <!--<bean class="org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor" />-->
+
+
+    
+    <!-- ******************************************************************* -->
+    <!-- ENCRYPTION                                                          -->
+    <!-- ******************************************************************* -->
+    <!-- Create an instance of a Jasypt PasswordEncryptor that will be used  -->
+    <!-- for encryption (hashing, in fact) passwords before storing them     -->
+    <!-- into the database.                                                  -->
+    <!-- ******************************************************************* -->
+    <!--  <encryption:basic-password-encryptor />-->
+
+
+</beans>

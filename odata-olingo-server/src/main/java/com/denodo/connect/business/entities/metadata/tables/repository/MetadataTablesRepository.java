@@ -40,7 +40,7 @@ public class MetadataTablesRepository {
     			
     			 m = jdbcConnection.getMetaData();
     			//        m.getExportedKeys(jdbcConnection.getCatalog(), null, "survey");
-    			tables = m.getTables(jdbcConnection.getCatalog(), null,"final_count_by_v%", null);
+    			tables = m.getTables(jdbcConnection.getCatalog(), null,null, null);
 
     			while(tables.next()) {
     				MetadataTables table= new MetadataTables();
@@ -65,25 +65,29 @@ public class MetadataTablesRepository {
     public  List<MetadataColumn> getMetadataView(String viewName) throws SQLException {
 
     	Connection jdbcConnection =denodoTemplate.getDataSource().getConnection();
+		List<MetadataColumn> metadataColumns = new ArrayList<MetadataColumn>();
     	DatabaseMetaData m =null;
     	try{
-    	 m = jdbcConnection.getMetaData();
-    	}catch(Exception e){
-    	e.printStackTrace();	
+    		try{
+    			m = jdbcConnection.getMetaData();
+    		}catch(Exception e){
+    			e.printStackTrace();	
+    		}
+    		ResultSet columns=m.getColumns(jdbcConnection.getCatalog(), null, viewName, null);
+    
+
+    		while (columns.next()) {
+    			MetadataColumn column= new MetadataColumn();
+    			column.setTableName(columns.getString("TABLE_NAME"));
+    			column.setColumnName(columns.getString("COLUMN_NAME"));
+    			column.setDataType(columns.getInt("DATA_TYPE"));
+    			column.setNullable(columns.getInt("NULLABLE"));
+    			metadataColumns.add(column);
+
+    		}	
+    	}finally{
+    		jdbcConnection.close();
     	}
-    	ResultSet columns=m.getColumns(jdbcConnection.getCatalog(), null, viewName, null);
-    	List<MetadataColumn> metadataColumns = new ArrayList<MetadataColumn>();
-
-    	while (columns.next()) {
-    		MetadataColumn column= new MetadataColumn();
-    		column.setTableName(columns.getString("TABLE_NAME"));
-    		column.setColumnName(columns.getString("COLUMN_NAME"));
-    		column.setDataType(columns.getInt("DATA_TYPE"));
-    		column.setNullable(columns.getInt("NULLABLE"));
-    		metadataColumns.add(column);
-
-    	}	
-
     	return metadataColumns;
 
     }

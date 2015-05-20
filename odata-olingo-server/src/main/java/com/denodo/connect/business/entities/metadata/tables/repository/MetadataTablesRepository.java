@@ -10,8 +10,6 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
-import org.springframework.jdbc.core.SqlTypeValue;
 import org.springframework.stereotype.Repository;
 
 import com.denodo.connect.business.entities.metadata.tables.MetadataTables;
@@ -63,6 +61,35 @@ public class MetadataTablesRepository {
     }
 
     public  List<MetadataColumn> getMetadataView(String viewName) throws SQLException {
+
+    	Connection jdbcConnection =denodoTemplate.getDataSource().getConnection();
+		List<MetadataColumn> metadataColumns = new ArrayList<MetadataColumn>();
+    	DatabaseMetaData m =null;
+    	try{
+    		try{
+    			m = jdbcConnection.getMetaData();
+    		}catch(Exception e){
+    			e.printStackTrace();	
+    		}
+    		ResultSet columns=m.getPrimaryKeys(jdbcConnection.getCatalog(), null, viewName);
+    
+
+    		while (columns.next()) {
+    			MetadataColumn column= new MetadataColumn();
+    			column.setTableName(columns.getString("TABLE_NAME"));
+    			column.setColumnName(columns.getString("COLUMN_NAME"));
+    		
+    			metadataColumns.add(column);
+
+    		}	
+    	}finally{
+    		jdbcConnection.close();
+    	}
+    	return metadataColumns;
+
+    }
+    
+    public  List<MetadataColumn> getPrimaryKeys(String viewName) throws SQLException {
 
     	Connection jdbcConnection =denodoTemplate.getDataSource().getConnection();
 		List<MetadataColumn> metadataColumns = new ArrayList<MetadataColumn>();

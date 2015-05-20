@@ -23,6 +23,8 @@ public interface MetadataService {
 	public List<MetadataColumn> getMetadataView(String viewName) throws SQLException;
 	
 	public List<MetadataTables> getMetadataTables() throws SQLException;
+	
+	public  List<MetadataColumn> getPrimaryKeys(String viewName) throws SQLException;
 
 }
 

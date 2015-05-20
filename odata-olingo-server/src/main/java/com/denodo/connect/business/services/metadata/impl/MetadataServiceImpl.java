@@ -44,5 +44,9 @@ public class MetadataServiceImpl implements MetadataService {
 	public List<MetadataTables> getMetadataTables() throws SQLException{
 		 return this.metadataTablesRepository.getTables();
 	}
+	
+	 public  List<MetadataColumn> getPrimaryKeys(String viewName) throws SQLException {
+		 return this.metadataTablesRepository.getPrimaryKeys(viewName);
+	 }
 }
 

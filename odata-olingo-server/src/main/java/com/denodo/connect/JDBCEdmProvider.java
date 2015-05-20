@@ -140,7 +140,7 @@ public class JDBCEdmProvider extends EdmProvider {
     
     
     Schema schema2 = new Schema();
-    schema2.setNamespace(NAMESPACE);
+    schema2.setNamespace(NAMESPACE_DENODO);
     List<MetadataTables> metadataTables = new ArrayList<MetadataTables>();
 	try {
 	metadataTables=	this.metadataService.getMetadataTables();
@@ -260,23 +260,39 @@ public class JDBCEdmProvider extends EdmProvider {
 		
 		e.printStackTrace();
 	}
-       
+      
+	 
+	
      for (MetadataColumn metadataColumn : metadataviews) {
     	 properties.add(new SimpleProperty().setName(metadataColumn.getColumnName()).setType(getTypeField(metadataColumn.getDataType())).setFacets(
-                 new Facets().setNullable(isNullable(metadataColumn.getNullable()))));
-	}
-        
-        
+    			 new Facets().setNullable(isNullable(metadataColumn.getNullable()))));
+
+     }
+
+     // Key
+     List<PropertyRef> keyProperties = new ArrayList<PropertyRef>();   
+     List<MetadataColumn> primaryKeys= new ArrayList<MetadataColumn>();
+     try {
+    	 metadataviews = metadataService.getPrimaryKeys(edmFQName.getName());
+     } catch (SQLException e) {
+
+    	 e.printStackTrace();
+     }
+     
+     for (MetadataColumn primaryKey : primaryKeys) {
+    	 keyProperties.add(new PropertyRef().setName(primaryKey.getColumnName()));    
+     }
+    	
+       
         // Navigation Properties
         List<NavigationProperty> navigationProperties = new ArrayList<NavigationProperty>();
 //        navigationProperties.add(new NavigationProperty().setName("Manufacturer")
 //            .setRelationship(ASSOCIATION_CAR_MANUFACTURER).setFromRole(ROLE_1_1).setToRole(ROLE_1_2));
 
        
-        // Key
-        List<PropertyRef> keyProperties = new ArrayList<PropertyRef>();    
+       
         
-        keyProperties.add(new PropertyRef().setName(metadataviews.get(0).getColumnName()));      
+    
   
         Key key = new Key().setKeys(keyProperties);
 
@@ -379,9 +395,31 @@ public class JDBCEdmProvider extends EdmProvider {
 	  case Types.BOOLEAN:
 		  return EdmSimpleTypeKind.Boolean;
 	  case Types.VARCHAR:
-		  return EdmSimpleTypeKind.String;
+		  return EdmSimpleTypeKind.String;	
+	  case Types.BINARY:
+		  return EdmSimpleTypeKind.Binary;
+	  case Types.TINYINT:
+		  return EdmSimpleTypeKind.Byte;
+	  case Types.DATE:
+		  return EdmSimpleTypeKind.DateTime;
+//	  case Types.TIMESTAMP:
+//		  return EdmSimpleTypeKind.DateTimeOffset;
+	  case Types.DECIMAL:
+		  return EdmSimpleTypeKind.Decimal;
+	  case Types.DOUBLE:
+		  return EdmSimpleTypeKind.Double;
+//	  case Types.:
+//		  return EdmSimpleTypeKind.Guid;
+	  case Types.SMALLINT:
+		  return EdmSimpleTypeKind.Int16;
 	  case Types.INTEGER:
 		  return EdmSimpleTypeKind.Int32;
+	  case Types.BIGINT:
+		  return EdmSimpleTypeKind.Int64;
+//	  case Types.SB:
+//		  return EdmSimpleTypeKind.SByte;
+	  case Types.FLOAT:
+		  return EdmSimpleTypeKind.Single;
 
 	  default:
 		  break;

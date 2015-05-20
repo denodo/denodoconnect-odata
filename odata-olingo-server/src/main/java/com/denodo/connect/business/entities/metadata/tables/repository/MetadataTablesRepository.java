@@ -118,6 +118,33 @@ public class MetadataTablesRepository {
 
     }
     
+    public  List<MetadataColumn> getExportedKeys(String viewName) throws SQLException {
+
+    	Connection jdbcConnection =denodoTemplate.getDataSource().getConnection();
+		List<MetadataColumn> metadataColumns = new ArrayList<MetadataColumn>();
+    	DatabaseMetaData m =null;
+    	try{
+    		try{
+    			m = jdbcConnection.getMetaData();
+    		}catch(Exception e){
+    			e.printStackTrace();	
+    		}
+    		ResultSet columns=m.getExportedKeys(jdbcConnection.getCatalog(), null, viewName);
+    
+
+    		while (columns.next()) {
+    			MetadataColumn column= new MetadataColumn();
+    			column.setTableName(columns.getString("PKTABLE_NAME"));
+    			column.setColumnName(columns.getString("PKCOLUMN_NAME"));
+    			metadataColumns.add(column);
+
+    		}	
+    	}finally{
+    		jdbcConnection.close();
+    	}
+    	return metadataColumns;
+
+    }
     
     
 }

@@ -39,14 +39,19 @@ public class MetadataServiceImpl implements MetadataService {
 	@Override
 	public List<MetadataColumn> getMetadataView(String viewName) throws SQLException {
         return this.metadataTablesRepository.getMetadataView(viewName);
-    }
-    
+	}
+	@Override
 	public List<MetadataTables> getMetadataTables() throws SQLException{
-		 return this.metadataTablesRepository.getTables();
+		return this.metadataTablesRepository.getTables();
+	}
+	@Override
+	public  List<MetadataColumn> getPrimaryKeys(String viewName) throws SQLException {
+		return this.metadataTablesRepository.getPrimaryKeys(viewName);
 	}
 	
-	 public  List<MetadataColumn> getPrimaryKeys(String viewName) throws SQLException {
-		 return this.metadataTablesRepository.getPrimaryKeys(viewName);
-	 }
+	@Override
+	public  List<MetadataColumn> getExportedKeys(String viewName) throws SQLException{
+		return this.metadataTablesRepository.getExportedKeys(viewName);
+	}
 }
 

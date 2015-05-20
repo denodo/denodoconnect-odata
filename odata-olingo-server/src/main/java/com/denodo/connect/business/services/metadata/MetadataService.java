@@ -25,6 +25,8 @@ public interface MetadataService {
 	public List<MetadataTables> getMetadataTables() throws SQLException;
 	
 	public  List<MetadataColumn> getPrimaryKeys(String viewName) throws SQLException;
+	
+    public  List<MetadataColumn> getExportedKeys(String viewName) throws SQLException;
 
 }
 

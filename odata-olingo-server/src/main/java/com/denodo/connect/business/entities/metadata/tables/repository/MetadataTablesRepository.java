@@ -38,7 +38,7 @@ public class MetadataTablesRepository {
     			
     			 m = jdbcConnection.getMetaData();
     			//        m.getExportedKeys(jdbcConnection.getCatalog(), null, "survey");
-    			tables = m.getTables(jdbcConnection.getCatalog(), null,null, null);
+    			tables = m.getTables(jdbcConnection.getCatalog(), null, null, null);
 
     			while(tables.next()) {
     				MetadataTables table= new MetadataTables();
@@ -71,35 +71,6 @@ public class MetadataTablesRepository {
     		}catch(Exception e){
     			e.printStackTrace();	
     		}
-    		ResultSet columns=m.getPrimaryKeys(jdbcConnection.getCatalog(), null, viewName);
-    
-
-    		while (columns.next()) {
-    			MetadataColumn column= new MetadataColumn();
-    			column.setTableName(columns.getString("TABLE_NAME"));
-    			column.setColumnName(columns.getString("COLUMN_NAME"));
-    		
-    			metadataColumns.add(column);
-
-    		}	
-    	}finally{
-    		jdbcConnection.close();
-    	}
-    	return metadataColumns;
-
-    }
-    
-    public  List<MetadataColumn> getPrimaryKeys(String viewName) throws SQLException {
-
-    	Connection jdbcConnection =denodoTemplate.getDataSource().getConnection();
-		List<MetadataColumn> metadataColumns = new ArrayList<MetadataColumn>();
-    	DatabaseMetaData m =null;
-    	try{
-    		try{
-    			m = jdbcConnection.getMetaData();
-    		}catch(Exception e){
-    			e.printStackTrace();	
-    		}
     		ResultSet columns=m.getColumns(jdbcConnection.getCatalog(), null, viewName, null);
     
 
@@ -118,6 +89,36 @@ public class MetadataTablesRepository {
     	return metadataColumns;
 
     }
+    public  List<MetadataColumn> getPrimaryKeys(String viewName) throws SQLException {
+
+    	Connection jdbcConnection =denodoTemplate.getDataSource().getConnection();
+		List<MetadataColumn> metadataColumns = new ArrayList<MetadataColumn>();
+    	DatabaseMetaData m =null;
+    	try{
+    		try{
+    			m = jdbcConnection.getMetaData();
+    		}catch(Exception e){
+    			e.printStackTrace();	
+    		}
+    		ResultSet columns=m.getPrimaryKeys(jdbcConnection.getCatalog(), null, viewName);
+    
+
+    		while (columns.next()) {
+    			MetadataColumn column= new MetadataColumn();
+    			column.setTableName(columns.getString("TABLE_NAME"));
+    			column.setColumnName(columns.getString("COLUMN_NAME"));
+    		
+    			metadataColumns.add(column);
+
+    		}	
+    	}finally{
+    		jdbcConnection.close();
+    	}
+    	return metadataColumns;
+
+    }
+    
+    
     
 }
 

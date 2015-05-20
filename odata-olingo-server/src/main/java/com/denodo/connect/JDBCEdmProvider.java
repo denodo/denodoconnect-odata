@@ -273,7 +273,7 @@ public class JDBCEdmProvider extends EdmProvider {
      List<PropertyRef> keyProperties = new ArrayList<PropertyRef>();   
      List<MetadataColumn> primaryKeys= new ArrayList<MetadataColumn>();
      try {
-    	 metadataviews = metadataService.getPrimaryKeys(edmFQName.getName());
+    	primaryKeys = metadataService.getPrimaryKeys(edmFQName.getName());
      } catch (SQLException e) {
 
     	 e.printStackTrace();
@@ -282,7 +282,7 @@ public class JDBCEdmProvider extends EdmProvider {
      for (MetadataColumn primaryKey : primaryKeys) {
     	 keyProperties.add(new PropertyRef().setName(primaryKey.getColumnName()));    
      }
-    	
+     Key key = new Key().setKeys(keyProperties);	
        
         // Navigation Properties
         List<NavigationProperty> navigationProperties = new ArrayList<NavigationProperty>();
@@ -294,7 +294,7 @@ public class JDBCEdmProvider extends EdmProvider {
         
     
   
-        Key key = new Key().setKeys(keyProperties);
+  
 
         return new EntityType().setName(edmFQName.getName())
             .setProperties(properties)
@@ -405,6 +405,8 @@ public class JDBCEdmProvider extends EdmProvider {
 //	  case Types.TIMESTAMP:
 //		  return EdmSimpleTypeKind.DateTimeOffset;
 	  case Types.DECIMAL:
+		  return EdmSimpleTypeKind.Decimal;
+	  case Types.NUMERIC:
 		  return EdmSimpleTypeKind.Decimal;
 	  case Types.DOUBLE:
 		  return EdmSimpleTypeKind.Double;

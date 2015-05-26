@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ============================================================================= -->
+<!--                                                                               -->
+<!--   This software is part of the DenodoConnect component collection.            -->
+<!--                                                                               -->
+<!--   Copyright (c) 2014-2015, Denodo Technologies (http://www.denodo.com)        -->
+<!--                                                                               -->
+<!--   Licensed under the Apache License, Version 2.0 (the "License");             -->
+<!--   you may not use this file except in compliance with the License.            -->
+<!--   You may obtain a copy of the License at                                     -->
+<!--                                                                               -->
+<!--       http://www.apache.org/licenses/LICENSE-2.0                              -->
+<!--                                                                               -->
+<!--   Unless required by applicable law or agreed to in writing, software         -->
+<!--   distributed under the License is distributed on an "AS IS" BASIS,           -->
+<!--   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.    -->
+<!--   See the License for the specific language governing permissions and         -->
+<!--   limitations under the License.                                              -->
+<!--                                                                               -->
+<!-- ============================================================================= -->
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:odata="http://www.apache.org/olingo/odata2/spring/odata"
+       xmlns="http://www.springframework.org/schema/beans"
+       xsi:schemaLocation="
+           http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd
+           http://www.apache.org/olingo/odata2/spring/odata http://www.apache.org/olingo/odata2/spring/odata.xsd">
+
+
+  <!-- ******************************************************************* -->
+  <!-- PROPERTY PLACEHOLDER (configuration)                                -->
+  <!-- ******************************************************************* -->
+  <!-- The property placeholder will be in charge of reading the           -->
+  <!-- .properties files that contain environment-specific configuration   -->
+  <!-- and make their values available to the application context so that  -->
+  <!-- they can be assigned with "${propertyname}".                        -->
+  <!-- ******************************************************************* -->
+  <context:property-placeholder location="classpath:business.properties" />
+
+
+  <!-- ******************************************************************* -->
+  <!-- COMPONENT SCANNING                                                  -->
+  <!-- ******************************************************************* -->
+  <!-- Spring will be configured so that component beans are declared and  -->
+  <!-- wired together into the application context by using annotations    -->
+  <!-- (mainly @Component, @Repository and @Service for declaring beans,   -->
+  <!-- and @Autowired for wiring dependencies).                            -->
+  <!--                                                                     -->
+  <!-- Note that @Controller classes are explicity excluded so that if a   -->
+  <!-- Spring MVC controller layer is included, it can have its own XML    -->
+  <!-- bean configuration file only for its @Controllers, configuring      -->
+  <!-- <context:component-scan use-default-filters="false" ... /> and      -->
+  <!-- adding a <context:include-filter ... /> for @Controllers so that    -->
+  <!-- they are the only beans to be declared in the web-layer application -->
+  <!-- context.                                                            -->
+  <!-- ******************************************************************* -->
+  <context:component-scan annotation-config="true" base-package="com.denodo.connect">
+    <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+  </context:component-scan>
+
+
+  <!-- ******************************************************************* -->
+  <!-- DATASOURCE CONFIGURATION                                            -->
+  <!-- ******************************************************************* -->
+  <!-- The datasource can be both configured as application-managed (using -->
+  <!-- Apache Commons-DBCP) or as container-managed (referencing via JNDI  -->
+  <!-- to an already configured container datasource).                     -->
+  <!--                                                                     -->
+  <!-- Also, this datasource is in fact wrapped by a lazy proxy (supplied  -->
+  <!-- by Spring) which gets connections from the pool only when they are  -->
+  <!-- really needed to execute queries (thus avoiding that the behaviour  -->
+  <!-- of the open-session-in-view filter can use up all the available     -->
+  <!-- connections when they are not needed.                               -->
+  <!-- ******************************************************************* -->
+  <bean id="dataSourceTarget"
+        class="org.apache.commons.dbcp.BasicDataSource"
+        destroy-method="close" p:driverClassName="${datasource.driver}"
+        p:url="${datasource.url}" p:username="${datasource.username}"
+        p:password="${datasource.password}" />
+
+  <bean id="dataSource"
+        class="org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy"
+        p:targetDataSource-ref="dataSourceTarget" />
+
+
+  <!-- ******************************************************************* -->
+  <!-- SPRING JDBC TEMPLATE                                                -->
+  <!-- ******************************************************************* -->
+  <bean class="org.springframework.jdbc.core.JdbcTemplate"
+        p:dataSource-ref="dataSource"/>
+
+
+  <!-- ******************************************************************* -->
+  <!-- APACHE OLINGO - ODATA SERVER CONFIGURATION                          -->
+  <!-- ******************************************************************* -->
+  <!-- Registry of the Olingo Service Factory as a Spring bean             -->
+  <!-- ******************************************************************* -->
+  <bean class="com.denodo.connect.DenodoODataServiceFactory" id="denodoServiceFactory" />
+
+
+  <!-- ******************************************************************* -->
+  <!-- APACHE OLINGO - ODATA SERVER CONFIGURATION                          -->
+  <!-- ******************************************************************* -->
+  <!-- Creation of the OData server, using the Denodo Service Factory      -->
+  <!-- ******************************************************************* -->
+  <odata:server address="/denodo-odata.svc" factory="denodoServiceFactory" id="denodoService" />
+
+</beans>

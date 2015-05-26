@@ -19,7 +19,8 @@ import org.springframework.stereotype.Service;
 
 import com.denodo.connect.business.entities.metadata.tables.MetadataTables;
 import com.denodo.connect.business.entities.metadata.tables.repository.MetadataTablesRepository;
-import com.denodo.connect.business.entities.metadata.view.MetadataColumn;
+import com.denodo.connect.business.entities.metadata.view.AssociationMetadata;
+import com.denodo.connect.business.entities.metadata.view.ColumnMetadata;
 import com.denodo.connect.business.entities.metadata.view.repository.MetadataRepository;
 import com.denodo.connect.business.services.metadata.MetadataService;
 
@@ -37,7 +38,7 @@ public class MetadataServiceImpl implements MetadataService {
 	}
 
 	@Override
-	public List<MetadataColumn> getMetadataView(String viewName) throws SQLException {
+	public List<ColumnMetadata> getMetadataView(String viewName) throws SQLException {
         return this.metadataTablesRepository.getMetadataView(viewName);
 	}
 	@Override
@@ -45,13 +46,32 @@ public class MetadataServiceImpl implements MetadataService {
 		return this.metadataTablesRepository.getTables();
 	}
 	@Override
-	public  List<MetadataColumn> getPrimaryKeys(String viewName) throws SQLException {
+	public  List<ColumnMetadata> getPrimaryKeys(String viewName) throws SQLException {
 		return this.metadataTablesRepository.getPrimaryKeys(viewName);
 	}
 	
 	@Override
-	public  List<MetadataColumn> getExportedKeys(String viewName) throws SQLException{
+	public  List<ColumnMetadata> getExportedKeys(String viewName) throws SQLException{
 		return this.metadataTablesRepository.getExportedKeys(viewName);
 	}
+	
+	
+	@Override
+	public List<ColumnMetadata> getMetadataDescView(String viewName) throws SQLException{
+		return this.metadataRepository.getMetadataView(viewName);
+	}
+
+	@Override
+	public List<String> getAssociations() throws SQLException {
+		return this.metadataRepository.getAssociations();
+	}
+
+	@Override
+	public AssociationMetadata getMetadataAssociation(
+			String associationName) throws SQLException {
+		return this.metadataRepository.getAssociationMetadata(associationName);
+	}
+
+
 }
 

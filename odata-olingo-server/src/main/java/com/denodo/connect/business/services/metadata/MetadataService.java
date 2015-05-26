@@ -15,18 +15,25 @@ import java.sql.SQLException;
 import java.util.List;
 
 import com.denodo.connect.business.entities.metadata.tables.MetadataTables;
-import com.denodo.connect.business.entities.metadata.view.MetadataColumn;
+import com.denodo.connect.business.entities.metadata.view.AssociationMetadata;
+import com.denodo.connect.business.entities.metadata.view.ColumnMetadata;
 
 
 public interface MetadataService {
 
-	public List<MetadataColumn> getMetadataView(String viewName) throws SQLException;
+	public List<ColumnMetadata> getMetadataView(String viewName) throws SQLException;
 	
 	public List<MetadataTables> getMetadataTables() throws SQLException;
 	
-	public  List<MetadataColumn> getPrimaryKeys(String viewName) throws SQLException;
+	public  List<ColumnMetadata> getPrimaryKeys(String viewName) throws SQLException;
 	
-    public  List<MetadataColumn> getExportedKeys(String viewName) throws SQLException;
+    public  List<ColumnMetadata> getExportedKeys(String viewName) throws SQLException;
+        
+	public List<ColumnMetadata> getMetadataDescView(String viewName) throws SQLException;
+    
+	public List<String> getAssociations() throws SQLException;
+    
+	public AssociationMetadata getMetadataAssociation(String associationName) throws SQLException;
 
 }
 

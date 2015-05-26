@@ -1,6 +1,6 @@
 package com.denodo.connect.business.entities.metadata.view;
 
-public class MetadataColumn {
+public class ColumnMetadata {
 
 	
 	private String tableName;
@@ -14,7 +14,7 @@ public class MetadataColumn {
 	private String isAutoIncrement;
 	
 	
-	public MetadataColumn() {
+	public ColumnMetadata() {
 		
 	}
 	

@@ -12,37 +12,72 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
-import com.denodo.connect.business.entities.metadata.view.MetadataColumn;
+import com.denodo.connect.business.entities.metadata.view.AssociationMetadata;
+import com.denodo.connect.business.entities.metadata.view.ColumnMetadata;
 
 
 
 @Repository
 public class MetadataRepository {
 
-    @Autowired
-    @Qualifier("denodoTemplate")
-    JdbcTemplate denodoTemplate;
+	@Autowired
+	@Qualifier("denodoTemplate")
+	JdbcTemplate denodoTemplate;
 
 
-    private static final String CUSTOMERCOMMUNICATIONS = "DESC VIEW ?;";
+	private static final String METADATAVIEWS = "DESC VIEW ?;";
+	private static final String METADATAASSOCIATION = "DESC ASSOCIATION ?;";
+	private static final String ASSOCIATIONS = "LIST ASSOCIATIONS;";
 
-    public  List<MetadataColumn> getMetadataView(String viewName) {
+	public  List<ColumnMetadata> getMetadataView(String viewName) {
 
-    	String query=CUSTOMERCOMMUNICATIONS.replace("?", viewName);
-//    	List<MetadataColumn> metadataColumn =this.denodoTemplate.query(query,new RowMapper<MetadataColumn>() {
-//    		@Override
-//    		public MetadataColumn mapRow(ResultSet rs, int rowNum) throws SQLException {
+		String query=METADATAVIEWS.replace("?", viewName);
+		List<ColumnMetadata> columnMetadata =this.denodoTemplate.query(query,new RowMapper<ColumnMetadata>() {
+			@Override
+			public ColumnMetadata mapRow(ResultSet rs, int rowNum) throws SQLException {
+				ColumnMetadata c= new ColumnMetadata();
+				c.setColumnName(rs.getString(1));
+				return c;
+			}});
 
-//    			return new MetadataColumn(rs.getString("fieldname"),
-//    					rs.getString("fieldtype"), rs.getBoolean(7),rs.getString(3),rs.getString(4),rs.getString(5),rs.getString(6)
-//
-//    					);
-//    		}});
-//    	
-    	return null;
-    }
-    
+		return columnMetadata;
+	}
 
-    
+	public  AssociationMetadata getAssociationMetadata(String associationName) {
+
+		String query=METADATAASSOCIATION.replace("?", associationName);
+		AssociationMetadata association=this.denodoTemplate.queryForObject(query,new RowMapper<AssociationMetadata>() {
+			@Override
+			public AssociationMetadata mapRow(ResultSet rs, int rowNum) throws SQLException {
+				AssociationMetadata associationMetadata= new AssociationMetadata();
+				associationMetadata.setAssociationName("association_name");
+				associationMetadata.setAsocciationDescription("asocciation_description)");
+				associationMetadata.setLeftRole("left_role");
+				associationMetadata.setLeftViewName("left_view_name");
+				associationMetadata.setLeftMultiplicity("left_multiplicity");
+				associationMetadata.setRightRole("right_role");
+				associationMetadata.setRightViewName("right_view_name");
+				associationMetadata.setRightMultiplicity("right_multiplicity");
+				return associationMetadata;
+
+			}});
+
+		return association;
+	}
+
+	public  List<String> getAssociations() {
+
+
+		List<String> associations =this.denodoTemplate.query(ASSOCIATIONS,new RowMapper<String>() {
+			@Override
+			public String mapRow(ResultSet rs, int rowNum) throws SQLException {
+				String association=rs.getString(1);
+				return association;
+
+			}});
+
+		return associations;
+	}
+
 }
 

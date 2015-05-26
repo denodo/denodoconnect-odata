@@ -13,7 +13,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import com.denodo.connect.business.entities.metadata.tables.MetadataTables;
-import com.denodo.connect.business.entities.metadata.view.MetadataColumn;
+import com.denodo.connect.business.entities.metadata.view.ColumnMetadata;
 
 
 
@@ -60,10 +60,10 @@ public class MetadataTablesRepository {
 
     }
 
-    public  List<MetadataColumn> getMetadataView(String viewName) throws SQLException {
+    public  List<ColumnMetadata> getMetadataView(String viewName) throws SQLException {
 
     	Connection jdbcConnection =denodoTemplate.getDataSource().getConnection();
-		List<MetadataColumn> metadataColumns = new ArrayList<MetadataColumn>();
+		List<ColumnMetadata> columnMetadatas = new ArrayList<ColumnMetadata>();
     	DatabaseMetaData m =null;
     	try{
     		try{
@@ -75,24 +75,24 @@ public class MetadataTablesRepository {
     
 
     		while (columns.next()) {
-    			MetadataColumn column= new MetadataColumn();
+    			ColumnMetadata column= new ColumnMetadata();
     			column.setTableName(columns.getString("TABLE_NAME"));
     			column.setColumnName(columns.getString("COLUMN_NAME"));
     			column.setDataType(columns.getInt("DATA_TYPE"));
     			column.setNullable(columns.getInt("NULLABLE"));
-    			metadataColumns.add(column);
+    			columnMetadatas.add(column);
 
     		}	
     	}finally{
     		jdbcConnection.close();
     	}
-    	return metadataColumns;
+    	return columnMetadatas;
 
     }
-    public  List<MetadataColumn> getPrimaryKeys(String viewName) throws SQLException {
+    public  List<ColumnMetadata> getPrimaryKeys(String viewName) throws SQLException {
 
     	Connection jdbcConnection =denodoTemplate.getDataSource().getConnection();
-		List<MetadataColumn> metadataColumns = new ArrayList<MetadataColumn>();
+		List<ColumnMetadata> columnMetadatas = new ArrayList<ColumnMetadata>();
     	DatabaseMetaData m =null;
     	try{
     		try{
@@ -104,24 +104,24 @@ public class MetadataTablesRepository {
     
 
     		while (columns.next()) {
-    			MetadataColumn column= new MetadataColumn();
+    			ColumnMetadata column= new ColumnMetadata();
     			column.setTableName(columns.getString("TABLE_NAME"));
     			column.setColumnName(columns.getString("COLUMN_NAME"));
     		
-    			metadataColumns.add(column);
+    			columnMetadatas.add(column);
 
     		}	
     	}finally{
     		jdbcConnection.close();
     	}
-    	return metadataColumns;
+    	return columnMetadatas;
 
     }
     
-    public  List<MetadataColumn> getExportedKeys(String viewName) throws SQLException {
+    public  List<ColumnMetadata> getExportedKeys(String viewName) throws SQLException {
 
     	Connection jdbcConnection =denodoTemplate.getDataSource().getConnection();
-		List<MetadataColumn> metadataColumns = new ArrayList<MetadataColumn>();
+		List<ColumnMetadata> columnMetadatas = new ArrayList<ColumnMetadata>();
     	DatabaseMetaData m =null;
     	try{
     		try{
@@ -133,16 +133,16 @@ public class MetadataTablesRepository {
     
 
     		while (columns.next()) {
-    			MetadataColumn column= new MetadataColumn();
+    			ColumnMetadata column= new ColumnMetadata();
     			column.setTableName(columns.getString("PKTABLE_NAME"));
     			column.setColumnName(columns.getString("PKCOLUMN_NAME"));
-    			metadataColumns.add(column);
+    			columnMetadatas.add(column);
 
     		}	
     	}finally{
     		jdbcConnection.close();
     	}
-    	return metadataColumns;
+    	return columnMetadatas;
 
     }
     

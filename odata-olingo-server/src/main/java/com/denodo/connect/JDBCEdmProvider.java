@@ -21,8 +21,11 @@ package com.denodo.connect;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.edm.EdmMultiplicity;
 import org.apache.olingo.odata2.api.edm.EdmSimpleTypeKind;
 import org.apache.olingo.odata2.api.edm.FullQualifiedName;
@@ -47,10 +50,12 @@ import org.apache.olingo.odata2.api.edm.provider.Schema;
 import org.apache.olingo.odata2.api.edm.provider.SimpleProperty;
 import org.apache.olingo.odata2.api.exception.ODataException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jmx.support.MetricType;
 import org.springframework.stereotype.Component;
 
 import com.denodo.connect.business.entities.metadata.tables.MetadataTables;
-import com.denodo.connect.business.entities.metadata.view.MetadataColumn;
+import com.denodo.connect.business.entities.metadata.view.AssociationMetadata;
+import com.denodo.connect.business.entities.metadata.view.ColumnMetadata;
 import com.denodo.connect.business.services.metadata.MetadataService;
 import com.mysql.jdbc.ResultSetMetaData;
 
@@ -81,10 +86,18 @@ public class JDBCEdmProvider extends EdmProvider {
     private static final String ASSOCIATION_SET = "Cars_Manufacturers";
 
     private static final String FUNCTION_IMPORT = "NumberOfCars";
-
-    @Autowired
+    private Map<String,List<AssociationMetadata>> asocciations = new HashMap<String, List<AssociationMetadata>>();
+	private static final Logger logger = Logger.getLogger(JDBCEdmProvider.class);
+   
+	@Autowired
     private MetadataService metadataService; // Data accessors
-
+    public JDBCEdmProvider() {
+    	try {
+    		getAssociations();
+    	} catch (SQLException e) {
+    		logger.error(e.getMessage());
+    	}
+    }
     @Override
     public List<Schema> getSchemas() throws ODataException {
         List<Schema> schemas = new ArrayList<Schema>();
@@ -129,7 +142,7 @@ public class JDBCEdmProvider extends EdmProvider {
         if (NAMESPACE_DENODO.equals(edmFQName.getNamespace())) {
             // Properties
             List<Property> properties = new ArrayList<Property>();
-            List<MetadataColumn> metadataviews = new ArrayList<MetadataColumn>();
+            List<ColumnMetadata> metadataviews = new ArrayList<ColumnMetadata>();
             try {
                 metadataviews = metadataService.getMetadataView(edmFQName.getName());
             } catch (SQLException e) {
@@ -137,7 +150,7 @@ public class JDBCEdmProvider extends EdmProvider {
                 e.printStackTrace();
             }
 
-            for (MetadataColumn metadataColumn : metadataviews) {
+            for (ColumnMetadata metadataColumn : metadataviews) {
                 properties.add(new SimpleProperty().setName(metadataColumn.getColumnName())
                         .setType(getTypeField(metadataColumn.getDataType()))
                         .setFacets(new Facets().setNullable(isNullable(metadataColumn.getNullable()))));
@@ -146,7 +159,7 @@ public class JDBCEdmProvider extends EdmProvider {
 
             // Key
             List<PropertyRef> keyProperties = new ArrayList<PropertyRef>();
-            List<MetadataColumn> primaryKeys = new ArrayList<MetadataColumn>();
+            List<ColumnMetadata> primaryKeys = new ArrayList<ColumnMetadata>();
             try {
                 primaryKeys = metadataService.getPrimaryKeys(edmFQName.getName());
             } catch (SQLException e) {
@@ -154,25 +167,19 @@ public class JDBCEdmProvider extends EdmProvider {
                 e.printStackTrace();
             }
 
-            for (MetadataColumn primaryKey : primaryKeys) {
+            for (ColumnMetadata primaryKey : primaryKeys) {
                 keyProperties.add(new PropertyRef().setName(primaryKey.getColumnName()));
             }
             Key key = new Key().setKeys(keyProperties);
 
             // Navigation Properties
             List<NavigationProperty> navigationProperties = new ArrayList<NavigationProperty>();
-            List<MetadataColumn> exportedKeys = new ArrayList<MetadataColumn>();
-            try {
-                exportedKeys = metadataService.getExportedKeys(edmFQName.getName());
-            } catch (SQLException e) {
-
-                e.printStackTrace();
-            }
-            for (MetadataColumn exportedKey : exportedKeys) {
-                navigationProperties.add(new NavigationProperty().setName(exportedKey.getTableName())
-                        .setRelationship(getAssociationEntity(edmFQName.getName(), exportedKey.getTableName()))
-                        .setFromRole(edmFQName.getName() + "-" + exportedKey.getTableName())
-                        .setToRole(exportedKey.getTableName() + "_" + edmFQName.getName()));
+           
+            for (AssociationMetadata associationMetadata : this.asocciations.get(edmFQName.getName())) {
+                navigationProperties.add(new NavigationProperty().setName(associationMetadata.getAssociationName())
+                        .setRelationship(getAssociationEntity(associationMetadata.getAssociationName()))
+                        .setFromRole(associationMetadata.getLeftRole())
+                        .setToRole(associationMetadata.getRightRole()));
             }
 
             return new EntityType().setName(edmFQName.getName()).setProperties(properties).setKey(key)
@@ -198,146 +205,194 @@ public class JDBCEdmProvider extends EdmProvider {
 
         return null;
     }
-
     @Override
-    public Association getAssociation(final FullQualifiedName edmFQName) throws ODataException {
-        if (NAMESPACE.equals(edmFQName.getNamespace())) {
-            if (ASSOCIATION_CAR_MANUFACTURER.getName().equals(edmFQName.getName())) {
-                return new Association().setName(ASSOCIATION_CAR_MANUFACTURER.getName())
-                        .setEnd1(new AssociationEnd().setType(ENTITY_TYPE_1_1).setRole(ROLE_1_1).setMultiplicity(EdmMultiplicity.MANY))
-                        .setEnd2(new AssociationEnd().setType(ENTITY_TYPE_1_2).setRole(ROLE_1_2).setMultiplicity(EdmMultiplicity.ONE));
-            }
-        }
-        return null;
+	public Association getAssociation(final FullQualifiedName edmFQName) throws ODataException {
+		if (NAMESPACE.equals(edmFQName.getNamespace())) {
+			if (ASSOCIATION_CAR_MANUFACTURER.getName().equals(edmFQName.getName())) {
+				return new Association().setName(ASSOCIATION_CAR_MANUFACTURER.getName())
+						.setEnd1(
+								new AssociationEnd().setType(ENTITY_TYPE_1_1).setRole(ROLE_1_1).setMultiplicity(EdmMultiplicity.MANY))
+								.setEnd2(
+										new AssociationEnd().setType(ENTITY_TYPE_1_2).setRole(ROLE_1_2).setMultiplicity(EdmMultiplicity.ONE));
+			}
+		}
+		if (NAMESPACE_DENODO.equals(edmFQName.getNamespace())) {
+			String associationName=edmFQName.getName();
+			List<AssociationMetadata> associationsMetadata= this.asocciations.get(associationName);
+			AssociationMetadata association= null;
+
+			for (AssociationMetadata associationMetadata : associationsMetadata) {
+				if(associationName.equals(associationMetadata.getAssociationName())){
+
+					association= associationMetadata;
+				} 
+				return new Association().setName(edmFQName.getNamespace())
+						.setEnd1(
+								new AssociationEnd().setType(getTypeEntity(NAMESPACE_DENODO, associationMetadata.getLeftViewName())).setRole(association.getLeftRole()).setMultiplicity(EdmMultiplicity.MANY))
+								.setEnd2(
+										new AssociationEnd().setType(getTypeEntity(NAMESPACE_DENODO, associationMetadata.getRightViewName())).setRole(association.getRightRole()).setMultiplicity(EdmMultiplicity.ONE));
+
+			}
+		}
+		return null;
     }
 
-    @Override
-    public EntitySet getEntitySet(final String entityContainer, final String name) throws ODataException {
-        if (ENTITY_CONTAINER.equals(entityContainer)) {
-            return getEntity(NAMESPACE_DENODO, name);
-        }
-        return null;
-    }
+	@Override
+	public EntitySet getEntitySet(final String entityContainer, final String name) throws ODataException {
+		if (ENTITY_CONTAINER.equals(entityContainer)) {
+			if (ENTITY_SET_NAME_CARS.equals(name)) {
+				return new EntitySet().setName(name).setEntityType(ENTITY_TYPE_1_1);
+			} else if (ENTITY_SET_NAME_MANUFACTURERS.equals(name)) {
+				return new EntitySet().setName(name).setEntityType(ENTITY_TYPE_1_2);
+			}else{
+				return getEntity(NAMESPACE_DENODO, name);
+			}
+		}
+		return null;
+	}
 
-    @Override
-    public AssociationSet getAssociationSet(final String entityContainer, final FullQualifiedName association,
-            final String sourceEntitySetName, final String sourceEntitySetRole) throws ODataException {
-        if (ENTITY_CONTAINER.equals(entityContainer)) {
-            if (ASSOCIATION_CAR_MANUFACTURER.equals(association)) {
-                return new AssociationSet().setName(ASSOCIATION_SET).setAssociation(ASSOCIATION_CAR_MANUFACTURER)
-                        .setEnd1(new AssociationSetEnd().setRole(ROLE_1_2).setEntitySet(ENTITY_SET_NAME_MANUFACTURERS))
-                        .setEnd2(new AssociationSetEnd().setRole(ROLE_1_1).setEntitySet(ENTITY_SET_NAME_CARS));
-            }
-        }
-        return null;
-    }
+	@Override
+	public AssociationSet getAssociationSet(final String entityContainer, final FullQualifiedName association,
+			final String sourceEntitySetName, final String sourceEntitySetRole) throws ODataException {
+		if (ENTITY_CONTAINER.equals(entityContainer)) {
+			if (ASSOCIATION_CAR_MANUFACTURER.equals(association)) {
+				return new AssociationSet().setName(ASSOCIATION_SET)
+						.setAssociation(ASSOCIATION_CAR_MANUFACTURER)
+						.setEnd1(new AssociationSetEnd().setRole(ROLE_1_2).setEntitySet(ENTITY_SET_NAME_MANUFACTURERS))
+						.setEnd2(new AssociationSetEnd().setRole(ROLE_1_1).setEntitySet(ENTITY_SET_NAME_CARS));
+			}
+		}
+		return null;
+	}
 
-    @Override
-    public FunctionImport getFunctionImport(final String entityContainer, final String name) throws ODataException {
-        if (ENTITY_CONTAINER.equals(entityContainer)) {
-            if (FUNCTION_IMPORT.equals(name)) {
-                return new FunctionImport().setName(name)
-                        .setReturnType(new ReturnType().setTypeName(ENTITY_TYPE_1_1).setMultiplicity(EdmMultiplicity.MANY))
-                        .setHttpMethod("GET");
-            }
-        }
-        return null;
-    }
+	@Override
+	public FunctionImport getFunctionImport(final String entityContainer, final String name) throws ODataException {
+		if (ENTITY_CONTAINER.equals(entityContainer)) {
+			if (FUNCTION_IMPORT.equals(name)) {
+				return new FunctionImport().setName(name)
+						.setReturnType(new ReturnType().setTypeName(ENTITY_TYPE_1_1).setMultiplicity(EdmMultiplicity.MANY))
+						.setHttpMethod("GET");
+			}
+		}
+		return null;
+	}
 
-    @Override
-    public EntityContainerInfo getEntityContainerInfo(final String name) throws ODataException {
-        // if (name == null || "ODataCarsEntityContainer".equals(name)) {
-        // return new
-        // EntityContainerInfo().setName("ODataCarsEntityContainer").setDefaultEntityContainer(true);
-        // }else{
-        // return new
-        // EntityContainerInfo().setName("ODataDenodoEntityContainer").setDefaultEntityContainer(true);
-        // }
+	@Override
+	public EntityContainerInfo getEntityContainerInfo(final String name) throws ODataException {
+		if (name == null || "ODataCarsEntityContainer".equals(name)) {
+			return new EntityContainerInfo().setName("ODataCarsEntityContainer").setDefaultEntityContainer(true);
+		}else{
+			return new EntityContainerInfo().setName("ODataDenodoEntityContainer").setDefaultEntityContainer(true);
+		}
 
-        return new EntityContainerInfo().setName(ENTITY_CONTAINER).setDefaultEntityContainer(true);
-    }
 
-    public static EntitySet getEntity(String nameSpace, String entityName) {
-        FullQualifiedName fullQualifiedName = new FullQualifiedName(nameSpace, entityName);
-        return new EntitySet().setName(entityName).setEntityType(fullQualifiedName);
-    }
+	}
 
-    public EdmSimpleTypeKind getTypeField(int type) {
-        switch (type) {
-        case Types.BOOLEAN:
-            return EdmSimpleTypeKind.Boolean;
-        case Types.VARCHAR:
-            return EdmSimpleTypeKind.String;
-        case Types.BINARY:
-            return EdmSimpleTypeKind.Binary;
-        case Types.TINYINT:
-            return EdmSimpleTypeKind.Byte;
-        case Types.DATE:
-            return EdmSimpleTypeKind.DateTime;
-        case Types.DECIMAL:
-            return EdmSimpleTypeKind.Decimal;
-        case Types.NUMERIC:
-            return EdmSimpleTypeKind.Decimal;
-        case Types.DOUBLE:
-            return EdmSimpleTypeKind.Double;
-        case Types.SMALLINT:
-            return EdmSimpleTypeKind.Int16;
-        case Types.INTEGER:
-            return EdmSimpleTypeKind.Int32;
-        case Types.BIGINT:
-            return EdmSimpleTypeKind.Int64;
-        case Types.FLOAT:
-            return EdmSimpleTypeKind.Double;
-        case Types.BIT:
-            return EdmSimpleTypeKind.Boolean;
-        case Types.BLOB:
-            return EdmSimpleTypeKind.Binary;
-        case Types.CHAR:
-            return EdmSimpleTypeKind.String;
-        case Types.CLOB:
-            return EdmSimpleTypeKind.String;
-        case Types.LONGVARBINARY:
-            return EdmSimpleTypeKind.Byte;
-        case Types.LONGVARCHAR:
-            return EdmSimpleTypeKind.String;
-        case Types.LONGNVARCHAR:
-            return EdmSimpleTypeKind.String;
-        case Types.NULL:
-            return EdmSimpleTypeKind.Null;
-        case Types.REAL:
-            return EdmSimpleTypeKind.Decimal;
-        case Types.SQLXML:
-            return EdmSimpleTypeKind.String;
-        case Types.TIME:
-            return EdmSimpleTypeKind.Time;
-        case Types.TIMESTAMP:
-            return EdmSimpleTypeKind.String;
-        case Types.VARBINARY:
-            return EdmSimpleTypeKind.Binary;
-        default:
-            break;
-        }
+	public  EntitySet getEntity(String nameSpace,String entityName){
+		FullQualifiedName fullQualifiedName =new FullQualifiedName(nameSpace, entityName);
+		return new EntitySet().setName(entityName).setEntityType(fullQualifiedName); 
+	}
 
-        return EdmSimpleTypeKind.String;
-    }
+	public EdmSimpleTypeKind getTypeField(int type){
+		switch (type) {
+		case Types.BOOLEAN:
+			return EdmSimpleTypeKind.Boolean;
+		case Types.VARCHAR:
+			return EdmSimpleTypeKind.String;	
+		case Types.BINARY:
+			return EdmSimpleTypeKind.Binary;
+		case Types.TINYINT:
+			return EdmSimpleTypeKind.Byte;
+		case Types.DATE:
+			return EdmSimpleTypeKind.DateTime;
+		case Types.DECIMAL:
+			return EdmSimpleTypeKind.Decimal;
+		case Types.NUMERIC:
+			return EdmSimpleTypeKind.Decimal;
+		case Types.DOUBLE:
+			return EdmSimpleTypeKind.Double;
+		case Types.SMALLINT:
+			return EdmSimpleTypeKind.Int16;
+		case Types.INTEGER:
+			return EdmSimpleTypeKind.Int32;
+		case Types.BIGINT:
+			return EdmSimpleTypeKind.Int64;
+		case Types.FLOAT:
+			return EdmSimpleTypeKind.Double;
+		case Types.BIT:
+			return EdmSimpleTypeKind.Boolean;
+		case Types.BLOB:
+			return EdmSimpleTypeKind.Binary;
+		case Types.CHAR:
+			return EdmSimpleTypeKind.String;
+		case Types.CLOB:
+			return EdmSimpleTypeKind.String;
+		case Types.LONGVARBINARY:
+			return EdmSimpleTypeKind.Byte;
+		case Types.LONGVARCHAR:
+			return EdmSimpleTypeKind.String;	
+		case Types.LONGNVARCHAR:
+			return EdmSimpleTypeKind.String;	
+		case Types.NULL:
+			return EdmSimpleTypeKind.Null;	
+		case Types.REAL:
+			return EdmSimpleTypeKind.Decimal;	
+		case Types.SQLXML:
+			return EdmSimpleTypeKind.String;	
+		case Types.TIME:
+			return EdmSimpleTypeKind.Time;	
+		case Types.TIMESTAMP:
+			return EdmSimpleTypeKind.String;	
+		case Types.VARBINARY:
+			return EdmSimpleTypeKind.Binary;
+		default:
+			break;
+		}
 
-    private static Boolean isNullable(int nullable) {
-        
-        switch (nullable) {
-        case ResultSetMetaData.columnNoNulls:
-            return Boolean.FALSE;
-        case ResultSetMetaData.columnNullable:
-            return Boolean.TRUE;
-        case ResultSetMetaData.columnNullableUnknown:
-            return null;
+		return EdmSimpleTypeKind.String;
+	}
 
-        default:
-            break;
-        }
-        return null;
-    }
+	private Boolean isNullable(int nullable){
+		switch (nullable) {
 
-    private static FullQualifiedName getAssociationEntity(String table, String foreignTable) {
-        return new FullQualifiedName(NAMESPACE_DENODO, (table + "_" + foreignTable + "_" + foreignTable + "_" + table));
-    }
+		case ResultSetMetaData.columnNoNulls:
+			return false;
+		case ResultSetMetaData.columnNullable:
+			return true;
+		case ResultSetMetaData.columnNullableUnknown:
+			return null;
+
+		default:
+			break;
+		}
+		return null;
+	}
+	
+	private FullQualifiedName getAssociationEntity( String associationName){
+		return new FullQualifiedName(NAMESPACE_DENODO,
+				associationName);
+	}
+	
+	private FullQualifiedName getTypeEntity(String name,String namespace){
+		return new FullQualifiedName(namespace,
+				name);
+	}
+	
+	private void getAssociations() throws SQLException {
+		List<String> associationsName = metadataService.getAssociations();
+		for (String association : associationsName) {
+			AssociationMetadata associationMetadata = metadataService.getMetadataAssociation(association);
+			if(!this.asocciations.containsKey(associationMetadata.getLeftViewName())){
+				List<AssociationMetadata> associationsMetadata= new ArrayList<AssociationMetadata>();
+				associationsMetadata.add(associationMetadata);
+				this.asocciations.put(associationMetadata.getLeftViewName(),associationsMetadata );
+			}else{
+				List<AssociationMetadata> associationsMetadata=this.asocciations.get(associationMetadata.getLeftViewName());
+				associationsMetadata.add(associationMetadata);
+				this.asocciations.put(associationMetadata.getLeftViewName(),associationsMetadata );
+			}
+
+		}
+
+	}
 }

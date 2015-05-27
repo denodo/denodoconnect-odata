@@ -34,15 +34,15 @@ public class DenodoODataServiceFactory extends ODataServiceFactory {
 
 
 	@Autowired
-	private JDBCEdmProvider jDBCEdmProvider;	// Data accessors
+	private DenodoEdmProvider denodoEdmProvider;	// Data accessors
 	@Autowired
-	private JDBCODataSingleProcessor jDBCODataSingleProcessor;	
+	private DenodoDataSingleProcessor denodoDataSingleProcessor;	
   @Override
   public ODataService createService(final ODataContext ctx) throws ODataException {
 
    
 
 //    ODataSingleProcessor singleProcessor = new CarODataSingleProcessor();
-    return createODataSingleProcessorService(jDBCEdmProvider, jDBCODataSingleProcessor);
+    return createODataSingleProcessorService(denodoEdmProvider, denodoDataSingleProcessor);
   }
 }

@@ -45,7 +45,7 @@ import org.springframework.stereotype.Component;
 import com.denodo.connect.business.services.entity.EntityService;
 
 @Component
-public class JDBCODataSingleProcessor extends ODataSingleProcessor {
+public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
     @Autowired
     private DenodoDataStore dataStore;

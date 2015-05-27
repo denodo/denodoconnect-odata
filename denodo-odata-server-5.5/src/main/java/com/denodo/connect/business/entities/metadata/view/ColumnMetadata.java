@@ -1,16 +1,18 @@
 package com.denodo.connect.business.entities.metadata.view;
 
+import org.apache.olingo.odata2.api.edm.EdmSimpleTypeKind;
+
 public class ColumnMetadata {
 
 	
 	private String tableName;
 	private String columnName;
 	private Boolean isPrimaryKey;
-	private int dataType;
+	private EdmSimpleTypeKind dataType;
 	private int columnSize;
 	private int decimalDigits;
 	private int numPrecRadix;
-	private int nullable;
+	private Boolean nullable;
 	private String isAutoIncrement;
 	
 	
@@ -36,12 +38,7 @@ public class ColumnMetadata {
 	public void setIsPrimaryKey(Boolean isPrimaryKey) {
 		this.isPrimaryKey = isPrimaryKey;
 	}
-	public int getDataType() {
-		return dataType;
-	}
-	public void setDataType(int dataType) {
-		this.dataType = dataType;
-	}
+
 	public int getColumnSize() {
 		return columnSize;
 	}
@@ -67,23 +64,33 @@ public class ColumnMetadata {
 		this.isAutoIncrement = isAutoIncrement;
 	}
 
-	public int getNullable() {
+	public EdmSimpleTypeKind getDataType() {
+		return dataType;
+	}
+
+	public void setDataType(EdmSimpleTypeKind dataType) {
+		this.dataType = dataType;
+	}
+
+	public Boolean getNullable() {
 		return nullable;
 	}
 
-	public void setNullable(int nullable) {
+	public void setNullable(Boolean nullable) {
 		this.nullable = nullable;
 	}
 
 	@Override
 	public String toString() {
-		return "MetadataColumn [tableName=" + tableName + ", columnName="
+		return "ColumnMetadata [tableName=" + tableName + ", columnName="
 				+ columnName + ", isPrimaryKey=" + isPrimaryKey + ", dataType="
 				+ dataType + ", columnSize=" + columnSize + ", decimalDigits="
 				+ decimalDigits + ", numPrecRadix=" + numPrecRadix
 				+ ", nullable=" + nullable + ", isAutoIncrement="
 				+ isAutoIncrement + "]";
 	}
+
+	
 
 	
 	

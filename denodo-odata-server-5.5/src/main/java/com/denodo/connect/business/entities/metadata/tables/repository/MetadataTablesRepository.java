@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 
 import com.denodo.connect.business.entities.metadata.tables.MetadataTables;
 import com.denodo.connect.business.entities.metadata.view.ColumnMetadata;
+import com.denodo.connect.util.TypesUtils;
 
 
 
@@ -78,8 +79,8 @@ public class MetadataTablesRepository {
     			ColumnMetadata column= new ColumnMetadata();
     			column.setTableName(columns.getString("TABLE_NAME"));
     			column.setColumnName(columns.getString("COLUMN_NAME"));
-    			column.setDataType(columns.getInt("DATA_TYPE"));
-    			column.setNullable(columns.getInt("NULLABLE"));
+    			column.setDataType( TypesUtils.getTypeField(columns.getInt("DATA_TYPE")));
+    			column.setNullable( TypesUtils.isNullable(columns.getInt("NULLABLE")));
     			columnMetadatas.add(column);
 
     		}	

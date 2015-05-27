@@ -18,7 +18,6 @@ import org.springframework.stereotype.Repository;
 public class MetadataRepository {
 
 	@Autowired
-	@Qualifier("denodoTemplate")
 	JdbcTemplate denodoTemplate;
 
 
@@ -47,14 +46,14 @@ public class MetadataRepository {
 			@Override
 			public AssociationMetadata mapRow(ResultSet rs, int rowNum) throws SQLException {
 				AssociationMetadata associationMetadata= new AssociationMetadata();
-				associationMetadata.setAssociationName("association_name");
-				associationMetadata.setAsocciationDescription("asocciation_description)");
-				associationMetadata.setLeftRole("left_role");
-				associationMetadata.setLeftViewName("left_view_name");
-				associationMetadata.setLeftMultiplicity("left_multiplicity");
-				associationMetadata.setRightRole("right_role");
-				associationMetadata.setRightViewName("right_view_name");
-				associationMetadata.setRightMultiplicity("right_multiplicity");
+				associationMetadata.setAssociationName(rs.getString("association_name"));
+				associationMetadata.setAsocciationDescription(rs.getString("association_description"));
+				associationMetadata.setLeftRole(rs.getString("left_role"));
+				associationMetadata.setLeftViewName(rs.getString("left_view_name"));
+				associationMetadata.setLeftMultiplicity(rs.getString("left_multiplicity"));
+				associationMetadata.setRightRole(rs.getString("right_role"));
+				associationMetadata.setRightViewName(rs.getString("right_view_name"));
+				associationMetadata.setRightMultiplicity(rs.getString("right_multiplicity"));
 				return associationMetadata;
 
 			}});

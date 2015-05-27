@@ -22,7 +22,6 @@ import com.denodo.connect.util.TypesUtils;
 public class MetadataTablesRepository {
 
     @Autowired
-    @Qualifier("denodoTemplate")
     JdbcTemplate denodoTemplate;
 
 

@@ -20,7 +20,6 @@ import org.springframework.stereotype.Repository;
 public class EntityRespository {
 
     @Autowired
-    @Qualifier("denodoTemplate")
     JdbcTemplate denodoTemplate;
 
     public List<Map<String, Object>> getEntitySet(final String entitySetName) throws SQLException {

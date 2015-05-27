@@ -18,9 +18,7 @@
  ******************************************************************************/
 package com.denodo.connect;
 
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -90,17 +88,18 @@ public class DenodoEdmProvider extends EdmProvider {
    
 	@Autowired
     private MetadataService metadataService; // Data accessors
-    public DenodoEdmProvider() {
+    
+    @Override
+    public List<Schema> getSchemas() throws ODataException {
+    
     	try {
     		getAssociations();
     	} catch (SQLException e) {
     		logger.error(e.getMessage());
     	}
-    }
-    @Override
-    public List<Schema> getSchemas() throws ODataException {
-        List<Schema> schemas = new ArrayList<Schema>();
 
+        List<Schema> schemas = new ArrayList<Schema>();
+     
         Schema schema2 = new Schema();
         schema2.setNamespace(NAMESPACE_DENODO);
         List<MetadataTables> metadataTables = new ArrayList<MetadataTables>();
@@ -173,12 +172,15 @@ public class DenodoEdmProvider extends EdmProvider {
 
             // Navigation Properties
             List<NavigationProperty> navigationProperties = new ArrayList<NavigationProperty>();
-           
-            for (AssociationMetadata associationMetadata : this.asocciations.get(edmFQName.getName())) {
-                navigationProperties.add(new NavigationProperty().setName(associationMetadata.getAssociationName())
-                        .setRelationship(getAssociationEntity(associationMetadata.getAssociationName()))
-                        .setFromRole(associationMetadata.getLeftRole())
-                        .setToRole(associationMetadata.getRightRole()));
+            if(this.asocciations!=null){
+            	if( this.asocciations.containsKey(edmFQName.getName())){
+            		for (AssociationMetadata associationMetadata : this.asocciations.get(edmFQName.getName())) {
+            			navigationProperties.add(new NavigationProperty().setName(associationMetadata.getAssociationName())
+            					.setRelationship(getAssociationEntity(associationMetadata.getAssociationName()))
+            					.setFromRole(associationMetadata.getLeftRole())
+            					.setToRole(associationMetadata.getRightRole()));
+            		}
+            	}
             }
 
             return new EntityType().setName(edmFQName.getName()).setProperties(properties).setKey(key)

@@ -288,13 +288,13 @@ public class DenodoEdmProvider extends EdmProvider {
 
 	@Override
 	public EntityContainerInfo getEntityContainerInfo(final String name) throws ODataException {
-		if (name == null || "ODataCarsEntityContainer".equals(name)) {
-			return new EntityContainerInfo().setName("ODataCarsEntityContainer").setDefaultEntityContainer(true);
-		}else{
-			return new EntityContainerInfo().setName("ODataDenodoEntityContainer").setDefaultEntityContainer(true);
-		}
+//		if (name == null || "ODataCarsEntityContainer".equals(name)) {
+//			return new EntityContainerInfo().setName("ODataCarsEntityContainer").setDefaultEntityContainer(true);
+//		}else{
+//			return new EntityContainerInfo().setName("ODataDenodoEntityContainer").setDefaultEntityContainer(true);
+//		}
 
-
+        return new EntityContainerInfo().setName(ENTITY_CONTAINER).setDefaultEntityContainer(true);
 	}
 
 	public  EntitySet getEntity(String nameSpace,String entityName){

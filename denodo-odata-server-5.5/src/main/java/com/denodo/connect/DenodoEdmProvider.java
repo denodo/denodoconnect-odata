@@ -21,8 +21,10 @@ package com.denodo.connect;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.edm.EdmMultiplicity;
@@ -74,16 +76,12 @@ public class DenodoEdmProvider extends EdmProvider {
 
     private static final FullQualifiedName ASSOCIATION_CAR_MANUFACTURER = new FullQualifiedName(NAMESPACE,
             "Car_Manufacturer_Manufacturer_Cars");
+   private static final String ENTITY_CONTAINER = "DenodoEntityContainer";
 
-    private static final String ROLE_1_1 = "Car_Manufacturer";
-    private static final String ROLE_1_2 = "Manufacturer_Cars";
-
-    private static final String ENTITY_CONTAINER = "DenodoEntityContainer";
-
-    private static final String ASSOCIATION_SET = "Cars_Manufacturers";
 
     private static final String FUNCTION_IMPORT = "NumberOfCars";
-    private Map<String,List<AssociationMetadata>> asocciations = new HashMap<String, List<AssociationMetadata>>();
+    private Map<String,List<AssociationMetadata>> associations = new HashMap<String, List<AssociationMetadata>>();
+    private Map<String,AssociationMetadata> associationsByName = new HashMap<String, AssociationMetadata>();
 	private static final Logger logger = Logger.getLogger(DenodoEdmProvider.class);
    
 	@Autowired
@@ -95,7 +93,7 @@ public class DenodoEdmProvider extends EdmProvider {
     	try {
     		getAssociations();
     	} catch (SQLException e) {
-    		logger.error(e.getMessage());
+    		logger.error(e);
     	}
 
         List<Schema> schemas = new ArrayList<Schema>();
@@ -125,7 +123,22 @@ public class DenodoEdmProvider extends EdmProvider {
         entityContainers2.add(entityContainer2);
         schema2.setEntityContainers(entityContainers2);
         List<AssociationSet> associationSets2 = new ArrayList<AssociationSet>();
-
+        List<Association> associations = new ArrayList<Association>();
+        Iterator<Entry<String, List<AssociationMetadata>>> association = this.associations.entrySet().iterator();
+        while (association.hasNext()) {
+        	Entry<String, List<AssociationMetadata>> e = association.next();
+        	List<AssociationMetadata> associationsMetadata= (List<AssociationMetadata>) e.getValue();
+        	for (AssociationMetadata assocMetadata : associationsMetadata) {
+        		 associationSets2.add(getAssociationSet(ENTITY_CONTAINER, getAssociationEntity(assocMetadata.getAssociationName()),
+                         assocMetadata.getLeftViewName(),assocMetadata.getLeftRole()));
+        			associations.add(getAssociation(getAssociationEntity(assocMetadata.getAssociationName())));
+			}
+        	
+        }
+        
+        
+        
+        schema2.setAssociations(associations);
         entityContainer2.setAssociationSets(associationSets2);
 
         List<FunctionImport> functionImports2 = new ArrayList<FunctionImport>();
@@ -172,9 +185,9 @@ public class DenodoEdmProvider extends EdmProvider {
 
             // Navigation Properties
             List<NavigationProperty> navigationProperties = new ArrayList<NavigationProperty>();
-            if(this.asocciations!=null){
-            	if( this.asocciations.containsKey(edmFQName.getName())){
-            		for (AssociationMetadata associationMetadata : this.asocciations.get(edmFQName.getName())) {
+            if(this.associations!=null){
+            	if( this.associations.containsKey(edmFQName.getName())){
+            		for (AssociationMetadata associationMetadata : this.associations.get(edmFQName.getName())) {
             			navigationProperties.add(new NavigationProperty().setName(associationMetadata.getAssociationName())
             					.setRelationship(getAssociationEntity(associationMetadata.getAssociationName()))
             					.setFromRole(associationMetadata.getLeftRole())
@@ -207,35 +220,23 @@ public class DenodoEdmProvider extends EdmProvider {
         return null;
     }
     @Override
-	public Association getAssociation(final FullQualifiedName edmFQName) throws ODataException {
-		if (NAMESPACE.equals(edmFQName.getNamespace())) {
-			if (ASSOCIATION_CAR_MANUFACTURER.getName().equals(edmFQName.getName())) {
-				return new Association().setName(ASSOCIATION_CAR_MANUFACTURER.getName())
-						.setEnd1(
-								new AssociationEnd().setType(ENTITY_TYPE_1_1).setRole(ROLE_1_1).setMultiplicity(EdmMultiplicity.MANY))
-								.setEnd2(
-										new AssociationEnd().setType(ENTITY_TYPE_1_2).setRole(ROLE_1_2).setMultiplicity(EdmMultiplicity.ONE));
-			}
-		}
-		if (NAMESPACE_DENODO.equals(edmFQName.getNamespace())) {
-			String associationName=edmFQName.getName();
-			List<AssociationMetadata> associationsMetadata= this.asocciations.get(associationName);
-			AssociationMetadata association= null;
+    public Association getAssociation(final FullQualifiedName edmFQName) throws ODataException {
 
-			for (AssociationMetadata associationMetadata : associationsMetadata) {
-				if(associationName.equals(associationMetadata.getAssociationName())){
+    	if (NAMESPACE_DENODO.equals(edmFQName.getNamespace())) {
+    		String associationName=edmFQName.getName();
+    		AssociationMetadata associationMetadata= this.associationsByName.get(associationName);
 
-					association= associationMetadata;
-				} 
-				return new Association().setName(edmFQName.getNamespace())
-						.setEnd1(
-								new AssociationEnd().setType(getTypeEntity(NAMESPACE_DENODO, associationMetadata.getLeftViewName())).setRole(association.getLeftRole()).setMultiplicity(EdmMultiplicity.MANY))
-								.setEnd2(
-										new AssociationEnd().setType(getTypeEntity(NAMESPACE_DENODO, associationMetadata.getRightViewName())).setRole(association.getRightRole()).setMultiplicity(EdmMultiplicity.ONE));
 
-			}
-		}
-		return null;
+    		return new Association().setName(edmFQName.getNamespace())
+    				.setEnd1(
+    						new AssociationEnd().setType(getTypeEntity(NAMESPACE_DENODO, associationMetadata.getLeftViewName())).setRole(associationMetadata.getLeftRole()).setMultiplicity(EdmMultiplicity.MANY))
+    						.setEnd2(
+    								new AssociationEnd().setType(getTypeEntity(NAMESPACE_DENODO, associationMetadata.getRightViewName())).setRole(associationMetadata.getRightRole()).setMultiplicity(EdmMultiplicity.ONE));
+    	}
+
+
+
+    	return null;
     }
 
 	@Override
@@ -256,12 +257,19 @@ public class DenodoEdmProvider extends EdmProvider {
 	public AssociationSet getAssociationSet(final String entityContainer, final FullQualifiedName association,
 			final String sourceEntitySetName, final String sourceEntitySetRole) throws ODataException {
 		if (ENTITY_CONTAINER.equals(entityContainer)) {
-			if (ASSOCIATION_CAR_MANUFACTURER.equals(association)) {
-				return new AssociationSet().setName(ASSOCIATION_SET)
-						.setAssociation(ASSOCIATION_CAR_MANUFACTURER)
-						.setEnd1(new AssociationSetEnd().setRole(ROLE_1_2).setEntitySet(ENTITY_SET_NAME_MANUFACTURERS))
-						.setEnd2(new AssociationSetEnd().setRole(ROLE_1_1).setEntitySet(ENTITY_SET_NAME_CARS));
+
+			try {
+				AssociationMetadata associationMetadata = metadataService.getMetadataAssociation(association.getName());
+				return new AssociationSet().setName(associationMetadata.getAssociationName())
+						.setAssociation(association)
+						.setEnd1(new AssociationSetEnd().setRole(associationMetadata.getLeftRole()).setEntitySet(associationMetadata.getLeftViewName()))
+						.setEnd2(new AssociationSetEnd().setRole(associationMetadata.getRightRole()).setEntitySet(associationMetadata.getRightViewName()));
+			} catch (SQLException e) {
+				logger.error(e);
 			}
+			
+			
+			
 		}
 		return null;
 	}
@@ -308,17 +316,20 @@ public class DenodoEdmProvider extends EdmProvider {
 	
 	private void getAssociations() throws SQLException {
 		List<String> associationsName = metadataService.getAssociations();
+		this.associations= new HashMap<String, List<AssociationMetadata>>();
+		this.associationsByName= new HashMap<String, AssociationMetadata>();
 		for (String association : associationsName) {
 			AssociationMetadata associationMetadata = metadataService.getMetadataAssociation(association);
-			if(!this.asocciations.containsKey(associationMetadata.getLeftViewName())){
+			if(!this.associations.containsKey(associationMetadata.getLeftViewName())){
 				List<AssociationMetadata> associationsMetadata= new ArrayList<AssociationMetadata>();
 				associationsMetadata.add(associationMetadata);
-				this.asocciations.put(associationMetadata.getLeftViewName(),associationsMetadata );
+				this.associations.put(associationMetadata.getLeftViewName(),associationsMetadata );
 			}else{
-				List<AssociationMetadata> associationsMetadata=this.asocciations.get(associationMetadata.getLeftViewName());
+				List<AssociationMetadata> associationsMetadata=this.associations.get(associationMetadata.getLeftViewName());
 				associationsMetadata.add(associationMetadata);
-				this.asocciations.put(associationMetadata.getLeftViewName(),associationsMetadata );
+				this.associations.put(associationMetadata.getLeftViewName(),associationsMetadata );
 			}
+			this.associationsByName.put(associationMetadata.getAssociationName(),associationMetadata);
 
 		}
 

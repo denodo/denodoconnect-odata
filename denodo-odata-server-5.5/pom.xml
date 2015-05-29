@@ -270,7 +270,7 @@
       <groupId>com.denodo.vdp</groupId>
       <artifactId>denodo-vdp-jdbcdriver</artifactId>
       <version>${version.denodovdpjdbcdriver}</version>
-      <scope>compile</scope>
+      <scope>runtime</scope>
     </dependency>
 
   </dependencies>

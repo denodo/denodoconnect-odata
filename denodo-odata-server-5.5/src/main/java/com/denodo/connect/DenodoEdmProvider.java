@@ -98,8 +98,8 @@ public class DenodoEdmProvider extends EdmProvider {
 
         List<Schema> schemas = new ArrayList<Schema>();
      
-        Schema schema2 = new Schema();
-        schema2.setNamespace(NAMESPACE_DENODO);
+        Schema schema = new Schema();
+        schema.setNamespace(NAMESPACE_DENODO);
         List<MetadataTables> metadataTables = new ArrayList<MetadataTables>();
         try {
             metadataTables = this.metadataService.getMetadataTables();
@@ -107,21 +107,21 @@ public class DenodoEdmProvider extends EdmProvider {
             e.printStackTrace();
         }
 
-        List<EntityType> entityTypes2 = new ArrayList<EntityType>();
+        List<EntityType> entityTypes = new ArrayList<EntityType>();
         for (MetadataTables table : metadataTables) {
-            entityTypes2.add(getEntityType(new FullQualifiedName(NAMESPACE_DENODO, table.getTableName())));
+            entityTypes.add(getEntityType(new FullQualifiedName(NAMESPACE_DENODO, table.getTableName())));
         }
-        schema2.setEntityTypes(entityTypes2);
-        List<EntityContainer> entityContainers2 = new ArrayList<EntityContainer>();
-        EntityContainer entityContainer2 = new EntityContainer();
-        entityContainer2.setName(ENTITY_CONTAINER).setDefaultEntityContainer(true);
-        List<EntitySet> entitySets2 = new ArrayList<EntitySet>();
+        schema.setEntityTypes(entityTypes);
+        List<EntityContainer> entityContainers = new ArrayList<EntityContainer>();
+        EntityContainer entityContainer = new EntityContainer();
+        entityContainer.setName(ENTITY_CONTAINER).setDefaultEntityContainer(true);
+        List<EntitySet> entitySets = new ArrayList<EntitySet>();
         for (MetadataTables table : metadataTables) {
-            entitySets2.add(getEntity(NAMESPACE_DENODO, table.getTableName()));
+            entitySets.add(getEntity(NAMESPACE_DENODO, table.getTableName()));
         }
-        entityContainer2.setEntitySets(entitySets2);
-        entityContainers2.add(entityContainer2);
-        schema2.setEntityContainers(entityContainers2);
+        entityContainer.setEntitySets(entitySets);
+        entityContainers.add(entityContainer);
+        schema.setEntityContainers(entityContainers);
         List<AssociationSet> associationSets2 = new ArrayList<AssociationSet>();
         List<Association> associations = new ArrayList<Association>();
         Iterator<Entry<String, List<AssociationMetadata>>> association = this.associations.entrySet().iterator();
@@ -138,13 +138,13 @@ public class DenodoEdmProvider extends EdmProvider {
         
         
         
-        schema2.setAssociations(associations);
-        entityContainer2.setAssociationSets(associationSets2);
+        schema.setAssociations(associations);
+        entityContainer.setAssociationSets(associationSets2);
 
         List<FunctionImport> functionImports2 = new ArrayList<FunctionImport>();
 
-        entityContainer2.setFunctionImports(functionImports2);
-        schemas.add(schema2);
+        entityContainer.setFunctionImports(functionImports2);
+        schemas.add(schema);
         return schemas;
     }
 

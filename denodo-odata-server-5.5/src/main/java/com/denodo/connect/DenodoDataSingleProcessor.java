@@ -62,7 +62,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             entitySet = uriInfo.getStartEntitySet();
 
             try {
-                List<Map<String, Object>> data = this.entityService.getEntitySet(entitySet.getName());
+                List<Map<String, Object>> data = this.entityService.getEntitySet(entitySet.getName(), uriInfo);
                 if (data != null && !data.isEmpty()) {
                     return EntityProvider.writeFeed(contentType, entitySet, data, 
                             EntityProviderWriteProperties.serviceRoot(getContext().getPathInfo().getServiceRoot()).build());

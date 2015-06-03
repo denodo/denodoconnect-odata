@@ -30,6 +30,7 @@ import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.edm.EdmMultiplicity;
 import org.apache.olingo.odata2.api.edm.EdmSimpleTypeKind;
 import org.apache.olingo.odata2.api.edm.FullQualifiedName;
+import org.apache.olingo.odata2.api.edm.provider.AnnotationAttribute;
 import org.apache.olingo.odata2.api.edm.provider.Association;
 import org.apache.olingo.odata2.api.edm.provider.AssociationEnd;
 import org.apache.olingo.odata2.api.edm.provider.AssociationSet;
@@ -43,6 +44,7 @@ import org.apache.olingo.odata2.api.edm.provider.EntityType;
 import org.apache.olingo.odata2.api.edm.provider.Facets;
 import org.apache.olingo.odata2.api.edm.provider.FunctionImport;
 import org.apache.olingo.odata2.api.edm.provider.Key;
+import org.apache.olingo.odata2.api.edm.provider.Mapping;
 import org.apache.olingo.odata2.api.edm.provider.NavigationProperty;
 import org.apache.olingo.odata2.api.edm.provider.Property;
 import org.apache.olingo.odata2.api.edm.provider.PropertyRef;
@@ -74,14 +76,14 @@ public class DenodoEdmProvider extends EdmProvider {
 
     private static final FullQualifiedName COMPLEX_TYPE = new FullQualifiedName(NAMESPACE, "Address");
 
-    private static final FullQualifiedName ASSOCIATION_CAR_MANUFACTURER = new FullQualifiedName(NAMESPACE,
-            "Car_Manufacturer_Manufacturer_Cars");
-   private static final String ENTITY_CONTAINER = "DenodoEntityContainer";
+    
+    private static final String ENTITY_CONTAINER = "DenodoEntityContainer";
 
 
     private static final String FUNCTION_IMPORT = "NumberOfCars";
-    private Map<String,List<AssociationMetadata>> associations = new HashMap<String, List<AssociationMetadata>>();
+    private Map<String,List<AssociationMetadata>> associationsByLeftEntity = new HashMap<String, List<AssociationMetadata>>();
     private Map<String,AssociationMetadata> associationsByName = new HashMap<String, AssociationMetadata>();
+    private Map<String,List<AssociationMetadata>> associationsByRightEntity = new HashMap<String, List<AssociationMetadata>>();
 	private static final Logger logger = Logger.getLogger(DenodoEdmProvider.class);
    
 	@Autowired
@@ -122,34 +124,37 @@ public class DenodoEdmProvider extends EdmProvider {
         entityContainer.setEntitySets(entitySets);
         entityContainers.add(entityContainer);
         schema.setEntityContainers(entityContainers);
-        List<AssociationSet> associationSets2 = new ArrayList<AssociationSet>();
+        List<AssociationSet> associationSets = new ArrayList<AssociationSet>();
         List<Association> associations = new ArrayList<Association>();
-        Iterator<Entry<String, List<AssociationMetadata>>> association = this.associations.entrySet().iterator();
+        Iterator<Entry<String, List<AssociationMetadata>>> association = this.associationsByLeftEntity.entrySet().iterator();
         while (association.hasNext()) {
         	Entry<String, List<AssociationMetadata>> e = association.next();
         	List<AssociationMetadata> associationsMetadata= (List<AssociationMetadata>) e.getValue();
         	for (AssociationMetadata assocMetadata : associationsMetadata) {
-        		 associationSets2.add(getAssociationSet(ENTITY_CONTAINER, getAssociationEntity(assocMetadata.getAssociationName()),
+        		 associationSets.add(getAssociationSet(ENTITY_CONTAINER, getAssociationEntity(assocMetadata.getAssociationName()),
                          assocMetadata.getLeftViewName(),assocMetadata.getLeftRole()));
         			associations.add(getAssociation(getAssociationEntity(assocMetadata.getAssociationName())));
 			}
         	
         }
         
-        
-        
         schema.setAssociations(associations);
-        entityContainer.setAssociationSets(associationSets2);
+        entityContainer.setAssociationSets(associationSets);
 
-        List<FunctionImport> functionImports2 = new ArrayList<FunctionImport>();
+        List<FunctionImport> functionImports = new ArrayList<FunctionImport>();
 
-        entityContainer.setFunctionImports(functionImports2);
+        entityContainer.setFunctionImports(functionImports);
         schemas.add(schema);
         return schemas;
     }
 
     @Override
     public EntityType getEntityType(final FullQualifiedName edmFQName) throws ODataException {
+    	try {
+    		getAssociations();
+    	} catch (SQLException e) {
+    		logger.error(e);
+    	}
         if (NAMESPACE_DENODO.equals(edmFQName.getNamespace())) {
             // Properties
             List<Property> properties = new ArrayList<Property>();
@@ -158,7 +163,7 @@ public class DenodoEdmProvider extends EdmProvider {
                 metadataviews = metadataService.getMetadataView(edmFQName.getName());
             } catch (SQLException e) {
 
-                e.printStackTrace();
+                logger.error(e);
             }
 
             for (ColumnMetadata metadataColumn : metadataviews) {
@@ -185,17 +190,32 @@ public class DenodoEdmProvider extends EdmProvider {
 
             // Navigation Properties
             List<NavigationProperty> navigationProperties = new ArrayList<NavigationProperty>();
-            if(this.associations!=null){
-            	if( this.associations.containsKey(edmFQName.getName())){
-            		for (AssociationMetadata associationMetadata : this.associations.get(edmFQName.getName())) {
-            			navigationProperties.add(new NavigationProperty().setName(associationMetadata.getAssociationName())
+            if(this.associationsByLeftEntity!=null){
+            	if( this.associationsByLeftEntity.containsKey(edmFQName.getName())){
+            		for (AssociationMetadata associationMetadata : this.associationsByLeftEntity.get(edmFQName.getName())) {
+            			String[] mappings = associationMetadata.getMappings().split("=");
+            			
+            			
+            			navigationProperties.add(new NavigationProperty().setName(associationMetadata.getRightViewName())
             					.setRelationship(getAssociationEntity(associationMetadata.getAssociationName()))
             					.setFromRole(associationMetadata.getLeftRole())
-            					.setToRole(associationMetadata.getRightRole()));
+            					.setToRole(associationMetadata.getRightRole())
+            					.setMapping(new Mapping().setInternalName(mappings[0]).setMediaResourceSourceKey(mappings[1])));
             		}
             	}
             }
-
+            if(this.associationsByRightEntity!=null){
+            	if( this.associationsByRightEntity.containsKey(edmFQName.getName())){
+            		for (AssociationMetadata associationMetadata : this.associationsByRightEntity.get(edmFQName.getName())) {
+            			String[] mappings = associationMetadata.getMappings().split("=");
+            			navigationProperties.add(new NavigationProperty().setName(associationMetadata.getLeftViewName())
+            					.setRelationship(getAssociationEntity(associationMetadata.getAssociationName()))
+            					.setFromRole(associationMetadata.getLeftRole())
+            					.setToRole(associationMetadata.getRightRole())
+            					.setMapping(new Mapping().setInternalName(mappings[1]).setMediaResourceSourceKey(mappings[0])));
+            		}
+            	}
+            }
             return new EntityType().setName(edmFQName.getName()).setProperties(properties).setKey(key)
                     .setNavigationProperties(navigationProperties);
 
@@ -225,13 +245,22 @@ public class DenodoEdmProvider extends EdmProvider {
     	if (NAMESPACE_DENODO.equals(edmFQName.getNamespace())) {
     		String associationName=edmFQName.getName();
     		AssociationMetadata associationMetadata= this.associationsByName.get(associationName);
-
-
-    		return new Association().setName(edmFQName.getNamespace())
+			String[] mappings = associationMetadata.getMappings().split("=");
+			
+		
+			List<AnnotationAttribute> annotationsAtributeLeft = new ArrayList<AnnotationAttribute>();
+			AnnotationAttribute leftProperty= new AnnotationAttribute().setName(mappings[0]);
+			annotationsAtributeLeft.add(leftProperty);
+		
+			List<AnnotationAttribute> annotationsAtributeRight = new ArrayList<AnnotationAttribute>();
+			AnnotationAttribute rightProperty= new AnnotationAttribute().setName(mappings[1]);
+			annotationsAtributeRight.add(rightProperty);
+			
+    		return new Association().setName(associationName)
     				.setEnd1(
-    						new AssociationEnd().setType(getTypeEntity(NAMESPACE_DENODO, associationMetadata.getLeftViewName())).setRole(associationMetadata.getLeftRole()).setMultiplicity(EdmMultiplicity.MANY))
+    						new AssociationEnd().setType(getTypeEntity( associationMetadata.getLeftViewName(),NAMESPACE_DENODO)).setRole(associationMetadata.getLeftRole()).setMultiplicity(EdmMultiplicity.MANY).setAnnotationAttributes(annotationsAtributeLeft))
     						.setEnd2(
-    								new AssociationEnd().setType(getTypeEntity(NAMESPACE_DENODO, associationMetadata.getRightViewName())).setRole(associationMetadata.getRightRole()).setMultiplicity(EdmMultiplicity.ONE));
+    								new AssociationEnd().setType(getTypeEntity(associationMetadata.getRightViewName(),NAMESPACE_DENODO)).setRole(associationMetadata.getRightRole()).setMultiplicity(EdmMultiplicity.ONE).setAnnotationAttributes(annotationsAtributeRight));
     	}
 
 
@@ -316,19 +345,29 @@ public class DenodoEdmProvider extends EdmProvider {
 	
 	private void getAssociations() throws SQLException {
 		List<String> associationsName = metadataService.getAssociations();
-		this.associations= new HashMap<String, List<AssociationMetadata>>();
+		this.associationsByLeftEntity= new HashMap<String, List<AssociationMetadata>>();
 		this.associationsByName= new HashMap<String, AssociationMetadata>();
 		for (String association : associationsName) {
 			AssociationMetadata associationMetadata = metadataService.getMetadataAssociation(association);
-			if(!this.associations.containsKey(associationMetadata.getLeftViewName())){
+			if(!this.associationsByLeftEntity.containsKey(associationMetadata.getLeftViewName())){
 				List<AssociationMetadata> associationsMetadata= new ArrayList<AssociationMetadata>();
 				associationsMetadata.add(associationMetadata);
-				this.associations.put(associationMetadata.getLeftViewName(),associationsMetadata );
+				this.associationsByLeftEntity.put(associationMetadata.getLeftViewName(),associationsMetadata );
 			}else{
-				List<AssociationMetadata> associationsMetadata=this.associations.get(associationMetadata.getLeftViewName());
+				List<AssociationMetadata> associationsMetadata=this.associationsByLeftEntity.get(associationMetadata.getLeftViewName());
 				associationsMetadata.add(associationMetadata);
-				this.associations.put(associationMetadata.getLeftViewName(),associationsMetadata );
+				this.associationsByLeftEntity.put(associationMetadata.getLeftViewName(),associationsMetadata );
 			}
+			if(!this.associationsByRightEntity.containsKey(associationMetadata.getRightViewName())){
+				List<AssociationMetadata> associationsMetadata= new ArrayList<AssociationMetadata>();
+				associationsMetadata.add(associationMetadata);
+				this.associationsByRightEntity.put(associationMetadata.getRightViewName(),associationsMetadata );
+			}else{
+				List<AssociationMetadata> associationsMetadata=this.associationsByRightEntity.get(associationMetadata.getRightViewName());
+				associationsMetadata.add(associationMetadata);
+				this.associationsByRightEntity.put(associationMetadata.getRightViewName(),associationsMetadata );
+			}
+			
 			this.associationsByName.put(associationMetadata.getAssociationName(),associationMetadata);
 
 		}

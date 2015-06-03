@@ -28,6 +28,7 @@ import org.apache.olingo.odata2.api.edm.EdmEntitySet;
 import org.apache.olingo.odata2.api.edm.EdmLiteralKind;
 import org.apache.olingo.odata2.api.edm.EdmProperty;
 import org.apache.olingo.odata2.api.edm.EdmSimpleType;
+import org.apache.olingo.odata2.api.edm.provider.NavigationProperty;
 import org.apache.olingo.odata2.api.ep.EntityProvider;
 import org.apache.olingo.odata2.api.ep.EntityProviderWriteProperties;
 import org.apache.olingo.odata2.api.ep.EntityProviderWriteProperties.ODataEntityProviderPropertiesBuilder;
@@ -128,24 +129,26 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
 
         } else if (uriInfo.getNavigationSegments().size() == 1) {
-            // I think that this case is for relationships
-            // navigation first level, simplified example for illustration
-            // purposes only
-//            EdmEntitySet entitySet = uriInfo.getTargetEntitySet();
-//
-//            Map<String, Object> data = null;
-//
-//            if (ENTITY_SET_NAME_MANUFACTURERS.equals(entitySet.getName())) {
+//             I think that this case is for relationships
+//             navigation first level, simplified example for illustration
+//             purposes only
+        	NavigationProperty navigationProperty = (NavigationProperty) uriInfo.getNavigationSegments().get(0).getNavigationProperty();
+        	//TODO
+        	EdmEntitySet entitySet = uriInfo.getTargetEntitySet();
+
+            Map<String, Object> data = null;
+
+      
 //                int carKey = getKeyValue(uriInfo.getKeyPredicates().get(0));
 //                data = dataStore.getManufacturerFor(carKey);
-//            }
+//            
 //
 //            if (data != null) {
 //                return EntityProvider.writeEntry(contentType, uriInfo.getTargetEntitySet(), data, EntityProviderWriteProperties
 //                        .serviceRoot(getContext().getPathInfo().getServiceRoot()).build());
 //            }
-//
-//            throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
+
+            throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
         }
 
         throw new ODataNotImplementedException();

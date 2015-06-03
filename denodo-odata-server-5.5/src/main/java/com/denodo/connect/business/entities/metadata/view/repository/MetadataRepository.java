@@ -54,6 +54,7 @@ public class MetadataRepository {
 				associationMetadata.setRightRole(rs.getString("right_role"));
 				associationMetadata.setRightViewName(rs.getString("right_view_name"));
 				associationMetadata.setRightMultiplicity(rs.getString("right_multiplicity"));
+				associationMetadata.setMappings(rs.getString("mappings"));
 				return associationMetadata;
 
 			}});

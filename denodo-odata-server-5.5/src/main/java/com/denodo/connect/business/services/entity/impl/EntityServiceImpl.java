@@ -4,6 +4,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.olingo.odata2.api.uri.NavigationSegment;
 import org.apache.olingo.odata2.api.uri.expression.FilterExpression;
 import org.apache.olingo.odata2.api.uri.expression.OrderByExpression;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetUriInfo;
@@ -53,4 +54,13 @@ public class EntityServiceImpl implements EntityService{
     public  Map<String, Object> getEntity(final String entityName, final Map<String, Object> keys) throws SQLException {
         return this.entityRespository.getEntity(entityName, keys);
     }
+
+	@Override
+	public Map<String, Object> getEntitySetAssociation(String entityName,
+			Map<String, Object> keys,
+			List<NavigationSegment> navigationSegments, String tableTarget)
+			throws SQLException {
+
+		  return this.entityRespository.getEntityByAssociation(entityName, keys,navigationSegments,tableTarget);
+	}
 }

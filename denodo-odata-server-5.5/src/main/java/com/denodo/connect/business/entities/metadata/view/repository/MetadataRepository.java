@@ -6,6 +6,8 @@ import java.util.List;
 
 import com.denodo.connect.business.entities.metadata.view.AssociationMetadata;
 import com.denodo.connect.business.entities.metadata.view.ColumnMetadata;
+import com.denodo.connect.util.TypesUtils;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -50,10 +52,10 @@ public class MetadataRepository {
 				associationMetadata.setAsocciationDescription(rs.getString("association_description"));
 				associationMetadata.setLeftRole(rs.getString("left_role"));
 				associationMetadata.setLeftViewName(rs.getString("left_view_name"));
-				associationMetadata.setLeftMultiplicity(rs.getString("left_multiplicity"));
+				associationMetadata.setLeftMultiplicity(TypesUtils.getMultiplicity(rs.getString("left_multiplicity")));
 				associationMetadata.setRightRole(rs.getString("right_role"));
 				associationMetadata.setRightViewName(rs.getString("right_view_name"));
-				associationMetadata.setRightMultiplicity(rs.getString("right_multiplicity"));
+				associationMetadata.setRightMultiplicity(TypesUtils.getMultiplicity(rs.getString("right_multiplicity")));
 				associationMetadata.setMappings(rs.getString("mappings"));
 				return associationMetadata;
 

@@ -3,6 +3,7 @@ package com.denodo.connect.util;
 import java.sql.ResultSetMetaData;
 import java.sql.Types;
 
+import org.apache.olingo.odata2.api.edm.EdmMultiplicity;
 import org.apache.olingo.odata2.api.edm.EdmSimpleTypeKind;
 
 public final class TypesUtils {
@@ -79,6 +80,25 @@ public final class TypesUtils {
 		default:
 			break;
 		}
+		return null;
+	}
+	public static EdmMultiplicity getMultiplicity(String multiplicity){
+		if(multiplicity.equals("1")){
+			return EdmMultiplicity.ONE;
+
+		}
+		else if(multiplicity.equals("0,*")){
+			return EdmMultiplicity.MANY;
+
+		}
+		else if(multiplicity.equals("0,1")){
+			return EdmMultiplicity.ZERO_TO_ONE;
+		}
+		else if(multiplicity.equals("+")){
+			return EdmMultiplicity.MANY;
+		}
+			
+	
 		return null;
 	}
 }

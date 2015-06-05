@@ -1,14 +1,16 @@
 package com.denodo.connect.business.entities.metadata.view;
 
+import org.apache.olingo.odata2.api.edm.EdmMultiplicity;
+
 public class AssociationMetadata {
 
 	private String AssociationName;
 	private String leftRole;
 	private String leftViewName;
-	private String leftMultiplicity;
+	private EdmMultiplicity leftMultiplicity;
 	private String rightRole;
 	private String rightViewName;
-	private String rightMultiplicity;
+	private EdmMultiplicity rightMultiplicity;
 	private String mappings;
 	private String asocciationDescription;
 	private Boolean valid;
@@ -39,13 +41,24 @@ public class AssociationMetadata {
 	}
 
 
-	public String getLeftMultiplicity() {
+	
+	public EdmMultiplicity getLeftMultiplicity() {
 		return leftMultiplicity;
 	}
 
 
-	public void setLeftMultiplicity(String leftMultiplicity) {
+	public void setLeftMultiplicity(EdmMultiplicity leftMultiplicity) {
 		this.leftMultiplicity = leftMultiplicity;
+	}
+
+
+	public EdmMultiplicity getRightMultiplicity() {
+		return rightMultiplicity;
+	}
+
+
+	public void setRightMultiplicity(EdmMultiplicity rightMultiplicity) {
+		this.rightMultiplicity = rightMultiplicity;
 	}
 
 
@@ -109,25 +122,20 @@ public class AssociationMetadata {
 	}
 
 
-	public String getRightMultiplicity() {
-		return rightMultiplicity;
-	}
-
-
-	public void setRightMultiplicity(String rightMultiplicity) {
-		this.rightMultiplicity = rightMultiplicity;
-	}
-
-
 	@Override
 	public String toString() {
 		return "AssociationMetadata [AssociationName=" + AssociationName
 				+ ", leftRole=" + leftRole + ", leftViewName=" + leftViewName
-				+ ", leftMultiplicity=" + leftMultiplicity + ", rightRole="
+				+ ", leftMultiplicity=" + leftMultiplicity.toString() + ", rightRole="
 				+ rightRole + ", rightViewName=" + rightViewName
-				+ ", mappings=" + mappings + ", asocciationDescription="
+				+ ", rightMultiplicity=" + rightMultiplicity.toString() + ", mappings="
+				+ mappings + ", asocciationDescription="
 				+ asocciationDescription + ", valid=" + valid + "]";
 	}
+
+
+
+
 	
 
 	

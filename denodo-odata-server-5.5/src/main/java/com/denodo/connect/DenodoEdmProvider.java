@@ -63,18 +63,14 @@ import com.denodo.connect.business.services.metadata.MetadataService;
 @Component
 public class DenodoEdmProvider extends EdmProvider {
 
-    static final String ENTITY_SET_NAME_MANUFACTURERS = "Manufacturers";
-    static final String ENTITY_SET_NAME_CARS = "Cars";
-    static final String ENTITY_NAME_MANUFACTURER = "Manufacturer";
-    static final String ENTITY_NAME_CAR = "Car";
 
-    private static final String NAMESPACE = "org.apache.olingo.odata2.ODataCars";
+
+
     private static final String NAMESPACE_DENODO = "org.apache.olingo.odata2.denodo";
 
-    private static final FullQualifiedName ENTITY_TYPE_1_1 = new FullQualifiedName(NAMESPACE, ENTITY_NAME_CAR);
-    private static final FullQualifiedName ENTITY_TYPE_1_2 = new FullQualifiedName(NAMESPACE, ENTITY_NAME_MANUFACTURER);
 
-    private static final FullQualifiedName COMPLEX_TYPE = new FullQualifiedName(NAMESPACE, "Address");
+
+//    private static final FullQualifiedName COMPLEX_TYPE = new FullQualifiedName(NAMESPACE, "Address");
 
     
     private static final String ENTITY_CONTAINER = "DenodoEntityContainer";
@@ -106,7 +102,7 @@ public class DenodoEdmProvider extends EdmProvider {
         try {
             metadataTables = this.metadataService.getMetadataTables();
         } catch (SQLException e) {
-            e.printStackTrace();
+        	logger.error(e);
         }
 
         List<EntityType> entityTypes = new ArrayList<EntityType>();
@@ -210,8 +206,8 @@ public class DenodoEdmProvider extends EdmProvider {
             			String[] mappings = associationMetadata.getMappings().split("=");
             			navigationProperties.add(new NavigationProperty().setName(associationMetadata.getLeftViewName())
             					.setRelationship(getAssociationEntity(associationMetadata.getAssociationName()))
-            					.setFromRole(associationMetadata.getLeftRole())
-            					.setToRole(associationMetadata.getRightRole())
+            					.setFromRole(associationMetadata.getRightRole())
+            					.setToRole(associationMetadata.getLeftRole())
             					.setMapping(new Mapping().setInternalName(mappings[1]).setMediaResourceSourceKey(mappings[0])));
             		}
             	}
@@ -223,44 +219,35 @@ public class DenodoEdmProvider extends EdmProvider {
 
         return null;
     }
-
-    @Override
-    public ComplexType getComplexType(final FullQualifiedName edmFQName) throws ODataException {
-        if (NAMESPACE.equals(edmFQName.getNamespace())) {
-            if (COMPLEX_TYPE.getName().equals(edmFQName.getName())) {
-                List<Property> properties = new ArrayList<Property>();
-                properties.add(new SimpleProperty().setName("Street").setType(EdmSimpleTypeKind.String));
-                properties.add(new SimpleProperty().setName("City").setType(EdmSimpleTypeKind.String));
-                properties.add(new SimpleProperty().setName("ZipCode").setType(EdmSimpleTypeKind.String));
-                properties.add(new SimpleProperty().setName("Country").setType(EdmSimpleTypeKind.String));
-                return new ComplexType().setName(COMPLEX_TYPE.getName()).setProperties(properties);
-            }
-        }
-
-        return null;
-    }
+//
+//    @Override
+//    public ComplexType getComplexType(final FullQualifiedName edmFQName) throws ODataException {
+//        if (NAMESPACE.equals(edmFQName.getNamespace())) {
+//            if (COMPLEX_TYPE.getName().equals(edmFQName.getName())) {
+//                List<Property> properties = new ArrayList<Property>();
+//                properties.add(new SimpleProperty().setName("Street").setType(EdmSimpleTypeKind.String));
+//                properties.add(new SimpleProperty().setName("City").setType(EdmSimpleTypeKind.String));
+//                properties.add(new SimpleProperty().setName("ZipCode").setType(EdmSimpleTypeKind.String));
+//                properties.add(new SimpleProperty().setName("Country").setType(EdmSimpleTypeKind.String));
+//                return new ComplexType().setName(COMPLEX_TYPE.getName()).setProperties(properties);
+//            }
+//        }
+//
+//        return null;
+//    }
     @Override
     public Association getAssociation(final FullQualifiedName edmFQName) throws ODataException {
 
     	if (NAMESPACE_DENODO.equals(edmFQName.getNamespace())) {
     		String associationName=edmFQName.getName();
-    		AssociationMetadata associationMetadata= this.associationsByName.get(associationName);
-			String[] mappings = associationMetadata.getMappings().split("=");
-			
-		
-			List<AnnotationAttribute> annotationsAtributeLeft = new ArrayList<AnnotationAttribute>();
-			AnnotationAttribute leftProperty= new AnnotationAttribute().setName(mappings[0]);
-			annotationsAtributeLeft.add(leftProperty);
-		
-			List<AnnotationAttribute> annotationsAtributeRight = new ArrayList<AnnotationAttribute>();
-			AnnotationAttribute rightProperty= new AnnotationAttribute().setName(mappings[1]);
-			annotationsAtributeRight.add(rightProperty);
-			
+    		AssociationMetadata associationMetadata= this.associationsByName.get(associationName);	
     		return new Association().setName(associationName)
     				.setEnd1(
-    						new AssociationEnd().setType(getTypeEntity( associationMetadata.getLeftViewName(),NAMESPACE_DENODO)).setRole(associationMetadata.getLeftRole()).setMultiplicity(EdmMultiplicity.MANY).setAnnotationAttributes(annotationsAtributeLeft))
+    						new AssociationEnd().setType(getTypeEntity( associationMetadata.getLeftViewName(),NAMESPACE_DENODO)).
+    						setRole(associationMetadata.getLeftRole()).setMultiplicity(associationMetadata.getLeftMultiplicity()))
     						.setEnd2(
-    								new AssociationEnd().setType(getTypeEntity(associationMetadata.getRightViewName(),NAMESPACE_DENODO)).setRole(associationMetadata.getRightRole()).setMultiplicity(EdmMultiplicity.ONE).setAnnotationAttributes(annotationsAtributeRight));
+    								new AssociationEnd().setType(getTypeEntity(associationMetadata.getRightViewName(),NAMESPACE_DENODO)).
+    								setRole(associationMetadata.getRightRole()).setMultiplicity(associationMetadata.getRightMultiplicity()));
     	}
 
 
@@ -268,19 +255,13 @@ public class DenodoEdmProvider extends EdmProvider {
     	return null;
     }
 
-	@Override
-	public EntitySet getEntitySet(final String entityContainer, final String name) throws ODataException {
-		if (ENTITY_CONTAINER.equals(entityContainer)) {
-			if (ENTITY_SET_NAME_CARS.equals(name)) {
-				return new EntitySet().setName(name).setEntityType(ENTITY_TYPE_1_1);
-			} else if (ENTITY_SET_NAME_MANUFACTURERS.equals(name)) {
-				return new EntitySet().setName(name).setEntityType(ENTITY_TYPE_1_2);
-			}else{
-				return getEntity(NAMESPACE_DENODO, name);
-			}
-		}
-		return null;
-	}
+    @Override
+    public EntitySet getEntitySet(final String entityContainer, final String name) throws ODataException {
+    	if (ENTITY_CONTAINER.equals(entityContainer)) {
+    		return getEntity(NAMESPACE_DENODO, name);			
+    	}
+    	return null;
+    }
 
 	@Override
 	public AssociationSet getAssociationSet(final String entityContainer, final FullQualifiedName association,
@@ -296,33 +277,25 @@ public class DenodoEdmProvider extends EdmProvider {
 			} catch (SQLException e) {
 				logger.error(e);
 			}
-			
-			
-			
+						
 		}
 		return null;
 	}
 
-	@Override
-	public FunctionImport getFunctionImport(final String entityContainer, final String name) throws ODataException {
-		if (ENTITY_CONTAINER.equals(entityContainer)) {
-			if (FUNCTION_IMPORT.equals(name)) {
-				return new FunctionImport().setName(name)
-						.setReturnType(new ReturnType().setTypeName(ENTITY_TYPE_1_1).setMultiplicity(EdmMultiplicity.MANY))
-						.setHttpMethod("GET");
-			}
-		}
-		return null;
-	}
+//	@Override
+//	public FunctionImport getFunctionImport(final String entityContainer, final String name) throws ODataException {
+//		if (ENTITY_CONTAINER.equals(entityContainer)) {
+//			if (FUNCTION_IMPORT.equals(name)) {
+//				return new FunctionImport().setName(name)
+//						.setReturnType(new ReturnType().setTypeName(ENTITY_TYPE_1_1).setMultiplicity(EdmMultiplicity.MANY))
+//						.setHttpMethod("GET");
+//			}
+//		}
+//		return null;
+//	}
 
 	@Override
 	public EntityContainerInfo getEntityContainerInfo(final String name) throws ODataException {
-//		if (name == null || "ODataCarsEntityContainer".equals(name)) {
-//			return new EntityContainerInfo().setName("ODataCarsEntityContainer").setDefaultEntityContainer(true);
-//		}else{
-//			return new EntityContainerInfo().setName("ODataDenodoEntityContainer").setDefaultEntityContainer(true);
-//		}
-
         return new EntityContainerInfo().setName(ENTITY_CONTAINER).setDefaultEntityContainer(true);
 	}
 
@@ -346,6 +319,7 @@ public class DenodoEdmProvider extends EdmProvider {
 	private void getAssociations() throws SQLException {
 		List<String> associationsName = metadataService.getAssociations();
 		this.associationsByLeftEntity= new HashMap<String, List<AssociationMetadata>>();
+		this.associationsByRightEntity= new HashMap<String, List<AssociationMetadata>>();
 		this.associationsByName= new HashMap<String, AssociationMetadata>();
 		for (String association : associationsName) {
 			AssociationMetadata associationMetadata = metadataService.getMetadataAssociation(association);

@@ -30,7 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import com.denodo.connect.business.services.metadata.MetadataService;
 
 public class DenodoODataServiceFactory extends ODataServiceFactory {
-	private static final Logger logger = Logger.getLogger(DenodoDataStore.class);
+	private static final Logger logger = Logger.getLogger(DenodoODataServiceFactory.class);
 
 
 	@Autowired

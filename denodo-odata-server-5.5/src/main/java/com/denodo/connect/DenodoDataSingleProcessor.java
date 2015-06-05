@@ -29,7 +29,6 @@ import org.apache.olingo.odata2.api.edm.EdmEntitySet;
 import org.apache.olingo.odata2.api.edm.EdmLiteralKind;
 import org.apache.olingo.odata2.api.edm.EdmProperty;
 import org.apache.olingo.odata2.api.edm.EdmSimpleType;
-import org.apache.olingo.odata2.api.edm.provider.NavigationProperty;
 import org.apache.olingo.odata2.api.ep.EntityProvider;
 import org.apache.olingo.odata2.api.ep.EntityProviderWriteProperties;
 import org.apache.olingo.odata2.api.ep.EntityProviderWriteProperties.ODataEntityProviderPropertiesBuilder;
@@ -38,10 +37,13 @@ import org.apache.olingo.odata2.api.exception.ODataNotFoundException;
 import org.apache.olingo.odata2.api.exception.ODataNotImplementedException;
 import org.apache.olingo.odata2.api.processor.ODataResponse;
 import org.apache.olingo.odata2.api.processor.ODataSingleProcessor;
+import org.apache.olingo.odata2.api.processor.part.EntitySimplePropertyProcessor;
+import org.apache.olingo.odata2.api.processor.part.EntitySimplePropertyValueProcessor;
 import org.apache.olingo.odata2.api.uri.KeyPredicate;
 import org.apache.olingo.odata2.api.uri.NavigationSegment;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntityUriInfo;
+import org.apache.olingo.odata2.api.uri.info.GetSimplePropertyUriInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -52,8 +54,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
 	private static final Logger logger = Logger.getLogger(DenodoDataSingleProcessor.class);
 	
-    @Autowired
-    private DenodoDataStore dataStore;
+
 
     @Autowired
     private EntityService entityService;
@@ -173,5 +174,23 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             keys.put(property.getName(), value);
         }
         return keys;
+    }
+
+    /**
+     * @see EntitySimplePropertyValueProcessor
+     */
+    @Override
+    public ODataResponse readEntitySimplePropertyValue(final GetSimplePropertyUriInfo uriInfo, final String contentType)
+        throws ODataException {
+      throw new ODataNotImplementedException();
+    }
+
+    /**
+     * @see EntitySimplePropertyProcessor
+     */
+    @Override
+    public ODataResponse readEntitySimpleProperty(final GetSimplePropertyUriInfo uriInfo, final String contentType)
+        throws ODataException {
+      throw new ODataNotImplementedException();
     }
 }

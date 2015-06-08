@@ -42,6 +42,12 @@ public class EntityRepository {
 
         return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget).get(0);
     }
+    
+    public List<Map<String, Object>> getEntitySetByAssociation(final String entityName, final Map<String, Object> keys,
+            List<NavigationSegment> navigationSegments, String tableTarget) throws SQLException {
+
+        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget);
+    }
 
     private List<Map<String, Object>> getEntityData(final String entityName, final Map<String, Object> keys,
             final String orderByExpression, final Integer top, final Integer skip, final String filterExpression,

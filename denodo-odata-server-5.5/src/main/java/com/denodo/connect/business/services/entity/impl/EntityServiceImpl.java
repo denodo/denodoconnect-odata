@@ -81,7 +81,16 @@ public class EntityServiceImpl implements EntityService {
     }
 
 	@Override
-	public Map<String, Object> getEntitySetAssociation(String entityName,
+	public List<Map<String, Object>> getEntitySetAssociation(String entityName,
+			Map<String, Object> keys,
+			List<NavigationSegment> navigationSegments, String tableTarget)
+			throws SQLException {
+
+		  return this.entityRepository.getEntitySetByAssociation(entityName, keys,navigationSegments,tableTarget);
+	}
+	
+	@Override
+	public Map<String, Object> getEntityAssociation(String entityName,
 			Map<String, Object> keys,
 			List<NavigationSegment> navigationSegments, String tableTarget)
 			throws SQLException {

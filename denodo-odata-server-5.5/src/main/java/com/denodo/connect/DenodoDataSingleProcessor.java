@@ -92,12 +92,10 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
          
                try {
-                   Map<String, Object> data = this.entityService.getEntitySetAssociation(entitySetStart.getName(), keys, navigationSegments, entitySetTarget.getName());
+                   List<Map<String, Object>> data = this.entityService.getEntitySetAssociation(entitySetStart.getName(), keys, navigationSegments, entitySetTarget.getName());
                    if (data != null && !data.isEmpty()) {
-                       URI serviceRoot = getContext().getPathInfo().getServiceRoot();
-                       ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
-
-                       return EntityProvider.writeEntry(contentType, entitySetTarget, data, propertiesBuilder.build());
+                	   return EntityProvider.writeFeed(contentType, entitySetTarget, data, 
+                               EntityProviderWriteProperties.serviceRoot(getContext().getPathInfo().getServiceRoot()).build());
                    }
                } catch (SQLException e) {
             	   logger.error(e);
@@ -142,7 +140,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
       
             try {
-                Map<String, Object> data = this.entityService.getEntitySetAssociation(entitySetStart.getName(), keys, navigationSegments, entitySetTarget.getName());
+                Map<String, Object> data = this.entityService.getEntityAssociation(entitySetStart.getName(), keys, navigationSegments, entitySetTarget.getName());
                 if (data != null && !data.isEmpty()) {
                     URI serviceRoot = getContext().getPathInfo().getServiceRoot();
                     ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
@@ -182,6 +180,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
     @Override
     public ODataResponse readEntitySimplePropertyValue(final GetSimplePropertyUriInfo uriInfo, final String contentType)
         throws ODataException {
+    	//TODO example customer(5)/address(1)/address_id/$value
       throw new ODataNotImplementedException();
     }
 
@@ -191,6 +190,51 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
     @Override
     public ODataResponse readEntitySimpleProperty(final GetSimplePropertyUriInfo uriInfo, final String contentType)
         throws ODataException {
+
+    	   if (uriInfo.getNavigationSegments().size() == 0) {
+               EdmEntitySet entitySet = uriInfo.getStartEntitySet();
+               EdmEntitySet entitySetTarget =uriInfo.getTargetEntitySet();
+               List<EdmProperty> properties = uriInfo.getPropertyPath();
+               Map<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+               try {
+                   Map<String, Object> data = this.entityService.getEntity(entitySet.getName(), keys);
+                   if (data != null && !data.isEmpty()) {
+                       URI serviceRoot = getContext().getPathInfo().getServiceRoot();
+                       ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
+
+                       return EntityProvider.writeEntry(contentType, entitySetTarget, data, propertiesBuilder.build());
+                   }
+               } catch (SQLException e) {
+               	logger.error(e);
+               }
+
+               throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
+
+           } else if (uriInfo.getNavigationSegments().size() >= 1) {
+//                I think that this case is for relationships
+//                navigation first level, simplified example for illustration
+//                purposes only
+               Map<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+           	List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
+           	EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
+           	EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
+
+         
+               try {
+                   List<Map<String, Object>> data = this.entityService.getEntitySetAssociation(entitySetStart.getName(), keys, navigationSegments, entitySetTarget.getName());
+                   if (data != null && !data.isEmpty()) {
+                       URI serviceRoot = getContext().getPathInfo().getServiceRoot();
+                       ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
+
+                       return EntityProvider.writeFeed(contentType, entitySetTarget, data, propertiesBuilder.build());
+                   }
+               } catch (SQLException e) {
+               	logger.error(e);
+               }
+
+               throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
+           }
+      
       throw new ODataNotImplementedException();
     }
 }

@@ -22,11 +22,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class EntityRespository {
+public class EntityRepository {
 
     @Autowired
     JdbcTemplate denodoTemplate;
-    private static final Logger logger = Logger.getLogger(EntityRespository.class);
+    private static final Logger logger = Logger.getLogger(EntityRepository.class);
 
     public List<Map<String, Object>> getEntitySet(final String entitySetName, final String orderByExpressionString, final Integer top,
             final Integer skip, final String filterExpression, final List<String> selectedItems) throws SQLException {

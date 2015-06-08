@@ -15,14 +15,14 @@ import org.apache.olingo.odata2.api.uri.info.GetEntitySetUriInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.denodo.connect.business.entities.entityset.repository.EntityRespository;
+import com.denodo.connect.business.entities.entityset.repository.EntityRepository;
 import com.denodo.connect.business.services.entity.EntityService;
 
 @Service
 public class EntityServiceImpl implements EntityService {
 
     @Autowired
-    EntityRespository entityRespository;
+    EntityRepository entityRepository;
 
     public EntityServiceImpl() {
         super();
@@ -55,7 +55,7 @@ public class EntityServiceImpl implements EntityService {
         List<SelectItem> selectedItems = uriInfo.getSelect();
         List<String> selectedItemsAsString = getSelectOptionValues(selectedItems);
 
-        return this.entityRespository.getEntitySet(entitySetName, orderByExpressionString, top, skip, filterExpressionString,
+        return this.entityRepository.getEntitySet(entitySetName, orderByExpressionString, top, skip, filterExpressionString,
                 selectedItemsAsString);
     }
 
@@ -77,7 +77,7 @@ public class EntityServiceImpl implements EntityService {
     
     @Override
     public Map<String, Object> getEntity(final String entityName, final Map<String, Object> keys) throws SQLException {
-        return this.entityRespository.getEntity(entityName, keys);
+        return this.entityRepository.getEntity(entityName, keys);
     }
 
 	@Override
@@ -86,6 +86,6 @@ public class EntityServiceImpl implements EntityService {
 			List<NavigationSegment> navigationSegments, String tableTarget)
 			throws SQLException {
 
-		  return this.entityRespository.getEntityByAssociation(entityName, keys,navigationSegments,tableTarget);
+		  return this.entityRepository.getEntityByAssociation(entityName, keys,navigationSegments,tableTarget);
 	}
 }

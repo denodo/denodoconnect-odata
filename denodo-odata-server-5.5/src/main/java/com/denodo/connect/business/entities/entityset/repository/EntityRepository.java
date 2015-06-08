@@ -30,20 +30,23 @@ public class EntityRepository {
 
     public List<Map<String, Object>> getEntitySet(final String entitySetName, final String orderByExpressionString, final Integer top,
             final Integer skip, final String filterExpression, final List<String> selectedItems) throws SQLException {
-        return getEntityData(entitySetName, null, orderByExpressionString, top, skip, filterExpression,selectedItems,null,null);
+        return getEntityData(entitySetName, null, orderByExpressionString, top, skip, filterExpression, selectedItems, null, null);
     }
 
     public Map<String, Object> getEntity(final String entityName, final Map<String, Object> keys) throws SQLException {
         return getEntityData(entityName, keys, null, null, null, null, null, null, null).get(0);
     }
 
-    public Map<String, Object> getEntityByAssociation(final String entityName, final Map<String, Object> keys,List<NavigationSegment> navigationSegments, String tableTarget) throws SQLException {
+    public Map<String, Object> getEntityByAssociation(final String entityName, final Map<String, Object> keys,
+            List<NavigationSegment> navigationSegments, String tableTarget) throws SQLException {
 
-        return getEntityData(entityName, keys, null, null, null, null, null,navigationSegments,tableTarget).get(0);
+        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget).get(0);
     }
-    
+
     private List<Map<String, Object>> getEntityData(final String entityName, final Map<String, Object> keys,
-            final String orderByExpression, final Integer top, final Integer skip, final String filterExpression, final List<String> selectedItems, final List<NavigationSegment> navigationSegments, final String tableTarget) throws SQLException {
+            final String orderByExpression, final Integer top, final Integer skip, final String filterExpression,
+            final List<String> selectedItems, final List<NavigationSegment> navigationSegments, final String tableTarget)
+            throws SQLException {
 
         Connection jdbcConnection = null;
         List<Map<String, Object>> entitySetData = new ArrayList<Map<String, Object>>();
@@ -59,11 +62,12 @@ public class EntityRepository {
 
             String selectExpression = getSelectOption(selectedItems);
 
-            String sqlStatement = getSQLStatement(entityName, keys, filterExpressionAdapted, selectExpression, navigationSegments, tableTarget);
+            String sqlStatement = getSQLStatement(entityName, keys, filterExpressionAdapted, selectExpression, navigationSegments,
+                    tableTarget);
             sqlStatement = addOrderByExpression(sqlStatement, orderByExpression);
             sqlStatement = addTopOption(sqlStatement, top);
             sqlStatement = addSkipOption(sqlStatement, skip);
-            logger.debug("Executing query: "+ sqlStatement);
+            logger.debug("Executing query: " + sqlStatement);
             Statement statement = jdbcConnection.createStatement();
 
             resultSet = statement.executeQuery(sqlStatement);
@@ -80,14 +84,14 @@ public class EntityRepository {
 
                     rowData.put(columnName, resultSet.getObject(i));
                 }
-                
+
                 entitySetData.add(rowData);
             }
 
         } catch (EdmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } finally {
             if (jdbcConnection != null) {
                 jdbcConnection.close();
             }
@@ -95,20 +99,22 @@ public class EntityRepository {
         return entitySetData.isEmpty() ? null : entitySetData;
     }
 
-    private static String getSQLStatement(final String viewName, final Map<String, Object> keys, final String filterExpression, final String selectExpression, List<NavigationSegment> navigationSegments, String tableTarget) throws EdmException {
+    private static String getSQLStatement(final String viewName, final Map<String, Object> keys, final String filterExpression,
+            final String selectExpression, List<NavigationSegment> navigationSegments, String tableTarget) throws EdmException {
 
         StringBuilder sb = new StringBuilder();
-    
-        if(navigationSegments!=null && !navigationSegments.isEmpty()){
-            sb.append("SELECT "+tableTarget+".* FROM ");
-        	sb.append(viewName);	
-        	
-        	for (NavigationSegment navigationSegment : navigationSegments) {
-        		EdmNavigationProperty navigationProperty = navigationSegment.getNavigationProperty();
-        		sb.append(" LEFT JOIN "+navigationProperty.getName()+" ON "+navigationProperty.getMapping().getInternalName()+"="+navigationProperty.getMapping().getMediaResourceSourceKey());
-        	}	
-        }else{
-        	sb.append("SELECT ");
+
+        if (navigationSegments != null && !navigationSegments.isEmpty()) {
+            sb.append("SELECT " + tableTarget + ".* FROM ");
+            sb.append(viewName);
+
+            for (NavigationSegment navigationSegment : navigationSegments) {
+                EdmNavigationProperty navigationProperty = navigationSegment.getNavigationProperty();
+                sb.append(" LEFT JOIN " + navigationProperty.getName() + " ON " + navigationProperty.getMapping().getInternalName() + "="
+                        + navigationProperty.getMapping().getMediaResourceSourceKey());
+            }
+        } else {
+            sb.append("SELECT ");
             if (!selectExpression.isEmpty()) {
                 sb.append(selectExpression);
             } else {
@@ -127,7 +133,7 @@ public class EntityRepository {
                 if (!first) {
                     sb.append(" AND ");
                 }
-                sb.append(viewName+"."+entry.getKey());
+                sb.append(viewName + "." + entry.getKey());
                 sb.append("=");
                 if (entry.getValue() instanceof String) {
                     sb.append("'");
@@ -281,15 +287,16 @@ public class EntityRepository {
     private static String getSelectOption(final List<String> selectedItems) {
         StringBuilder sb = new StringBuilder();
 
-        for (String item : selectedItems) {
-            sb.append(item).append(",");
-        }
+        if (selectedItems != null) {
+            for (String item : selectedItems) {
+                sb.append(item).append(",");
+            }
 
-        if (sb.length() > 0) {
-            sb.insert(0, " ");
-            sb.replace(sb.length() - 1, sb.length(), " ");
+            if (sb.length() > 0) {
+                sb.insert(0, " ");
+                sb.replace(sb.length() - 1, sb.length(), " ");
+            }
         }
-
         return sb.toString();
     }
 }

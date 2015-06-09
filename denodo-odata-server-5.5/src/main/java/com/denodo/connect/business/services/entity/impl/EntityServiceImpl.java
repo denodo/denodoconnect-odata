@@ -5,8 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-
-
 import org.apache.olingo.odata2.api.uri.NavigationSegment;
 import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.edm.EdmProperty;
@@ -14,6 +12,7 @@ import org.apache.olingo.odata2.api.uri.SelectItem;
 import org.apache.olingo.odata2.api.uri.expression.FilterExpression;
 import org.apache.olingo.odata2.api.uri.expression.OrderByExpression;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetUriInfo;
+import org.apache.olingo.odata2.api.uri.info.GetEntityUriInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -78,13 +77,20 @@ public class EntityServiceImpl implements EntityService {
     }
     
     @Override
-    public Map<String, Object> getEntity(final String entityName, final Map<String, Object> keys) throws SQLException {
-        return this.entityRepository.getEntity(entityName, keys);
+    public Map<String, Object> getEntity(final String entityName, final Map<String, Object> keys, final GetEntityUriInfo uriInfo) throws SQLException {
+        List<String> selectedItemsAsString = new ArrayList<String>();
+        if (uriInfo != null) {
+            // Select System Query Option ($select)
+            List<SelectItem> selectedItems = uriInfo.getSelect();
+            selectedItemsAsString = getSelectOptionValues(selectedItems);
+        }
+        
+        return this.entityRepository.getEntity(entityName, keys, selectedItemsAsString, null);
     }
     
     @Override
     public Map<String, Object> getEntity(final String entityName, final Map<String, Object> keys, final EdmProperty property) throws SQLException {
-        return this.entityRepository.getEntity(entityName, keys);
+        return this.entityRepository.getEntity(entityName, keys, null, property);
     }
     
 	@Override

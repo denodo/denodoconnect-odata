@@ -32,17 +32,31 @@ import org.apache.olingo.odata2.api.uri.info.GetEntityUriInfo;
 
 public interface EntityService {
 
-    public  List<Map<String, Object>> getEntitySet(final String entitySetName, final GetEntitySetUriInfo uriInfo) throws SQLException;
-    
-    public  Map<String, Object> getEntity(final String entityName, final Map<String, Object> keys, final GetEntityUriInfo uriInfo) throws SQLException;
-    
-    public  List<Map<String, Object>> getEntitySetAssociation(final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments, String tableTarget) throws SQLException;
+    public  List<Map<String, Object>> getEntitySet(
+            final String entitySetName, final GetEntitySetUriInfo uriInfo)
+            throws SQLException;
 
-	public Map<String, Object> getEntityAssociation(String entityName, Map<String, Object> keys, List<NavigationSegment> navigationSegments, String tableTarget, EdmProperty property)
-			throws SQLException;
-	
-	public Map<String, Object> getEntityAssociation(String entityName, Map<String, Object> keys, List<NavigationSegment> navigationSegments, String tableTarget)
-			throws SQLException;
+    public  Map<String, Object> getEntity(
+            final String entityName, final Map<String, Object> keys, final GetEntityUriInfo uriInfo)
+            throws SQLException;
 
-	public Map<String, Object> getEntity(String entityName, Map<String, Object> keys, EdmProperty property) throws SQLException;
+    public  List<Map<String, Object>> getEntitySetAssociation(
+            final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
+            final String tableTarget)
+            throws SQLException;
+
+    public Map<String, Object> getEntityAssociation(
+            final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
+            final String tableTarget, final EdmProperty property)
+            throws SQLException;
+
+    public Map<String, Object> getEntityAssociation(
+            final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
+            final String tableTarget)
+            throws SQLException;
+
+    public Map<String, Object> getEntity(
+            final String entityName, final Map<String, Object> keys, final EdmProperty property)
+            throws SQLException;
+
 }

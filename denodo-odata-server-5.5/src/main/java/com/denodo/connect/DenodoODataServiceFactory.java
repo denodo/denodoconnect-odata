@@ -21,31 +21,31 @@
  */
 package com.denodo.connect;
 
-import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.ODataService;
 import org.apache.olingo.odata2.api.ODataServiceFactory;
-import org.apache.olingo.odata2.api.edm.provider.EdmProvider;
 import org.apache.olingo.odata2.api.exception.ODataException;
 import org.apache.olingo.odata2.api.processor.ODataContext;
-import org.apache.olingo.odata2.api.processor.ODataSingleProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import com.denodo.connect.business.services.metadata.MetadataService;
-
 public class DenodoODataServiceFactory extends ODataServiceFactory {
-	private static final Logger logger = Logger.getLogger(DenodoODataServiceFactory.class);
 
-
+    /*
+     * ENTITY DATA MODEL (EDM) provider, in charge of providing all the metadata
+     */
 	@Autowired
-	private DenodoEdmProvider denodoEdmProvider;	// Data accessors
+	private DenodoEdmProvider denodoEdmProvider;
+
+    /*
+     * DATA SINGLE PROCESSOR, in charge of retrieving data, querying, etc.
+     */
 	@Autowired
-	private DenodoDataSingleProcessor denodoDataSingleProcessor;	
-  @Override
-  public ODataService createService(final ODataContext ctx) throws ODataException {
+	private DenodoDataSingleProcessor denodoDataSingleProcessor;
 
-   
 
-//    ODataSingleProcessor singleProcessor = new CarODataSingleProcessor();
-    return createODataSingleProcessorService(denodoEdmProvider, denodoDataSingleProcessor);
-  }
+
+    @Override
+    public ODataService createService(final ODataContext ctx) throws ODataException {
+        return createODataSingleProcessorService(this.denodoEdmProvider, this.denodoDataSingleProcessor);
+    }
+
 }

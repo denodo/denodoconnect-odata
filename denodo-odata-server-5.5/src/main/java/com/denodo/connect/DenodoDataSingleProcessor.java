@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.denodo.connect.business.services.entity.EntityService;
 import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.edm.EdmEntitySet;
 import org.apache.olingo.odata2.api.edm.EdmLiteralKind;
@@ -51,8 +52,6 @@ import org.apache.olingo.odata2.api.uri.info.GetEntityUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetSimplePropertyUriInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import com.denodo.connect.business.services.entity.EntityService;
 
 @Component
 public class DenodoDataSingleProcessor extends ODataSingleProcessor {

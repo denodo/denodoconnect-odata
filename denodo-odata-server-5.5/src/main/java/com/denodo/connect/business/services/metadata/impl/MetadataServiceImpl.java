@@ -24,63 +24,64 @@ package com.denodo.connect.business.services.metadata.impl;
 import java.sql.SQLException;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import com.denodo.connect.business.entities.metadata.tables.MetadataTables;
 import com.denodo.connect.business.entities.metadata.tables.repository.MetadataTablesRepository;
 import com.denodo.connect.business.entities.metadata.view.AssociationMetadata;
 import com.denodo.connect.business.entities.metadata.view.ColumnMetadata;
 import com.denodo.connect.business.entities.metadata.view.repository.MetadataRepository;
 import com.denodo.connect.business.services.metadata.MetadataService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 @Service
 public class MetadataServiceImpl implements MetadataService {
-    
-    @Autowired
-	MetadataRepository metadataRepository;
-    
-    @Autowired
-	MetadataTablesRepository metadataTablesRepository;
 
-	public MetadataServiceImpl() {
-		super();
-	}
 
-	@Override
-	public List<ColumnMetadata> getMetadataView(String viewName) throws SQLException {
+    @Autowired
+    private MetadataRepository metadataRepository;
+
+    @Autowired
+    private MetadataTablesRepository metadataTablesRepository;
+
+
+
+    public MetadataServiceImpl() {
+        super();
+    }
+
+
+    @Override
+    public List<ColumnMetadata> getMetadataView(final String viewName) throws SQLException {
         return this.metadataTablesRepository.getMetadataView(viewName);
-	}
-	@Override
-	public List<MetadataTables> getMetadataTables() throws SQLException{
-		return this.metadataTablesRepository.getTables();
-	}
-	@Override
-	public  List<ColumnMetadata> getPrimaryKeys(String viewName) throws SQLException {
-		return this.metadataTablesRepository.getPrimaryKeys(viewName);
-	}
-	
-	@Override
-	public  List<ColumnMetadata> getExportedKeys(String viewName) throws SQLException{
-		return this.metadataTablesRepository.getExportedKeys(viewName);
-	}
-	
-	
-	@Override
-	public List<ColumnMetadata> getMetadataDescView(String viewName) throws SQLException{
-		return this.metadataRepository.getMetadataView(viewName);
-	}
+    }
+    @Override
+    public List<MetadataTables> getMetadataTables() throws SQLException{
+        return this.metadataTablesRepository.getTables();
+    }
+    @Override
+    public  List<ColumnMetadata> getPrimaryKeys(final String viewName) throws SQLException {
+        return this.metadataTablesRepository.getPrimaryKeys(viewName);
+    }
 
-	@Override
-	public List<String> getAssociations() throws SQLException {
-		return this.metadataRepository.getAssociations();
-	}
+    @Override
+    public  List<ColumnMetadata> getExportedKeys(final String viewName) throws SQLException{
+        return this.metadataTablesRepository.getExportedKeys(viewName);
+    }
 
-	@Override
-	public AssociationMetadata getMetadataAssociation(
-			String associationName) throws SQLException {
-		return this.metadataRepository.getAssociationMetadata(associationName);
-	}
+    @Override
+    public List<ColumnMetadata> getMetadataDescView(final String viewName) throws SQLException{
+        return this.metadataRepository.getMetadataView(viewName);
+    }
+
+    @Override
+    public List<String> getAssociations() throws SQLException {
+        return this.metadataRepository.getAssociations();
+    }
+
+    @Override
+    public AssociationMetadata getMetadataAssociation(final String associationName) throws SQLException {
+        return this.metadataRepository.getAssociationMetadata(associationName);
+    }
 
 
 }

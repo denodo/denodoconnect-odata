@@ -29,16 +29,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.denodo.connect.business.entities.metadata.tables.MetadataTables;
+import com.denodo.connect.business.entities.metadata.view.AssociationMetadata;
+import com.denodo.connect.business.entities.metadata.view.ColumnMetadata;
+import com.denodo.connect.business.services.metadata.MetadataService;
 import org.apache.log4j.Logger;
-import org.apache.olingo.odata2.api.edm.EdmMultiplicity;
-import org.apache.olingo.odata2.api.edm.EdmSimpleTypeKind;
 import org.apache.olingo.odata2.api.edm.FullQualifiedName;
-import org.apache.olingo.odata2.api.edm.provider.AnnotationAttribute;
 import org.apache.olingo.odata2.api.edm.provider.Association;
 import org.apache.olingo.odata2.api.edm.provider.AssociationEnd;
 import org.apache.olingo.odata2.api.edm.provider.AssociationSet;
 import org.apache.olingo.odata2.api.edm.provider.AssociationSetEnd;
-import org.apache.olingo.odata2.api.edm.provider.ComplexType;
 import org.apache.olingo.odata2.api.edm.provider.EdmProvider;
 import org.apache.olingo.odata2.api.edm.provider.EntityContainer;
 import org.apache.olingo.odata2.api.edm.provider.EntityContainerInfo;
@@ -51,17 +51,11 @@ import org.apache.olingo.odata2.api.edm.provider.Mapping;
 import org.apache.olingo.odata2.api.edm.provider.NavigationProperty;
 import org.apache.olingo.odata2.api.edm.provider.Property;
 import org.apache.olingo.odata2.api.edm.provider.PropertyRef;
-import org.apache.olingo.odata2.api.edm.provider.ReturnType;
 import org.apache.olingo.odata2.api.edm.provider.Schema;
 import org.apache.olingo.odata2.api.edm.provider.SimpleProperty;
 import org.apache.olingo.odata2.api.exception.ODataException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import com.denodo.connect.business.entities.metadata.tables.MetadataTables;
-import com.denodo.connect.business.entities.metadata.view.AssociationMetadata;
-import com.denodo.connect.business.entities.metadata.view.ColumnMetadata;
-import com.denodo.connect.business.services.metadata.MetadataService;
 
 @Component
 public class DenodoEdmProvider extends EdmProvider {

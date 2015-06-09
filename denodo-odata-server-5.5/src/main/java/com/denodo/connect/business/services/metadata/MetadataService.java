@@ -31,19 +31,19 @@ import com.denodo.connect.business.entities.metadata.view.ColumnMetadata;
 
 public interface MetadataService {
 
-	public List<ColumnMetadata> getMetadataView(String viewName) throws SQLException;
-	
+	public List<ColumnMetadata> getMetadataView(final String viewName) throws SQLException;
+
 	public List<MetadataTables> getMetadataTables() throws SQLException;
-	
-	public  List<ColumnMetadata> getPrimaryKeys(String viewName) throws SQLException;
-	
-    public  List<ColumnMetadata> getExportedKeys(String viewName) throws SQLException;
-        
-	public List<ColumnMetadata> getMetadataDescView(String viewName) throws SQLException;
-    
+
+	public  List<ColumnMetadata> getPrimaryKeys(final String viewName) throws SQLException;
+
+	public  List<ColumnMetadata> getExportedKeys(final String viewName) throws SQLException;
+
+	public List<ColumnMetadata> getMetadataDescView(final String viewName) throws SQLException;
+
 	public List<String> getAssociations() throws SQLException;
-    
-	public AssociationMetadata getMetadataAssociation(String associationName) throws SQLException;
+
+	public AssociationMetadata getMetadataAssociation(final String associationName) throws SQLException;
 
 }
 

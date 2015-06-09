@@ -6,8 +6,10 @@ import java.util.List;
 import java.util.Map;
 
 
+
 import org.apache.olingo.odata2.api.uri.NavigationSegment;
 import org.apache.olingo.odata2.api.edm.EdmException;
+import org.apache.olingo.odata2.api.edm.EdmProperty;
 import org.apache.olingo.odata2.api.uri.SelectItem;
 import org.apache.olingo.odata2.api.uri.expression.FilterExpression;
 import org.apache.olingo.odata2.api.uri.expression.OrderByExpression;
@@ -79,7 +81,12 @@ public class EntityServiceImpl implements EntityService {
     public Map<String, Object> getEntity(final String entityName, final Map<String, Object> keys) throws SQLException {
         return this.entityRepository.getEntity(entityName, keys);
     }
-
+    
+    @Override
+    public Map<String, Object> getEntity(final String entityName, final Map<String, Object> keys, final EdmProperty property) throws SQLException {
+        return this.entityRepository.getEntity(entityName, keys);
+    }
+    
 	@Override
 	public List<Map<String, Object>> getEntitySetAssociation(String entityName,
 			Map<String, Object> keys,
@@ -89,6 +96,14 @@ public class EntityServiceImpl implements EntityService {
 		  return this.entityRepository.getEntitySetByAssociation(entityName, keys,navigationSegments,tableTarget);
 	}
 	
+	@Override
+	public Map<String, Object> getEntityAssociation(String entityName,
+			Map<String, Object> keys,
+			List<NavigationSegment> navigationSegments, String tableTarget, EdmProperty property)
+			throws SQLException {
+
+		  return this.entityRepository.getEntityByAssociation(entityName, keys,navigationSegments,tableTarget, property);
+	}
 	@Override
 	public Map<String, Object> getEntityAssociation(String entityName,
 			Map<String, Object> keys,

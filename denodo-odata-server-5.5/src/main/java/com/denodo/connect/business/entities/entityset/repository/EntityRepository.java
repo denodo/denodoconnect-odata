@@ -16,6 +16,7 @@ import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.edm.EdmNavigationProperty;
+import org.apache.olingo.odata2.api.edm.EdmProperty;
 import org.apache.olingo.odata2.api.uri.NavigationSegment;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -30,28 +31,40 @@ public class EntityRepository {
 
     public List<Map<String, Object>> getEntitySet(final String entitySetName, final String orderByExpressionString, final Integer top,
             final Integer skip, final String filterExpression, final List<String> selectedItems) throws SQLException {
-        return getEntityData(entitySetName, null, orderByExpressionString, top, skip, filterExpression, selectedItems, null, null);
+        return getEntityData(entitySetName, null, orderByExpressionString, top, skip, filterExpression, selectedItems, null, null, null);
     }
 
     public Map<String, Object> getEntity(final String entityName, final Map<String, Object> keys) throws SQLException {
-        return getEntityData(entityName, keys, null, null, null, null, null, null, null).get(0);
+        return getEntityData(entityName, keys, null, null, null, null, null, null, null, null).get(0);
     }
+    
+    public Map<String, Object> getEntity(final String entityName, final Map<String, Object> keys, final EdmProperty property) throws SQLException {
+        return getEntityData(entityName, keys, null, null, null, null, null, null, null, property).get(0);
+    }
+
+
+    public Map<String, Object> getEntityByAssociation(final String entityName, final Map<String, Object> keys,
+            List<NavigationSegment> navigationSegments, String tableTarget, EdmProperty property) throws SQLException {
+
+        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget,  property).get(0);
+    }
+    
 
     public Map<String, Object> getEntityByAssociation(final String entityName, final Map<String, Object> keys,
             List<NavigationSegment> navigationSegments, String tableTarget) throws SQLException {
 
-        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget).get(0);
+        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget,  null).get(0);
     }
     
     public List<Map<String, Object>> getEntitySetByAssociation(final String entityName, final Map<String, Object> keys,
             List<NavigationSegment> navigationSegments, String tableTarget) throws SQLException {
 
-        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget);
+        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget, null);
     }
 
     private List<Map<String, Object>> getEntityData(final String entityName, final Map<String, Object> keys,
             final String orderByExpression, final Integer top, final Integer skip, final String filterExpression,
-            final List<String> selectedItems, final List<NavigationSegment> navigationSegments, final String tableTarget)
+            final List<String> selectedItems, final List<NavigationSegment> navigationSegments, final String tableTarget, final EdmProperty property)
             throws SQLException {
 
         Connection jdbcConnection = null;
@@ -66,7 +79,12 @@ public class EntityRepository {
             filterExpressionAdapted = getStartsWithOption(filterExpressionAdapted);
             filterExpressionAdapted = getIndexOfOption(filterExpressionAdapted);
 
-            String selectExpression = getSelectOption(selectedItems);
+            String selectExpression;
+            if(property==null){
+            	selectExpression= getSelectOption(selectedItems);
+            }else{
+            	selectExpression= property.getName();
+            }
 
             String sqlStatement = getSQLStatement(entityName, keys, filterExpressionAdapted, selectExpression, navigationSegments,
                     tableTarget);
@@ -305,4 +323,6 @@ public class EntityRepository {
         }
         return sb.toString();
     }
+    
+
 }

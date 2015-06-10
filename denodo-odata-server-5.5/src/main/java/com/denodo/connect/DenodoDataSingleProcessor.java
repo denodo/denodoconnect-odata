@@ -299,44 +299,44 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 	      throws ODataException {
 			EdmEntitySet entitySet;
 
-
-			if (uriInfo.getNavigationSegments().size() == 0) {
-				entitySet = uriInfo.getStartEntitySet();
-
-				try {
-					List<Map<String, Object>> data = this.entityService.getEntitySet(entitySet.getName(), uriInfo);
-					if (data != null && !data.isEmpty()) {
-						return EntityProvider.writeFeed(contentType, entitySet, data, 
-								EntityProviderWriteProperties.serviceRoot(getContext().getPathInfo().getServiceRoot()).build());
-					}
-				} catch (SQLException e) {
-					logger.error(e);
-				}
-
-				throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
-
-			} else if (uriInfo.getNavigationSegments().size() == 1) {
-				// I think that this case is for relationships
-				// navigation first level, simplified example for illustration
-				// purposes only
-				Map<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
-				List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
-
-				EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
-				EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
-
-
-				try {
-					List<Map<String, Object>> data = this.entityService.getEntitySetAssociation(entitySetStart.getName(), keys, navigationSegments, entitySetTarget.getName());
-					if (data != null && !data.isEmpty()) {
-						return EntityProvider.writeFeed(contentType, entitySetTarget, data, 
-								EntityProviderWriteProperties.serviceRoot(getContext().getPathInfo().getServiceRoot()).build());
-					}
-				} catch (SQLException e) {
-					logger.error(e);
-				}
-
-				throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
-			}
+//TODO
+//			if (uriInfo.getNavigationSegments().size() == 0) {
+//				entitySet = uriInfo.getStartEntitySet();
+//
+//				try {
+//					List<Map<String, Object>> data = this.entityService.getEntitySet(entitySet.getName(), uriInfo);
+//					if (data != null && !data.isEmpty()) {
+//						return EntityProvider.writeFeed(contentType, entitySet, data, 
+//								EntityProviderWriteProperties.serviceRoot(getContext().getPathInfo().getServiceRoot()).build());
+//					}
+//				} catch (SQLException e) {
+//					logger.error(e);
+//				}
+//
+//				throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
+//
+//			} else if (uriInfo.getNavigationSegments().size() == 1) {
+//				// I think that this case is for relationships
+//				// navigation first level, simplified example for illustration
+//				// purposes only
+//				Map<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+//				List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
+//
+//				EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
+//				EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
+//
+//
+//				try {
+//					List<Map<String, Object>> data = this.entityService.getEntitySetAssociation(entitySetStart.getName(), keys, navigationSegments, entitySetTarget.getName());
+//					if (data != null && !data.isEmpty()) {
+//						return EntityProvider.writeFeed(contentType, entitySetTarget, data, 
+//								EntityProviderWriteProperties.serviceRoot(getContext().getPathInfo().getServiceRoot()).build());
+//					}
+//				} catch (SQLException e) {
+//					logger.error(e);
+//				}
+//
+			throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
+//			}
 	  }
 }

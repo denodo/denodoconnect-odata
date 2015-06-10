@@ -59,7 +59,7 @@ public class EntityServiceImpl implements EntityService {
 
 
     public List<Map<String, Object>> getEntitySet(
-            final String entitySetName, final GetEntitySetUriInfo uriInfo)
+            final String entitySetName, final GetEntitySetUriInfo uriInfo, final List<String> keyProperties)
             throws SQLException {
 
         // Orderby System Query Option ($orderby)
@@ -85,7 +85,12 @@ public class EntityServiceImpl implements EntityService {
         // Select System Query Option ($select)
         List<SelectItem> selectedItems = uriInfo.getSelect();
         List<String> selectedItemsAsString = getSelectOptionValues(selectedItems);
-
+        // If there are properties selected we must get also the key properties because 
+        // they are necessary in order to get all the information to write the feed
+        if (!selectedItemsAsString.isEmpty()) {
+            selectedItemsAsString.addAll(keyProperties);
+        }
+        
         return this.entityRepository.getEntitySet(entitySetName, orderByExpressionString, top, skip, filterExpressionString,
                 selectedItemsAsString);
 
@@ -111,7 +116,8 @@ public class EntityServiceImpl implements EntityService {
 
 
     public Map<String, Object> getEntity(
-            final String entityName, final Map<String, Object> keys, final GetEntityUriInfo uriInfo)
+            final String entityName, final Map<String, Object> keys, final GetEntityUriInfo uriInfo, 
+            final List<String> keyProperties)
             throws SQLException {
 
         List<String> selectedItemsAsString = new ArrayList<String>();
@@ -119,6 +125,11 @@ public class EntityServiceImpl implements EntityService {
             // Select System Query Option ($select)
             List<SelectItem> selectedItems = uriInfo.getSelect();
             selectedItemsAsString = getSelectOptionValues(selectedItems);
+        }
+        // If there are properties selected we must get also the key properties because 
+        // they are necessary in order to get all the information to write the entry
+        if (!selectedItemsAsString.isEmpty()) {
+            selectedItemsAsString.addAll(keyProperties);
         }
 
         return this.entityRepository.getEntity(entityName, keys, selectedItemsAsString, null);

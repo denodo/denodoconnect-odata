@@ -7,12 +7,16 @@ import java.util.Map;
 
 
 
+
+
+
 import org.apache.olingo.odata2.api.uri.NavigationSegment;
 import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.edm.EdmProperty;
 import org.apache.olingo.odata2.api.uri.SelectItem;
 import org.apache.olingo.odata2.api.uri.expression.FilterExpression;
 import org.apache.olingo.odata2.api.uri.expression.OrderByExpression;
+import org.apache.olingo.odata2.api.uri.info.GetEntitySetCountUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetUriInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -112,4 +116,12 @@ public class EntityServiceImpl implements EntityService {
 
 		  return this.entityRepository.getEntityByAssociation(entityName, keys,navigationSegments,tableTarget);
 	}
+
+
+
+    public Integer getCount(String entitySetName, GetEntitySetCountUriInfo uriInfo)
+            throws SQLException {
+//      this.entityRepository.getCou
+        return null;
+    }
 }

@@ -7,6 +7,7 @@ import java.util.Map;
 import org.apache.olingo.odata2.api.edm.EdmProperty;
 import org.apache.olingo.odata2.api.uri.NavigationSegment;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetUriInfo;
+import org.apache.olingo.odata2.api.uri.info.GetEntitySetCountUriInfo;
 
 public interface EntityService {
 
@@ -23,4 +24,6 @@ public interface EntityService {
 			throws SQLException;
 
 	public Map<String, Object> getEntity(String entityName, Map<String, Object> keys, EdmProperty property) throws SQLException;
+	
+	public Integer getCount(final String entitySetName, final GetEntitySetCountUriInfo uriInfo) throws SQLException;
 }

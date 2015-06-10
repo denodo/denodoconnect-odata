@@ -324,5 +324,7 @@ public class EntityRepository {
         return sb.toString();
     }
     
-
+//    public Integer getCountEntity(final String entityName, final Map<String, Object> keys) throws SQLException {
+//        return getEntityData(entityName, keys, null, null, null, null, null, null, null, null).get(0);
+//    }
 }

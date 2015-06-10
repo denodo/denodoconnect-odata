@@ -37,10 +37,12 @@ import org.apache.olingo.odata2.api.exception.ODataNotFoundException;
 import org.apache.olingo.odata2.api.exception.ODataNotImplementedException;
 import org.apache.olingo.odata2.api.processor.ODataResponse;
 import org.apache.olingo.odata2.api.processor.ODataSingleProcessor;
+import org.apache.olingo.odata2.api.processor.part.EntitySetProcessor;
 import org.apache.olingo.odata2.api.processor.part.EntitySimplePropertyProcessor;
 import org.apache.olingo.odata2.api.processor.part.EntitySimplePropertyValueProcessor;
 import org.apache.olingo.odata2.api.uri.KeyPredicate;
 import org.apache.olingo.odata2.api.uri.NavigationSegment;
+import org.apache.olingo.odata2.api.uri.info.GetEntitySetCountUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntityUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetSimplePropertyUriInfo;
@@ -269,4 +271,54 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
 		throw new ODataNotImplementedException();
 	}
+	
+
+	  /**
+	   * @see EntitySetProcessor
+	   */
+	  @Override
+	  public ODataResponse countEntitySet(final GetEntitySetCountUriInfo uriInfo, final String contentType)
+	      throws ODataException {
+			EdmEntitySet entitySet;
+
+
+			if (uriInfo.getNavigationSegments().size() == 0) {
+				entitySet = uriInfo.getStartEntitySet();
+
+				try {
+					List<Map<String, Object>> data = this.entityService.getEntitySet(entitySet.getName(), uriInfo);
+					if (data != null && !data.isEmpty()) {
+						return EntityProvider.writeFeed(contentType, entitySet, data, 
+								EntityProviderWriteProperties.serviceRoot(getContext().getPathInfo().getServiceRoot()).build());
+					}
+				} catch (SQLException e) {
+					logger.error(e);
+				}
+
+				throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
+
+			} else if (uriInfo.getNavigationSegments().size() == 1) {
+				// I think that this case is for relationships
+				// navigation first level, simplified example for illustration
+				// purposes only
+				Map<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+				List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
+
+				EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
+				EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
+
+
+				try {
+					List<Map<String, Object>> data = this.entityService.getEntitySetAssociation(entitySetStart.getName(), keys, navigationSegments, entitySetTarget.getName());
+					if (data != null && !data.isEmpty()) {
+						return EntityProvider.writeFeed(contentType, entitySetTarget, data, 
+								EntityProviderWriteProperties.serviceRoot(getContext().getPathInfo().getServiceRoot()).build());
+					}
+				} catch (SQLException e) {
+					logger.error(e);
+				}
+
+				throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
+			}
+	  }
 }

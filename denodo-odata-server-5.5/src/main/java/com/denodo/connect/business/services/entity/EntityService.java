@@ -62,4 +62,7 @@ public interface EntityService {
 
 	
 	public Integer getCount(final String entitySetName, final GetEntitySetCountUriInfo uriInfo) throws SQLException;
+	 
+	public Integer getCountAssociation( final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
+	        final String tableTarget) throws SQLException ;
 }

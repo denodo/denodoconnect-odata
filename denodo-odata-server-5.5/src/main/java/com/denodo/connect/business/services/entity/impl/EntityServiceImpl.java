@@ -162,7 +162,14 @@ public class EntityServiceImpl implements EntityService {
 
     public Integer getCount(String entitySetName, GetEntitySetCountUriInfo uriInfo)
             throws SQLException {
-//      this.entityRepository.getCou
-        return null;
+        return this.entityRepository.getCountEntitySet(entitySetName, uriInfo);
+    }
+    
+    public Integer getCountAssociation(
+            final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
+            final String tableTarget)
+            throws SQLException {
+
+        return this.entityRepository.getCountEntitySet(entityName, keys, navigationSegments, tableTarget);
     }
 }

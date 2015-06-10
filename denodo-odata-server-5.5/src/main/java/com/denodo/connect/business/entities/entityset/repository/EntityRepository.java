@@ -39,6 +39,7 @@ import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.edm.EdmNavigationProperty;
 import org.apache.olingo.odata2.api.edm.EdmProperty;
 import org.apache.olingo.odata2.api.uri.NavigationSegment;
+import org.apache.olingo.odata2.api.uri.info.GetEntitySetCountUriInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -96,7 +97,7 @@ public class EntityRepository {
             filterExpressionAdapted = getIndexOfOption(filterExpressionAdapted);
 
             String sqlStatement = getSQLStatement(entityName, keys, filterExpressionAdapted, selectedItems, navigationSegments,
-                    tableTarget, property);
+                    tableTarget, property, false);
             sqlStatement = addOrderByExpression(sqlStatement, orderByExpression);
             sqlStatement = addTopOption(sqlStatement, top);
             sqlStatement = addSkipOption(sqlStatement, skip);
@@ -133,18 +134,22 @@ public class EntityRepository {
     }
 
     private static String getSelectSection(final String viewName, final String tableTarget, final boolean navigation,
-            final List<String> selectedProperties, final EdmProperty property) throws EdmException {
+            final List<String> selectedProperties, final EdmProperty property, final Boolean count) throws EdmException {
         StringBuilder sb = new StringBuilder();
 
         String view = navigation ? tableTarget : viewName;
 
         String selectExpression;
-        if (property == null) {
-            selectExpression = getSelectOption(selectedProperties, view);
-        } else {
-            selectExpression = viewName + "." + property.getName() + " ";
-        }
+        if(count){
+            selectExpression=" count(*) ";
+        }else{ 
 
+            if (property == null) {
+                selectExpression = getSelectOption(selectedProperties, view);
+            } else {
+                selectExpression = viewName + "." + property.getName() + " ";
+            }
+        }
         sb.append("SELECT ");
         if (!selectExpression.isEmpty()) {
             sb.append(selectExpression);
@@ -159,15 +164,15 @@ public class EntityRepository {
 
     private static String getSQLStatement(final String viewName, final Map<String, Object> keys, final String filterExpression,
             final List<String> selectedProperties, List<NavigationSegment> navigationSegments, String tableTarget,
-            final EdmProperty property) throws EdmException {
+            final EdmProperty property, final Boolean count) throws EdmException {
 
         boolean navigation = navigationSegments != null && !navigationSegments.isEmpty();
 
         StringBuilder sb = new StringBuilder();
 
-        sb.append(getSelectSection(viewName, tableTarget, navigation, selectedProperties, property));
+        sb.append(getSelectSection(viewName, tableTarget, navigation, selectedProperties, property, count));
 
-        if (navigation) {
+        if (navigation&& navigationSegments!=null ) {
             for (NavigationSegment navigationSegment : navigationSegments) {
                 EdmNavigationProperty navigationProperty = navigationSegment.getNavigationProperty();
                 sb.append(" LEFT JOIN " + navigationProperty.getName() + " ON " + navigationProperty.getMapping().getInternalName() + "="
@@ -351,8 +356,24 @@ public class EntityRepository {
         return sb.toString();
     }
     
-//    public Integer getCountEntity(final String entityName, final Map<String, Object> keys) throws SQLException {
-//        return getEntityData(entityName, keys, null, null, null, null, null, null, null, null).get(0);
-//    }
+    public Integer getCountEntitySet(final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments, final String tableTarget){
+
+        try {
+            String sqlStatement = getSQLStatement(entityName, keys, null, null, navigationSegments,
+                    tableTarget, null, true);
+            logger.debug("Executing query: " + sqlStatement);
+
+            return this.denodoTemplate.queryForObject(sqlStatement,Integer.class);
+
+        } catch (EdmException e) {
+            logger.error(e);
+        } 
+
+        return null;
+    }
+
+    public Integer getCountEntitySet(final String entityName, GetEntitySetCountUriInfo uriInfo) throws SQLException {
+        return getCountEntitySet(entityName,null, null, null);
+    }
 
 }

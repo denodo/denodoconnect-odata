@@ -21,11 +21,9 @@
  */
 package com.denodo.connect.business.entities.entityset.repository;
 
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -42,7 +40,9 @@ import org.apache.olingo.odata2.api.uri.NavigationSegment;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetCountUriInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
+
 
 @Repository
 public class EntityRepository {
@@ -84,13 +84,11 @@ public class EntityRepository {
             final List<String> selectedItems, final List<NavigationSegment> navigationSegments, final String tableTarget,
             final EdmProperty property) throws SQLException {
 
-        Connection jdbcConnection = null;
+
         List<Map<String, Object>> entitySetData = new ArrayList<Map<String, Object>>();
 
         try {
-            jdbcConnection = this.denodoTemplate.getDataSource().getConnection();
 
-            ResultSet resultSet = null;
 
             String filterExpressionAdapted = getSubstringofOption(filterExpression);
             filterExpressionAdapted = getStartsWithOption(filterExpressionAdapted);
@@ -102,34 +100,28 @@ public class EntityRepository {
             sqlStatement = addTopOption(sqlStatement, top);
             sqlStatement = addSkipOption(sqlStatement, skip);
             logger.debug("Executing query: " + sqlStatement);
-            Statement statement = jdbcConnection.createStatement();
 
-            resultSet = statement.executeQuery(sqlStatement);
+            entitySetData=(List<Map<String, Object>>)this.denodoTemplate.query(sqlStatement, 
+                    new RowMapper<Map<String, Object>>(){
 
-            resultSet = statement.getResultSet();
-            ResultSetMetaData resultSetMetadata = resultSet.getMetaData();
+                @Override
+                public Map<String, Object> mapRow(ResultSet resultSet1, int rowNum) throws SQLException {
+                    ResultSetMetaData resultSetMetaData = resultSet1.getMetaData();
+                    Map<String, Object> rowData = new HashMap<String, Object>();
 
-            while (resultSet.next()) {
-                ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
-                Map<String, Object> rowData = new HashMap<String, Object>();
+                    for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
+                        String columnName = resultSetMetaData.getColumnName(i);
 
-                for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
-                    String columnName = resultSetMetadata.getColumnName(i);
-
-                    rowData.put(columnName, resultSet.getObject(i));
+                        rowData.put(columnName, resultSet1.getObject(i));
+                    }
+                    return rowData;
                 }
-
-                entitySetData.add(rowData);
-            }
+            });
 
         } catch (EdmException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } finally {
-            if (jdbcConnection != null) {
-                jdbcConnection.close();
-            }
+            logger.error(e);
         }
+
         return entitySetData.isEmpty() ? null : entitySetData;
     }
 
@@ -355,7 +347,7 @@ public class EntityRepository {
         }
         return sb.toString();
     }
-    
+
     public Integer getCountEntitySet(final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments, final String tableTarget){
 
         try {

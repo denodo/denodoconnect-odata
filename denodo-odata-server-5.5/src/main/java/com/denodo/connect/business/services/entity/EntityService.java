@@ -34,11 +34,12 @@ import org.apache.olingo.odata2.api.uri.info.GetEntityUriInfo;
 public interface EntityService {
 
     public  List<Map<String, Object>> getEntitySet(
-            final String entitySetName, final GetEntitySetUriInfo uriInfo)
+            final String entitySetName, final GetEntitySetUriInfo uriInfo, final List<String> keyProperties)
             throws SQLException;
 
     public  Map<String, Object> getEntity(
-            final String entityName, final Map<String, Object> keys, final GetEntityUriInfo uriInfo)
+            final String entityName, final Map<String, Object> keys, final GetEntityUriInfo uriInfo,
+            final List<String> keyProperties)
             throws SQLException;
 
     public  List<Map<String, Object>> getEntitySetAssociation(

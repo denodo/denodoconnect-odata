@@ -70,9 +70,10 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
         if (uriInfo.getNavigationSegments().size() == 0) {
             entitySet = uriInfo.getStartEntitySet();
-
+            List<String> keyProperties = entitySet.getEntityType().getKeyPropertyNames();
+            
             try {
-                List<Map<String, Object>> data = this.entityService.getEntitySet(entitySet.getName(), uriInfo);
+                List<Map<String, Object>> data = this.entityService.getEntitySet(entitySet.getName(), uriInfo, keyProperties);
                 if (data != null && !data.isEmpty()) {
                     URI serviceRoot = getContext().getPathInfo().getServiceRoot();
                     ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
@@ -81,7 +82,6 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                     // expand/select tree
                     ExpandSelectTreeNode expandSelectTreeNode = UriParser.createExpandSelectTree(uriInfo.getSelect(), uriInfo.getExpand());
                     propertiesBuilder.expandSelectTree(expandSelectTreeNode);
-                    // propertiesBuilder.contentOnly(true);
 
                     return EntityProvider.writeFeed(contentType, entitySet, data, propertiesBuilder.build());
                 }
@@ -123,11 +123,12 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
         if (uriInfo.getNavigationSegments().size() == 0) {
             EdmEntitySet entitySet = uriInfo.getStartEntitySet();
-
+            List<String> keyProperties = entitySet.getEntityType().getKeyPropertyNames();
+            
             Map<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
 
             try {
-                Map<String, Object> data = this.entityService.getEntity(entitySet.getName(), keys, uriInfo);
+                Map<String, Object> data = this.entityService.getEntity(entitySet.getName(), keys, uriInfo, keyProperties);
                 if (data != null && !data.isEmpty()) {
                     URI serviceRoot = getContext().getPathInfo().getServiceRoot();
                     ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
@@ -136,7 +137,6 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                     // expand/select tree
                     ExpandSelectTreeNode expandSelectTreeNode = UriParser.createExpandSelectTree(uriInfo.getSelect(), uriInfo.getExpand());
                     propertiesBuilder.expandSelectTree(expandSelectTreeNode);
-                    //propertiesBuilder.contentOnly(true);
 
                     return EntityProvider.writeEntry(contentType, entitySet, data, propertiesBuilder.build());
                 }

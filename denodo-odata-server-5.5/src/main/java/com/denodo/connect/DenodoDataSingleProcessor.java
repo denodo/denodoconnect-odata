@@ -87,9 +87,8 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 }
             } catch (SQLException e) {
                 logger.error(e);
+                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
-
-            throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
 
         } else if (uriInfo.getNavigationSegments().size() == 1) {
             // I think that this case is for relationships
@@ -110,9 +109,8 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 }
             } catch (SQLException e) {
                 logger.error(e);
+                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
-
-            throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
         }
 
         throw new ODataNotImplementedException();
@@ -142,9 +140,8 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 }
             } catch (SQLException e) {
                 logger.error(e);
+                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
-
-            throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
 
         } else if (uriInfo.getNavigationSegments().size() >= 1) {
             // I think that this case is for relationships
@@ -166,9 +163,9 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 }
             } catch (SQLException e) {
                 logger.error(e);
+                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
-            throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
         }
 
         throw new ODataNotImplementedException();
@@ -211,9 +208,9 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 }
             } catch (SQLException e) {
                 logger.error(e);
+                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
-            throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
 
         } else if (uriInfo.getNavigationSegments().size() >= 1) {
             // I think that this case is for relationships
@@ -233,9 +230,9 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 }
             } catch (SQLException e) {
                 logger.error(e);
+                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
-            throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
         }
 
         throw new ODataNotImplementedException();
@@ -260,9 +257,9 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 }
             } catch (SQLException e) {
                 logger.error(e);
+                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
-            throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
 
         } else if (uriInfo.getNavigationSegments().size() >= 1) {
             // I think that this case is for relationships
@@ -282,9 +279,9 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 }
             } catch (SQLException e) {
                 logger.error(e);
+                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
-            throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
         }
 
         throw new ODataNotImplementedException();
@@ -309,9 +306,9 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 	              }
 	          } catch (SQLException e) {
 	              logger.error(e);
+	              throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
 	          }
 
-	          throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
 
 	      } else if (uriInfo.getNavigationSegments().size() == 1) {
 	          // I think that this case is for relationships
@@ -331,9 +328,9 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 	              }
 	          } catch (SQLException e) {
 	              logger.error(e);
+	              throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
 	          }
 
-	          throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
 
 	      }
 	      throw new ODataNotImplementedException();

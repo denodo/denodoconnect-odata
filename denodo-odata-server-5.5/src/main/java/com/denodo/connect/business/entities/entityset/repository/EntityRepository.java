@@ -36,6 +36,8 @@ import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.edm.EdmNavigationProperty;
 import org.apache.olingo.odata2.api.edm.EdmProperty;
+import org.apache.olingo.odata2.api.exception.ODataException;
+import org.apache.olingo.odata2.api.exception.ODataNotFoundException;
 import org.apache.olingo.odata2.api.uri.NavigationSegment;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetCountUriInfo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,29 +54,29 @@ public class EntityRepository {
     private static final Logger logger = Logger.getLogger(EntityRepository.class);
 
     public List<Map<String, Object>> getEntitySet(final String entitySetName, final String orderByExpressionString, final Integer top,
-            final Integer skip, final String filterExpression, final List<String> selectedItems) throws SQLException {
+            final Integer skip, final String filterExpression, final List<String> selectedItems) throws SQLException, ODataException {
         return getEntityData(entitySetName, null, orderByExpressionString, top, skip, filterExpression, selectedItems, null, null, null);
     }
 
     public Map<String, Object> getEntity(final String entityName, final Map<String, Object> keys, final List<String> selectedItems,
-            final EdmProperty property) throws SQLException {
+            final EdmProperty property) throws SQLException, ODataException {
         return getEntityData(entityName, keys, null, null, null, null, selectedItems, null, null, property).get(0);
     }
 
     public Map<String, Object> getEntityByAssociation(final String entityName, final Map<String, Object> keys,
-            List<NavigationSegment> navigationSegments, String tableTarget, EdmProperty property) throws SQLException {
+            List<NavigationSegment> navigationSegments, String tableTarget, EdmProperty property) throws SQLException, ODataException {
 
         return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget, property).get(0);
     }
 
     public Map<String, Object> getEntityByAssociation(final String entityName, final Map<String, Object> keys,
-            List<NavigationSegment> navigationSegments, String tableTarget) throws SQLException {
+            List<NavigationSegment> navigationSegments, String tableTarget) throws SQLException, ODataException {
 
         return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget, null).get(0);
     }
 
     public List<Map<String, Object>> getEntitySetByAssociation(final String entityName, final Map<String, Object> keys,
-            List<NavigationSegment> navigationSegments, String tableTarget) throws SQLException {
+            List<NavigationSegment> navigationSegments, String tableTarget) throws SQLException, ODataException {
 
         return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget, null);
     }
@@ -82,45 +84,41 @@ public class EntityRepository {
     private List<Map<String, Object>> getEntityData(final String entityName, final Map<String, Object> keys,
             final String orderByExpression, final Integer top, final Integer skip, final String filterExpression,
             final List<String> selectedItems, final List<NavigationSegment> navigationSegments, final String tableTarget,
-            final EdmProperty property) throws SQLException {
+            final EdmProperty property) throws SQLException, ODataException {
 
 
         List<Map<String, Object>> entitySetData = new ArrayList<Map<String, Object>>();
 
-        try {
 
+        String filterExpressionAdapted = getSubstringofOption(filterExpression);
+        filterExpressionAdapted = getStartsWithOption(filterExpressionAdapted);
+        filterExpressionAdapted = getIndexOfOption(filterExpressionAdapted);
 
-            String filterExpressionAdapted = getSubstringofOption(filterExpression);
-            filterExpressionAdapted = getStartsWithOption(filterExpressionAdapted);
-            filterExpressionAdapted = getIndexOfOption(filterExpressionAdapted);
-
-            String sqlStatement = getSQLStatement(entityName, keys, filterExpressionAdapted, selectedItems, navigationSegments,
+        String sqlStatement = getSQLStatement(entityName, keys, filterExpressionAdapted, selectedItems, navigationSegments,
                     tableTarget, property, false);
-            sqlStatement = addOrderByExpression(sqlStatement, orderByExpression);
-            sqlStatement = addTopOption(sqlStatement, top);
-            sqlStatement = addSkipOption(sqlStatement, skip);
-            logger.debug("Executing query: " + sqlStatement);
+        sqlStatement = addOrderByExpression(sqlStatement, orderByExpression);
+        sqlStatement = addTopOption(sqlStatement, top);
+        sqlStatement = addSkipOption(sqlStatement, skip);
+        logger.debug("Executing query: " + sqlStatement);
 
-            entitySetData=(List<Map<String, Object>>)this.denodoTemplate.query(sqlStatement, 
+        entitySetData=(List<Map<String, Object>>)this.denodoTemplate.query(sqlStatement, 
                     new RowMapper<Map<String, Object>>(){
 
-                @Override
-                public Map<String, Object> mapRow(ResultSet resultSet1, int rowNum) throws SQLException {
-                    ResultSetMetaData resultSetMetaData = resultSet1.getMetaData();
-                    Map<String, Object> rowData = new HashMap<String, Object>();
+            @Override
+            public Map<String, Object> mapRow(ResultSet resultSet1, int rowNum) throws SQLException {
+                ResultSetMetaData resultSetMetaData = resultSet1.getMetaData();
+                Map<String, Object> rowData = new HashMap<String, Object>();
 
-                    for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
-                        String columnName = resultSetMetaData.getColumnName(i);
+                for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
+                    String columnName = resultSetMetaData.getColumnName(i);
 
-                        rowData.put(columnName, resultSet1.getObject(i));
-                    }
-                    return rowData;
+                    rowData.put(columnName, resultSet1.getObject(i));
                 }
-            });
+                return rowData;
+            }
+        });
 
-        } catch (EdmException e) {
-            logger.error(e);
-        }
+
 
         return entitySetData.isEmpty() ? null : entitySetData;
     }

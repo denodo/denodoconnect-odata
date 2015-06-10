@@ -1,3 +1,24 @@
+/*
+ * =============================================================================
+ *
+ *   This software is part of the DenodoConnect component collection.
+ *
+ *   Copyright (c) 2014-2015, denodo technologies (http://www.denodo.com)
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ *
+ * =============================================================================
+ */
 package com.denodo.connect.business.entities.entityset.repository;
 
 import java.sql.Connection;
@@ -34,28 +55,23 @@ public class EntityRepository {
         return getEntityData(entitySetName, null, orderByExpressionString, top, skip, filterExpression, selectedItems, null, null, null);
     }
 
-    public Map<String, Object> getEntity(final String entityName, final Map<String, Object> keys) throws SQLException {
-        return getEntityData(entityName, keys, null, null, null, null, null, null, null, null).get(0);
+    public Map<String, Object> getEntity(final String entityName, final Map<String, Object> keys, final List<String> selectedItems,
+            final EdmProperty property) throws SQLException {
+        return getEntityData(entityName, keys, null, null, null, null, selectedItems, null, null, property).get(0);
     }
-    
-    public Map<String, Object> getEntity(final String entityName, final Map<String, Object> keys, final EdmProperty property) throws SQLException {
-        return getEntityData(entityName, keys, null, null, null, null, null, null, null, property).get(0);
-    }
-
 
     public Map<String, Object> getEntityByAssociation(final String entityName, final Map<String, Object> keys,
             List<NavigationSegment> navigationSegments, String tableTarget, EdmProperty property) throws SQLException {
 
-        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget,  property).get(0);
+        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget, property).get(0);
     }
-    
 
     public Map<String, Object> getEntityByAssociation(final String entityName, final Map<String, Object> keys,
             List<NavigationSegment> navigationSegments, String tableTarget) throws SQLException {
 
-        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget,  null).get(0);
+        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget, null).get(0);
     }
-    
+
     public List<Map<String, Object>> getEntitySetByAssociation(final String entityName, final Map<String, Object> keys,
             List<NavigationSegment> navigationSegments, String tableTarget) throws SQLException {
 
@@ -64,8 +80,8 @@ public class EntityRepository {
 
     private List<Map<String, Object>> getEntityData(final String entityName, final Map<String, Object> keys,
             final String orderByExpression, final Integer top, final Integer skip, final String filterExpression,
-            final List<String> selectedItems, final List<NavigationSegment> navigationSegments, final String tableTarget, final EdmProperty property)
-            throws SQLException {
+            final List<String> selectedItems, final List<NavigationSegment> navigationSegments, final String tableTarget,
+            final EdmProperty property) throws SQLException {
 
         Connection jdbcConnection = null;
         List<Map<String, Object>> entitySetData = new ArrayList<Map<String, Object>>();
@@ -79,15 +95,8 @@ public class EntityRepository {
             filterExpressionAdapted = getStartsWithOption(filterExpressionAdapted);
             filterExpressionAdapted = getIndexOfOption(filterExpressionAdapted);
 
-            String selectExpression;
-            if(property==null){
-            	selectExpression= getSelectOption(selectedItems);
-            }else{
-            	selectExpression= property.getName();
-            }
-
-            String sqlStatement = getSQLStatement(entityName, keys, filterExpressionAdapted, selectExpression, navigationSegments,
-                    tableTarget);
+            String sqlStatement = getSQLStatement(entityName, keys, filterExpressionAdapted, selectedItems, navigationSegments,
+                    tableTarget, property);
             sqlStatement = addOrderByExpression(sqlStatement, orderByExpression);
             sqlStatement = addTopOption(sqlStatement, top);
             sqlStatement = addSkipOption(sqlStatement, skip);
@@ -123,29 +132,47 @@ public class EntityRepository {
         return entitySetData.isEmpty() ? null : entitySetData;
     }
 
+    private static String getSelectSection(final String viewName, final String tableTarget, final boolean navigation,
+            final List<String> selectedProperties, final EdmProperty property) throws EdmException {
+        StringBuilder sb = new StringBuilder();
+
+        String view = navigation ? tableTarget : viewName;
+
+        String selectExpression;
+        if (property == null) {
+            selectExpression = getSelectOption(selectedProperties, view);
+        } else {
+            selectExpression = viewName + "." + property.getName() + " ";
+        }
+
+        sb.append("SELECT ");
+        if (!selectExpression.isEmpty()) {
+            sb.append(selectExpression);
+        } else {
+            sb.append(view).append(".* ");
+        }
+        sb.append("FROM ");
+        sb.append(viewName);
+
+        return sb.toString();
+    }
+
     private static String getSQLStatement(final String viewName, final Map<String, Object> keys, final String filterExpression,
-            final String selectExpression, List<NavigationSegment> navigationSegments, String tableTarget) throws EdmException {
+            final List<String> selectedProperties, List<NavigationSegment> navigationSegments, String tableTarget,
+            final EdmProperty property) throws EdmException {
+
+        boolean navigation = navigationSegments != null && !navigationSegments.isEmpty();
 
         StringBuilder sb = new StringBuilder();
 
-        if (navigationSegments != null && !navigationSegments.isEmpty()) {
-            sb.append("SELECT " + tableTarget + ".* FROM ");
-            sb.append(viewName);
+        sb.append(getSelectSection(viewName, tableTarget, navigation, selectedProperties, property));
 
+        if (navigation) {
             for (NavigationSegment navigationSegment : navigationSegments) {
                 EdmNavigationProperty navigationProperty = navigationSegment.getNavigationProperty();
                 sb.append(" LEFT JOIN " + navigationProperty.getName() + " ON " + navigationProperty.getMapping().getInternalName() + "="
                         + navigationProperty.getMapping().getMediaResourceSourceKey());
             }
-        } else {
-            sb.append("SELECT ");
-            if (!selectExpression.isEmpty()) {
-                sb.append(selectExpression);
-            } else {
-                sb.append(viewName).append(".* ");
-            }
-            sb.append("FROM ");
-            sb.append(viewName);
         }
 
         boolean whereClause = false;
@@ -308,12 +335,12 @@ public class EntityRepository {
         return " LIKE ";
     }
 
-    private static String getSelectOption(final List<String> selectedItems) {
+    private static String getSelectOption(final List<String> selectedItems, final String viewName) {
         StringBuilder sb = new StringBuilder();
 
         if (selectedItems != null) {
             for (String item : selectedItems) {
-                sb.append(item).append(",");
+                sb.append(viewName).append(".").append(item).append(",");
             }
 
             if (sb.length() > 0) {
@@ -323,8 +350,12 @@ public class EntityRepository {
         }
         return sb.toString();
     }
+<<<<<<< HEAD
     
 //    public Integer getCountEntity(final String entityName, final Map<String, Object> keys) throws SQLException {
 //        return getEntityData(entityName, keys, null, null, null, null, null, null, null, null).get(0);
 //    }
+=======
+
+>>>>>>> 79d1ff01477ea28e1e4759a53c8a3ecd62e42f92
 }

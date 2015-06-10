@@ -1,3 +1,24 @@
+/*
+ * =============================================================================
+ *
+ *   This software is part of the DenodoConnect component collection.
+ *
+ *   Copyright (c) 2014-2015, denodo technologies (http://www.denodo.com)
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ *
+ * =============================================================================
+ */
 package com.denodo.connect.business.services.entity.impl;
 
 import java.sql.SQLException;
@@ -6,36 +27,40 @@ import java.util.List;
 import java.util.Map;
 
 
+import com.denodo.connect.business.entities.entityset.repository.EntityRepository;
 
+import com.denodo.connect.business.services.entity.EntityService;
 
-
-
-import org.apache.olingo.odata2.api.uri.NavigationSegment;
 import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.edm.EdmProperty;
+import org.apache.olingo.odata2.api.uri.NavigationSegment;
 import org.apache.olingo.odata2.api.uri.SelectItem;
 import org.apache.olingo.odata2.api.uri.expression.FilterExpression;
 import org.apache.olingo.odata2.api.uri.expression.OrderByExpression;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetCountUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetUriInfo;
+import org.apache.olingo.odata2.api.uri.info.GetEntityUriInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import com.denodo.connect.business.entities.entityset.repository.EntityRepository;
-import com.denodo.connect.business.services.entity.EntityService;
 
 @Service
 public class EntityServiceImpl implements EntityService {
 
+
     @Autowired
-    EntityRepository entityRepository;
+    private EntityRepository entityRepository;
+
+
 
     public EntityServiceImpl() {
         super();
     }
 
-    @Override
-    public List<Map<String, Object>> getEntitySet(final String entitySetName, final GetEntitySetUriInfo uriInfo) throws SQLException {
+
+
+    public List<Map<String, Object>> getEntitySet(
+            final String entitySetName, final GetEntitySetUriInfo uriInfo)
+            throws SQLException {
 
         // Orderby System Query Option ($orderby)
         OrderByExpression orderByExpression = uriInfo.getOrderBy();
@@ -63,9 +88,12 @@ public class EntityServiceImpl implements EntityService {
 
         return this.entityRepository.getEntitySet(entitySetName, orderByExpressionString, top, skip, filterExpressionString,
                 selectedItemsAsString);
+
     }
 
+
     private static List<String> getSelectOptionValues(final List<SelectItem> selectedItems) {
+
         List<String> selectValues = new ArrayList<String>();
 
         for (SelectItem item : selectedItems) {
@@ -77,45 +105,58 @@ public class EntityServiceImpl implements EntityService {
             }
         }
 
-
         return selectValues;
-    }
-    
-    @Override
-    public Map<String, Object> getEntity(final String entityName, final Map<String, Object> keys) throws SQLException {
-        return this.entityRepository.getEntity(entityName, keys);
-    }
-    
-    @Override
-    public Map<String, Object> getEntity(final String entityName, final Map<String, Object> keys, final EdmProperty property) throws SQLException {
-        return this.entityRepository.getEntity(entityName, keys);
-    }
-    
-	@Override
-	public List<Map<String, Object>> getEntitySetAssociation(String entityName,
-			Map<String, Object> keys,
-			List<NavigationSegment> navigationSegments, String tableTarget)
-			throws SQLException {
 
-		  return this.entityRepository.getEntitySetByAssociation(entityName, keys,navigationSegments,tableTarget);
-	}
-	
-	@Override
-	public Map<String, Object> getEntityAssociation(String entityName,
-			Map<String, Object> keys,
-			List<NavigationSegment> navigationSegments, String tableTarget, EdmProperty property)
-			throws SQLException {
+    }
 
-		  return this.entityRepository.getEntityByAssociation(entityName, keys,navigationSegments,tableTarget, property);
-	}
-	@Override
-	public Map<String, Object> getEntityAssociation(String entityName,
-			Map<String, Object> keys,
-			List<NavigationSegment> navigationSegments, String tableTarget)
-			throws SQLException {
 
-		  return this.entityRepository.getEntityByAssociation(entityName, keys,navigationSegments,tableTarget);
-	}
+    public Map<String, Object> getEntity(
+            final String entityName, final Map<String, Object> keys, final GetEntityUriInfo uriInfo)
+            throws SQLException {
+
+        List<String> selectedItemsAsString = new ArrayList<String>();
+        if (uriInfo != null) {
+            // Select System Query Option ($select)
+            List<SelectItem> selectedItems = uriInfo.getSelect();
+            selectedItemsAsString = getSelectOptionValues(selectedItems);
+        }
+
+        return this.entityRepository.getEntity(entityName, keys, selectedItemsAsString, null);
+    }
+
+
+    public Map<String, Object> getEntity(
+            final String entityName, final Map<String, Object> keys, final EdmProperty property) throws SQLException {
+        return this.entityRepository.getEntity(entityName, keys, null, property);
+    }
+
+
+    public List<Map<String, Object>> getEntitySetAssociation(
+            final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
+            final String tableTarget)
+            throws SQLException {
+
+        return this.entityRepository.getEntitySetByAssociation(entityName, keys,navigationSegments,tableTarget);
+    }
+
+
+    public Map<String, Object> getEntityAssociation(
+            final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
+            final String tableTarget, final EdmProperty property)
+            throws SQLException {
+
+        return this.entityRepository.getEntityByAssociation(entityName, keys, navigationSegments, tableTarget, property);
+    }
+
+
+    public Map<String, Object> getEntityAssociation(
+            final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
+            final String tableTarget)
+            throws SQLException {
+
+        return this.entityRepository.getEntityByAssociation(entityName, keys,navigationSegments,tableTarget);
+    }
+
 
 
 

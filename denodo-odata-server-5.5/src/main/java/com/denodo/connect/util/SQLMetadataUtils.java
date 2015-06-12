@@ -124,9 +124,11 @@ public final class SQLMetadataUtils {
             return EdmMultiplicity.ZERO_TO_ONE;
         } else if(multiplicity.equals("+")){
             return EdmMultiplicity.MANY;
+        } else if(multiplicity.equals("*")){
+            return EdmMultiplicity.MANY;
         }
 
-        return null;
+        throw new IllegalArgumentException("Unrecognized multiplicity value: " + multiplicity );
 
     }
 

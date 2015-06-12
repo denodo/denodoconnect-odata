@@ -46,7 +46,7 @@ public final class SQLMetadataUtils {
             case Types.DECIMAL:
                 return EdmSimpleTypeKind.Decimal;
             case Types.NUMERIC:
-                return EdmSimpleTypeKind.Decimal;
+                return EdmSimpleTypeKind.Double;
             case Types.DOUBLE:
                 return EdmSimpleTypeKind.Double;
             case Types.SMALLINT:
@@ -66,7 +66,7 @@ public final class SQLMetadataUtils {
             case Types.CLOB:
                 return EdmSimpleTypeKind.String;
             case Types.LONGVARBINARY:
-                return EdmSimpleTypeKind.Byte;
+                return EdmSimpleTypeKind.Binary;
             case Types.LONGVARCHAR:
                 return EdmSimpleTypeKind.String;
             case Types.LONGNVARCHAR:
@@ -74,7 +74,7 @@ public final class SQLMetadataUtils {
             case Types.NULL:
                 return EdmSimpleTypeKind.Null;
             case Types.REAL:
-                return EdmSimpleTypeKind.Decimal;
+                return EdmSimpleTypeKind.Double;
             case Types.SQLXML:
                 return EdmSimpleTypeKind.String;
             case Types.TIME:
@@ -83,6 +83,20 @@ public final class SQLMetadataUtils {
                 return EdmSimpleTypeKind.String;
             case Types.VARBINARY:
                 return EdmSimpleTypeKind.Binary;
+            case Types.ARRAY:
+                return EdmSimpleTypeKind.String;
+            case Types.DATALINK:
+                return EdmSimpleTypeKind.String;
+            case Types.DISTINCT:
+                return EdmSimpleTypeKind.String;
+            case Types.JAVA_OBJECT:
+                return EdmSimpleTypeKind.String;  
+            case Types.OTHER:
+                return EdmSimpleTypeKind.String;
+            case Types.REF:
+                return EdmSimpleTypeKind.String;
+            case Types.STRUCT:
+                return EdmSimpleTypeKind.String;
             default:
                 break;
         }

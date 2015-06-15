@@ -30,6 +30,7 @@ import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.edm.FullQualifiedName;
 import org.apache.olingo.odata2.api.edm.provider.Association;
 import org.apache.olingo.odata2.api.edm.provider.AssociationSet;
+import org.apache.olingo.odata2.api.edm.provider.AssociationSetEnd;
 import org.apache.olingo.odata2.api.edm.provider.EdmProvider;
 import org.apache.olingo.odata2.api.edm.provider.EntityContainer;
 import org.apache.olingo.odata2.api.edm.provider.EntityContainerInfo;
@@ -206,12 +207,9 @@ public class DenodoEdmProvider extends EdmProvider {
              * Entity Sets represent the collections of instances of each of the Entity Types that we have defined.
              * Their names correspond with the names of the entity types themselves
              */
-            // TODO Should the names of entity sets and entity types be the same? What about adding "_Type" to the types?
             final List<EntitySet> entitySets = new ArrayList<EntitySet>(allEntityTypes.size());
             for (final EntityType entityType : allEntityTypes) {
-                final EntitySet entitySet = new EntitySet();
-                entitySet.setEntityType(new FullQualifiedName(NAMESPACE_DENODO, entityType.getName()));
-                entitySets.add(entitySet);
+                entitySets.add(computeEntitySet(entityType));
             }
             denodoEntityContainer.setEntitySets(entitySets);
 
@@ -220,12 +218,9 @@ public class DenodoEdmProvider extends EdmProvider {
              * Association Sets repesent the collections of instances of each of the Associations that we have defined.
              * Their names correspond with the names of the associations themselves
              */
-            // TODO Should the names of associations and association types be the same? What about adding "_Type" to the associations?
             final List<AssociationSet> associationSets = new ArrayList<AssociationSet>(allAssociations.size());
             for (final Association association : allAssociations) {
-                final AssociationSet associationSet = new AssociationSet();
-                associationSet.setAssociation(new FullQualifiedName(NAMESPACE_DENODO, association.getName()));
-                associationSets.add(associationSet);
+                associationSets.add(computeAssociationSet(association));
             }
             denodoEntityContainer.setAssociationSets(associationSets);
 
@@ -254,24 +249,6 @@ public class DenodoEdmProvider extends EdmProvider {
     }
 
 
-    //
-//    @Override
-//    public ComplexType getComplexType(final FullQualifiedName edmFQName) throws ODataException {
-//        if (NAMESPACE.equals(edmFQName.getNamespace())) {
-//            if (COMPLEX_TYPE.getName().equals(edmFQName.getName())) {
-//                List<Property> properties = new ArrayList<Property>();
-//                properties.add(new SimpleProperty().setName("Street").setType(EdmSimpleTypeKind.String));
-//                properties.add(new SimpleProperty().setName("City").setType(EdmSimpleTypeKind.String));
-//                properties.add(new SimpleProperty().setName("ZipCode").setType(EdmSimpleTypeKind.String));
-//                properties.add(new SimpleProperty().setName("Country").setType(EdmSimpleTypeKind.String));
-//                return new ComplexType().setName(COMPLEX_TYPE.getName()).setProperties(properties);
-//            }
-//        }
-//
-//        return null;
-//    }
-
-
 
     @Override
     public Association getAssociation(final FullQualifiedName associationName) throws ODataException {
@@ -296,60 +273,111 @@ public class DenodoEdmProvider extends EdmProvider {
 
     @Override
     public EntitySet getEntitySet(final String entityContainer, final String name) throws ODataException {
+
         if (ENTITY_CONTAINER_DENODO.equals(entityContainer)) {
-            return getEntity(NAMESPACE_DENODO, name);
+
+            // Calling the metadata repository here might seem overkill, but we actually need a way to know
+            // if the required entity exists or not, so we have to query the data store
+            final EntityType entityType = getEntityType(new FullQualifiedName(NAMESPACE_DENODO, name));
+            if (entityType != null) {
+                return computeEntitySet(entityType);
+            }
+
         }
+
         return null;
+
     }
 
 
 
 
     @Override
-    public AssociationSet getAssociationSet(final String entityContainer, final FullQualifiedName association,
-                                            final String sourceEntitySetName, final String sourceEntitySetRole) throws ODataException {
-        if (ENTITY_CONTAINER_DENODO.equals(entityContainer)) {
+    public AssociationSet getAssociationSet(
+            final String entityContainer, final FullQualifiedName associationName,
+            final String sourceEntitySetName, final String sourceEntitySetRole)
+            throws ODataException {
 
+        try {
 
-            // TODO This code is probably wrong... is it returning a single association as if it were an entire set?
-//                AssociationMetadata associationMetadata = this.metadataAccessor.getAssociation(association.getName());
-//                return new AssociationSet().setName(associationMetadata.getAssociationName())
-//                        .setAssociation(association)
-//                        .setEnd1(new AssociationSetEnd().setRole(associationMetadata.getLeftRole()).setEntitySet(associationMetadata.getLeftViewName()))
-//                        .setEnd2(new AssociationSetEnd().setRole(associationMetadata.getRightRole()).setEntitySet(associationMetadata.getRightViewName()));
+            if (ENTITY_CONTAINER_DENODO.equals(entityContainer)) {
 
+                final Association association = this.metadataAccessor.getAssociation(associationName);
+
+                final AssociationSet associationSet = computeAssociationSet(association);
+
+                final AssociationSetEnd associationSetEnd1 = associationSet.getEnd1();
+                final AssociationSetEnd associationSetEnd2 = associationSet.getEnd2();
+
+                // We might need to reorder the ends depending on the specified source entity set name and role
+                // NOTE This is not something that appears in the docs anywhere, so we are simply making an assumption
+                // that we need to perform this reordering
+
+                if (associationSetEnd1.getEntitySet().equals(sourceEntitySetName) && associationSetEnd1.getRole().equals(sourceEntitySetRole)) {
+                    return associationSet;
+                }
+
+                if (associationSetEnd2.getEntitySet().equals(sourceEntitySetName) && associationSetEnd2.getRole().equals(sourceEntitySetRole)) {
+                    associationSet.setEnd1(associationSetEnd2);
+                    associationSet.setEnd2(associationSetEnd1);
+                    return associationSet;
+                }
+
+                throw new ODataException(
+                        "Source entity set name \"" + sourceEntitySetName + "\" and role \"" + sourceEntitySetRole + "\" " +
+                        "do not correspond to any of the ends of the \"" + associationSet.getName() + "\" association set");
+
+            }
+
+            return null;
+
+        } catch (final SQLException e) {
+            logger.error("An exception was raised while obtaining association " + associationName, e);
+            throw new ODataException(e);
         }
-        return null;
-    }
 
-//	@Override
-//	public FunctionImport getFunctionImport(final String entityContainer, final String name) throws ODataException {
-//		if (ENTITY_CONTAINER.equals(entityContainer)) {
-//			if (FUNCTION_IMPORT.equals(name)) {
-//				return new FunctionImport().setName(name)
-//						.setReturnType(new ReturnType().setTypeName(ENTITY_TYPE_1_1).setMultiplicity(EdmMultiplicity.MANY))
-//						.setHttpMethod("GET");
-//			}
-//		}
-//		return null;
-//	}
-
-
-    public  EntitySet getEntity(String nameSpace,String entityName){
-        FullQualifiedName fullQualifiedName =new FullQualifiedName(nameSpace, entityName);
-        return new EntitySet().setName(entityName).setEntityType(fullQualifiedName);
     }
 
 
 
-    private FullQualifiedName getAssociationEntity( String associationName){
-        return new FullQualifiedName(NAMESPACE_DENODO,
-                associationName);
+
+
+
+    private static EntitySet computeEntitySet(final EntityType entityType) {
+
+        final EntitySet entitySet = new EntitySet();
+
+        entitySet.setName(entityType.getName());
+        entitySet.setEntityType(new FullQualifiedName(NAMESPACE_DENODO, entityType.getName()));
+
+        return entitySet;
+
     }
 
-    private FullQualifiedName getTypeEntity(String name,String namespace){
-        return new FullQualifiedName(namespace,
-                name);
+
+
+
+    private static AssociationSet computeAssociationSet(final Association association) {
+
+        final AssociationSet associationSet = new AssociationSet();
+
+        associationSet.setName(association.getName());
+        associationSet.setAssociation(new FullQualifiedName(NAMESPACE_DENODO, association.getName()));
+
+        final AssociationSetEnd associationSetEnd1 = new AssociationSetEnd();
+        associationSetEnd1.setRole(association.getEnd1().getRole());
+        associationSetEnd1.setEntitySet(association.getEnd1().getType().getName());
+
+        final AssociationSetEnd associationSetEnd2 = new AssociationSetEnd();
+        associationSetEnd2.setRole(association.getEnd2().getRole());
+        associationSetEnd2.setEntitySet(association.getEnd2().getType().getName());
+
+        associationSet.setEnd1(associationSetEnd1);
+        associationSet.setEnd2(associationSetEnd2);
+
+        return associationSet;
+
     }
+
 
 }

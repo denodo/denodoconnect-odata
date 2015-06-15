@@ -567,6 +567,8 @@ public class MetadataAccessor {
 
             final DatabaseMetaData metadata = connection.getMetaData();
 
+            // Virtual DataPort defines two types of "tables": "TABLE" and "VIEW" for base and derived views,
+            // respectively. But we are interested in both here, so we are going to set the last parameter to null
             final ResultSet tablesRs =
                     metadata.getTables(connection.getCatalog(), null, null, null);
 

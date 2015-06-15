@@ -98,16 +98,22 @@ public class MetadataAccessor {
                  * come in the "REMARKS" column of this ResultSet.
                  */
 
-
-                // -----------------------------------------------------------------
-                // TODO Take into account this for types (from the Olingo doc):
-                // http://olingo.apache.org/javadoc/odata2/org/apache/olingo/odata2/api/edm/EdmSimpleType.html
-                //
-                //    For all EDM simple types, the facet Nullable is taken into account. For Binary, MaxLength
-                // is also applicable. For String, the facets MaxLength and Unicode are also considered. The
-                // EDM simple types DateTime, DateTimeOffset, and Time can have a Precision facet. Decimal can
-                // have the facets Precision and Scale.
-                // -----------------------------------------------------------------
+                /*
+                 * NOTE the metadata for these types is extracting according to what is established on
+                 * the Apache Olingo documentation at:
+                 * http://olingo.apache.org/javadoc/odata2/org/apache/olingo/odata2/api/edm/EdmSimpleType.html
+                 * ---
+                 * For all EDM simple types, the facet Nullable is taken into account. For Binary, MaxLength
+                 * is also applicable. For String, the facets MaxLength and Unicode are also considered. The
+                 * EDM simple types DateTime, DateTimeOffset, and Time can have a Precision facet. Decimal can
+                 * have the facets Precision and Scale.
+                 * ---
+                 * Note also that, in order to better understand the way these properties are extracted from
+                 * metadata, it is useful to understand the names of the different metadata fields (and their
+                 * correspondence between ODBC 2.0 and 3.0), given OData evolves from Microsoft specifications
+                 * like the Entity Framework.
+                 * See: https://msdn.microsoft.com/en-us/library/ms711683%28v=vs.85%29.aspx and find "ODBC 2.0 column"
+                 */
 
                 final SimpleProperty property = new SimpleProperty();
 
@@ -130,8 +136,22 @@ public class MetadataAccessor {
                     if (!columnsRs.wasNull()) {
                         propertyFacets.setMaxLength(Integer.valueOf(maxLength));
                     }
-                } else if (type == EdmSimpleTypeKind.Decimal || type == EdmSimpleTypeKind.Double) {
-                    final int precision = columnsRs.getInt("DECIMAL_DIGITS");
+                } else if (type == EdmSimpleTypeKind.Decimal) {
+                    final int scale = columnsRs.getInt("DECIMAL_DIGITS");
+                    if (!columnsRs.wasNull()) {
+                        propertyFacets.setScale(Integer.valueOf(scale));
+                    }
+                    final int precision = columnsRs.getInt("COLUMN_SIZE");
+                    if (!columnsRs.wasNull()) {
+                        propertyFacets.setPrecision(Integer.valueOf(precision));
+                    }
+                } else if (type == EdmSimpleTypeKind.Binary) {
+                    final int maxLength = columnsRs.getInt("COLUMN_SIZE");
+                    if (!columnsRs.wasNull()) {
+                        propertyFacets.setMaxLength(Integer.valueOf(maxLength));
+                    }
+                } else if (type == EdmSimpleTypeKind.DateTime || type == EdmSimpleTypeKind.DateTimeOffset || type == EdmSimpleTypeKind.Time) {
+                    final int precision = columnsRs.getInt("COLUMN_SIZE");
                     if (!columnsRs.wasNull()) {
                         propertyFacets.setPrecision(Integer.valueOf(precision));
                     }

@@ -26,13 +26,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-
-import com.denodo.connect.business.entities.entityset.repository.EntityRepository;
-
-import com.denodo.connect.business.services.entity.EntityService;
-
 import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.edm.EdmProperty;
+import org.apache.olingo.odata2.api.exception.ODataException;
 import org.apache.olingo.odata2.api.uri.NavigationSegment;
 import org.apache.olingo.odata2.api.uri.SelectItem;
 import org.apache.olingo.odata2.api.uri.expression.FilterExpression;
@@ -42,6 +38,9 @@ import org.apache.olingo.odata2.api.uri.info.GetEntitySetUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntityUriInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import com.denodo.connect.business.entities.entityset.repository.EntityRepository;
+import com.denodo.connect.business.services.entity.EntityService;
 
 @Service
 public class EntityServiceImpl implements EntityService {
@@ -60,7 +59,7 @@ public class EntityServiceImpl implements EntityService {
 
     public List<Map<String, Object>> getEntitySet(
             final String entitySetName, final GetEntitySetUriInfo uriInfo, final List<String> keyProperties)
-            throws SQLException {
+            throws SQLException, ODataException {
 
         // Orderby System Query Option ($orderby)
         OrderByExpression orderByExpression = uriInfo.getOrderBy();
@@ -118,7 +117,7 @@ public class EntityServiceImpl implements EntityService {
     public Map<String, Object> getEntity(
             final String entityName, final Map<String, Object> keys, final GetEntityUriInfo uriInfo, 
             final List<String> keyProperties)
-            throws SQLException {
+            throws SQLException, ODataException {
 
         List<String> selectedItemsAsString = new ArrayList<String>();
         if (uriInfo != null) {
@@ -137,7 +136,8 @@ public class EntityServiceImpl implements EntityService {
 
 
     public Map<String, Object> getEntity(
-            final String entityName, final Map<String, Object> keys, final EdmProperty property) throws SQLException {
+            final String entityName, final Map<String, Object> keys, final EdmProperty property) 
+            throws SQLException, ODataException {
         return this.entityRepository.getEntity(entityName, keys, null, property);
     }
 
@@ -145,7 +145,7 @@ public class EntityServiceImpl implements EntityService {
     public List<Map<String, Object>> getEntitySetAssociation(
             final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
             final String tableTarget)
-            throws SQLException {
+            throws SQLException, ODataException {
 
         return this.entityRepository.getEntitySetByAssociation(entityName, keys,navigationSegments,tableTarget);
     }
@@ -154,7 +154,7 @@ public class EntityServiceImpl implements EntityService {
     public Map<String, Object> getEntityAssociation(
             final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
             final String tableTarget, final EdmProperty property)
-            throws SQLException {
+            throws SQLException, ODataException {
 
         return this.entityRepository.getEntityByAssociation(entityName, keys, navigationSegments, tableTarget, property);
     }
@@ -163,7 +163,7 @@ public class EntityServiceImpl implements EntityService {
     public Map<String, Object> getEntityAssociation(
             final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
             final String tableTarget)
-            throws SQLException {
+            throws SQLException, ODataException {
 
         return this.entityRepository.getEntityByAssociation(entityName, keys,navigationSegments,tableTarget);
     }

@@ -26,44 +26,45 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.olingo.odata2.api.edm.EdmProperty;
+import org.apache.olingo.odata2.api.exception.ODataException;
 import org.apache.olingo.odata2.api.uri.NavigationSegment;
-import org.apache.olingo.odata2.api.uri.info.GetEntitySetUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetCountUriInfo;
+import org.apache.olingo.odata2.api.uri.info.GetEntitySetUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntityUriInfo;
 
 public interface EntityService {
 
     public  List<Map<String, Object>> getEntitySet(
             final String entitySetName, final GetEntitySetUriInfo uriInfo, final List<String> keyProperties)
-            throws SQLException;
+            throws SQLException, ODataException;
 
     public  Map<String, Object> getEntity(
             final String entityName, final Map<String, Object> keys, final GetEntityUriInfo uriInfo,
             final List<String> keyProperties)
-            throws SQLException;
+            throws SQLException, ODataException;
 
     public  List<Map<String, Object>> getEntitySetAssociation(
             final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
             final String tableTarget)
-            throws SQLException;
+            throws SQLException, ODataException;
 
     public Map<String, Object> getEntityAssociation(
             final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
             final String tableTarget, final EdmProperty property)
-            throws SQLException;
+            throws SQLException, ODataException;
 
     public Map<String, Object> getEntityAssociation(
             final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
             final String tableTarget)
-            throws SQLException;
+            throws SQLException, ODataException;
 
     public Map<String, Object> getEntity(
             final String entityName, final Map<String, Object> keys, final EdmProperty property)
-            throws SQLException;
+            throws SQLException, ODataException;
 
 	
-	public Integer getCount(final String entitySetName, final GetEntitySetCountUriInfo uriInfo) throws SQLException;
+	public Integer getCount(final String entitySetName, final GetEntitySetCountUriInfo uriInfo) throws SQLException, ODataException;
 	 
 	public Integer getCountAssociation( final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
-	        final String tableTarget) throws SQLException ;
+	        final String tableTarget) throws SQLException, ODataException;
 }

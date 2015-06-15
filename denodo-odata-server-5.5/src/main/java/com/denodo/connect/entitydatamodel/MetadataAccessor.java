@@ -133,8 +133,10 @@ public class MetadataAccessor {
                 // Size of VARCHAR (String) columns and precision of DECIMAL columns
                 if (type == EdmSimpleTypeKind.String) {
                     final int maxLength = columnsRs.getInt("COLUMN_SIZE");
-                    if (!columnsRs.wasNull()) {
-                        propertyFacets.setMaxLength(Integer.valueOf(maxLength));
+                    if (maxLength != Integer.MAX_VALUE) { // Integer.MAX_VALUE is returned when there is no limit
+                        if (!columnsRs.wasNull()) {
+                            propertyFacets.setMaxLength(Integer.valueOf(maxLength));
+                        }
                     }
                 } else if (type == EdmSimpleTypeKind.Decimal) {
                     final int scale = columnsRs.getInt("DECIMAL_DIGITS");

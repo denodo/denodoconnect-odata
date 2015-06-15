@@ -42,7 +42,7 @@ public final class SQLMetadataUtils {
             case Types.TINYINT:
                 return EdmSimpleTypeKind.Byte;
             case Types.DATE:
-                return EdmSimpleTypeKind.DateTime;
+                return EdmSimpleTypeKind.DateTimeOffset;
             case Types.DECIMAL:
                 return EdmSimpleTypeKind.Decimal;
             case Types.NUMERIC:
@@ -80,7 +80,7 @@ public final class SQLMetadataUtils {
             case Types.TIME:
                 return EdmSimpleTypeKind.Time;
             case Types.TIMESTAMP:
-                return EdmSimpleTypeKind.String;
+                return EdmSimpleTypeKind.DateTimeOffset;
             case Types.VARBINARY:
                 return EdmSimpleTypeKind.Binary;
             case Types.ARRAY:

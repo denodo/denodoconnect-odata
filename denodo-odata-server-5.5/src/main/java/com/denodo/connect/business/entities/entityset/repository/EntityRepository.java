@@ -137,7 +137,7 @@ public class EntityRepository {
             if (property == null) {
                 selectExpression = getSelectOption(selectedProperties, view);
             } else {
-                selectExpression = viewName + "." + property.getName() + " ";
+                selectExpression = view + "." + property.getName() + " ";
             }
         }
         sb.append("SELECT ");

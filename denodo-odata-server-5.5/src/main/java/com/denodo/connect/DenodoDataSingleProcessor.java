@@ -34,6 +34,7 @@ import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.edm.EdmAssociation;
 import org.apache.olingo.odata2.api.edm.EdmAssociationSet;
 import org.apache.olingo.odata2.api.edm.EdmEntitySet;
+import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.edm.EdmLiteralKind;
 import org.apache.olingo.odata2.api.edm.EdmProperty;
 import org.apache.olingo.odata2.api.edm.EdmSimpleType;
@@ -74,7 +75,12 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
         if (uriInfo.getNavigationSegments().size() == 0) {
             entitySet = uriInfo.getStartEntitySet();
-            List<String> keyProperties = entitySet.getEntityType().getKeyPropertyNames();
+            List<String> keyProperties = new ArrayList<String>();
+            if(!(entitySet.getEntityType().getKeyProperties()==null || entitySet.getEntityType().getKeyProperties().isEmpty())){
+                    keyProperties = entitySet.getEntityType().getKeyPropertyNames();
+            }else{
+                logger.debug("The entitySet "+entitySet.getName()+" has not keys");
+            }
 
             try {
                 List<Map<String, Object>> data = this.entityService.getEntitySet(entitySet.getName(), uriInfo, keyProperties);
@@ -138,7 +144,12 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
         if (uriInfo.getNavigationSegments().size() == 0) {
             EdmEntitySet entitySet = uriInfo.getStartEntitySet();
-            List<String> keyProperties = entitySet.getEntityType().getKeyPropertyNames();
+            List<String> keyProperties = new ArrayList<String>();
+            if(!(entitySet.getEntityType().getKeyProperties()==null || entitySet.getEntityType().getKeyProperties().isEmpty())){
+                    keyProperties = entitySet.getEntityType().getKeyPropertyNames();
+            }else{
+                logger.debug("The entitySet "+entitySet.getName()+" has not keys");
+            }
 
             Map<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
 

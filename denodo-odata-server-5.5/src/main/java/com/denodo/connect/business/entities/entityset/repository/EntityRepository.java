@@ -33,9 +33,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
+import org.apache.olingo.odata2.api.edm.EdmAssociationSet;
 import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.edm.EdmNavigationProperty;
 import org.apache.olingo.odata2.api.edm.EdmProperty;
+import org.apache.olingo.odata2.api.edm.EdmReferentialConstraintRole;
 import org.apache.olingo.odata2.api.exception.ODataException;
 import org.apache.olingo.odata2.api.exception.ODataNotFoundException;
 import org.apache.olingo.odata2.api.uri.NavigationSegment;
@@ -55,36 +57,36 @@ public class EntityRepository {
 
     public List<Map<String, Object>> getEntitySet(final String entitySetName, final String orderByExpressionString, final Integer top,
             final Integer skip, final String filterExpression, final List<String> selectedItems) throws SQLException, ODataException {
-        return getEntityData(entitySetName, null, orderByExpressionString, top, skip, filterExpression, selectedItems, null, null, null);
+        return getEntityData(entitySetName, null, orderByExpressionString, top, skip, filterExpression, selectedItems, null, null, null, null);
     }
 
     public Map<String, Object> getEntity(final String entityName, final Map<String, Object> keys, final List<String> selectedItems,
             final EdmProperty property) throws SQLException, ODataException {
-        return getEntityData(entityName, keys, null, null, null, null, selectedItems, null, null, property).get(0);
+        return getEntityData(entityName, keys, null, null, null, null, selectedItems, null, null, property, null).get(0);
     }
 
     public Map<String, Object> getEntityByAssociation(final String entityName, final Map<String, Object> keys,
-            List<NavigationSegment> navigationSegments, String tableTarget, EdmProperty property) throws SQLException, ODataException {
+            List<NavigationSegment> navigationSegments, String tableTarget, EdmProperty property, List<EdmAssociationSet> associations) throws SQLException, ODataException {
 
-        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget, property).get(0);
+        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget, property, null).get(0);
     }
 
     public Map<String, Object> getEntityByAssociation(final String entityName, final Map<String, Object> keys,
-            List<NavigationSegment> navigationSegments, String tableTarget) throws SQLException, ODataException {
+            List<NavigationSegment> navigationSegments, String tableTarget, List<EdmAssociationSet> associations) throws SQLException, ODataException {
 
-        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget, null).get(0);
+        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget, null,  associations).get(0);
     }
 
     public List<Map<String, Object>> getEntitySetByAssociation(final String entityName, final Map<String, Object> keys,
-            List<NavigationSegment> navigationSegments, String tableTarget) throws SQLException, ODataException {
+            List<NavigationSegment> navigationSegments, String tableTarget, List<EdmAssociationSet> associations) throws SQLException, ODataException {
 
-        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget, null);
+        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget, null,associations);
     }
 
     private List<Map<String, Object>> getEntityData(final String entityName, final Map<String, Object> keys,
             final String orderByExpression, final Integer top, final Integer skip, final String filterExpression,
             final List<String> selectedItems, final List<NavigationSegment> navigationSegments, final String tableTarget,
-            final EdmProperty property) throws SQLException, ODataException {
+            final EdmProperty property, List<EdmAssociationSet> associations) throws SQLException, ODataException {
 
 
         List<Map<String, Object>> entitySetData = new ArrayList<Map<String, Object>>();
@@ -95,7 +97,7 @@ public class EntityRepository {
         filterExpressionAdapted = getIndexOfOption(filterExpressionAdapted);
 
         String sqlStatement = getSQLStatement(entityName, keys, filterExpressionAdapted, selectedItems, navigationSegments,
-                    tableTarget, property, false);
+                    tableTarget, property, false, associations);
         sqlStatement = addOrderByExpression(sqlStatement, orderByExpression);
         sqlStatement = addTopOption(sqlStatement, top);
         sqlStatement = addSkipOption(sqlStatement, skip);
@@ -154,7 +156,7 @@ public class EntityRepository {
 
     private static String getSQLStatement(final String viewName, final Map<String, Object> keys, final String filterExpression,
             final List<String> selectedProperties, List<NavigationSegment> navigationSegments, String tableTarget,
-            final EdmProperty property, final Boolean count) throws EdmException {
+            final EdmProperty property, final Boolean count,final List<EdmAssociationSet> associations) throws ODataException {
 
         boolean navigation = navigationSegments != null && !navigationSegments.isEmpty();
 
@@ -162,11 +164,39 @@ public class EntityRepository {
 
         sb.append(getSelectSection(viewName, tableTarget, navigation, selectedProperties, property, count));
 
-        if (navigation&& navigationSegments!=null ) {
-            for (NavigationSegment navigationSegment : navigationSegments) {
-                EdmNavigationProperty navigationProperty = navigationSegment.getNavigationProperty();
-                sb.append(" LEFT JOIN " + navigationProperty.getName() + " ON " + navigationProperty.getMapping().getInternalName() + "="
-                        + navigationProperty.getMapping().getMediaResourceSourceKey());
+        if (navigation && navigationSegments!=null ) {
+            int i= 0;
+            for (EdmAssociationSet association : associations) {
+                EdmReferentialConstraintRole referentialConstraintPrincipal; 
+                EdmReferentialConstraintRole referentialConstraintDependent;
+                String tableDependent; 
+                if(association.getAssociation().getReferentialConstraint()==null || 
+                        association.getAssociation().getReferentialConstraint().getPrincipal()==null ||
+                        association.getAssociation().getReferentialConstraint().getDependent()==null ){
+                    throw  new ODataException("This association is not navigable");
+                    //This association is not referential constraint, and it is not navigable.
+                }
+                //We have to check the direction of the navigation
+                if(navigationSegments.get(i).getNavigationProperty().getName().equals(association.getAssociation().getEnd1().getRole())){
+                    referentialConstraintPrincipal = association.getAssociation().getReferentialConstraint().getPrincipal();
+                    referentialConstraintDependent = association.getAssociation().getReferentialConstraint().getDependent();
+                    tableDependent = association.getAssociation().getEnd1().getEntityType().getName();
+                }else{
+                    referentialConstraintPrincipal = association.getAssociation().getReferentialConstraint().getDependent();
+                    referentialConstraintDependent = association.getAssociation().getReferentialConstraint().getPrincipal();
+                    tableDependent = association.getAssociation().getEnd2().getEntityType().getName(); 
+                }
+
+                sb.append(" LEFT JOIN " + tableDependent + " ON " );
+                int j = 0;
+                for (String attributte : referentialConstraintPrincipal.getPropertyRefNames()){
+                    if(j>0){
+                        sb.append(" AND ");
+                    }
+                    sb.append(  attributte + "="+referentialConstraintDependent.getPropertyRefNames().get(j) );
+                    j++;
+                }
+                i++;
             }
         }
 
@@ -346,11 +376,11 @@ public class EntityRepository {
         return sb.toString();
     }
 
-    public Integer getCountEntitySet(final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments, final String tableTarget){
+    public Integer getCountEntitySet(final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments, final String tableTarget, final List<EdmAssociationSet> associations ) throws ODataException{
 
         try {
             String sqlStatement = getSQLStatement(entityName, keys, null, null, navigationSegments,
-                    tableTarget, null, true);
+                    tableTarget, null, true, associations );
             logger.debug("Executing query: " + sqlStatement);
 
             return this.denodoTemplate.queryForObject(sqlStatement,Integer.class);
@@ -362,8 +392,8 @@ public class EntityRepository {
         return null;
     }
 
-    public Integer getCountEntitySet(final String entityName, GetEntitySetCountUriInfo uriInfo) throws SQLException {
-        return getCountEntitySet(entityName,null, null, null);
+    public Integer getCountEntitySet(final String entityName, GetEntitySetCountUriInfo uriInfo) throws SQLException, ODataException {
+        return getCountEntitySet(entityName,null, null, null, null);
     }
 
 }

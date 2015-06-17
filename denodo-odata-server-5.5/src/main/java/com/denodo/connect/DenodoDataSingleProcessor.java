@@ -23,12 +23,16 @@ package com.denodo.connect;
 
 import java.net.URI;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import com.denodo.connect.business.services.entity.EntityService;
+
 import org.apache.log4j.Logger;
+import org.apache.olingo.odata2.api.edm.EdmAssociation;
+import org.apache.olingo.odata2.api.edm.EdmAssociationSet;
 import org.apache.olingo.odata2.api.edm.EdmEntitySet;
 import org.apache.olingo.odata2.api.edm.EdmLiteralKind;
 import org.apache.olingo.odata2.api.edm.EdmProperty;
@@ -71,7 +75,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         if (uriInfo.getNavigationSegments().size() == 0) {
             entitySet = uriInfo.getStartEntitySet();
             List<String> keyProperties = entitySet.getEntityType().getKeyPropertyNames();
-            
+
             try {
                 List<Map<String, Object>> data = this.entityService.getEntitySet(entitySet.getName(), uriInfo, keyProperties);
                 if (data != null && !data.isEmpty()) {
@@ -99,10 +103,23 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
             EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
             EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
-
+            List<EdmAssociationSet> associations= new ArrayList<EdmAssociationSet>();
             try {
+                EdmEntitySet entitySource= null;
+                int n=0;
+                for (NavigationSegment navigationSegment : navigationSegments) {
+                    if(n==0){
+                        //We need the entitysetsource of the association to get the associationSet
+                        associations.add(uriInfo.getEntityContainer().getAssociationSet(entitySetStart, navigationSegment.getNavigationProperty()));
+                    }else{
+                        associations.add(uriInfo.getEntityContainer().getAssociationSet(entitySource, navigationSegment.getNavigationProperty()));  
+                    }
+                    entitySource= navigationSegment.getEntitySet();
+                    n++;
+                }
+
                 List<Map<String, Object>> data = this.entityService.getEntitySetAssociation(entitySetStart.getName(), keys,
-                        navigationSegments, entitySetTarget.getName());
+                        navigationSegments, entitySetTarget.getName(), associations);
                 if (data != null && !data.isEmpty()) {
                     return EntityProvider.writeFeed(contentType, entitySetTarget, data,
                             EntityProviderWriteProperties.serviceRoot(getContext().getPathInfo().getServiceRoot()).build());
@@ -122,7 +139,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         if (uriInfo.getNavigationSegments().size() == 0) {
             EdmEntitySet entitySet = uriInfo.getStartEntitySet();
             List<String> keyProperties = entitySet.getEntityType().getKeyPropertyNames();
-            
+
             Map<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
 
             try {
@@ -152,9 +169,24 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
             EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
 
+            List<EdmAssociationSet> associations= new ArrayList<EdmAssociationSet>();
+           
             try {
+                EdmEntitySet entitySource= null;
+                int n=0;
+                for (NavigationSegment navigationSegment : navigationSegments) {
+                    if(n==0){
+                        //We need the entitysetsource of the association to get the associationSet
+                        associations.add(uriInfo.getEntityContainer().getAssociationSet(entitySetStart, navigationSegment.getNavigationProperty()));
+                    }else{
+                        associations.add(uriInfo.getEntityContainer().getAssociationSet(entitySource, navigationSegment.getNavigationProperty()));  
+                    }
+                    entitySource= navigationSegment.getEntitySet();
+                    n++;
+                }
+
                 Map<String, Object> data = this.entityService.getEntityAssociation(entitySetStart.getName(), keys, navigationSegments,
-                        entitySetTarget.getName());
+                        entitySetTarget.getName(), associations);
                 if (data != null && !data.isEmpty()) {
                     URI serviceRoot = getContext().getPathInfo().getServiceRoot();
                     ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
@@ -222,9 +254,22 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
             EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
 
+            List<EdmAssociationSet> associations= new ArrayList<EdmAssociationSet>();
             try {
+                EdmEntitySet entitySource= null;
+                int n=0;
+                for (NavigationSegment navigationSegment : navigationSegments) {
+                    if(n==0){
+                        //We need the entitysetsource of th association to get the associationSet
+                        associations.add(uriInfo.getEntityContainer().getAssociationSet(entitySetStart, navigationSegment.getNavigationProperty()));
+                    }else{
+                        associations.add(uriInfo.getEntityContainer().getAssociationSet(entitySource, navigationSegment.getNavigationProperty()));  
+                    }
+                    entitySource= navigationSegment.getEntitySet();
+                    n++;
+                }
                 Map<String, Object> data = this.entityService.getEntityAssociation(entitySetStart.getName(), keys, navigationSegments,
-                        entitySetTarget.getName());
+                        entitySetTarget.getName(), associations);
                 if (data != null && !data.isEmpty()) {
                     return EntityProvider.writePropertyValue(properties.get(0), data.get(properties.get(0).getName()));
                 }
@@ -271,9 +316,22 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
             EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
 
+            List<EdmAssociationSet> associations= new ArrayList<EdmAssociationSet>();
             try {
+                EdmEntitySet entitySource= null;
+                int n=0;
+                for (NavigationSegment navigationSegment : navigationSegments) {
+                    if(n==0){
+                        //We need the entitysetsource of th association to get the associationSet
+                        associations.add(uriInfo.getEntityContainer().getAssociationSet(entitySetStart, navigationSegment.getNavigationProperty()));
+                    }else{
+                        associations.add(uriInfo.getEntityContainer().getAssociationSet(entitySource, navigationSegment.getNavigationProperty()));  
+                    }
+                    entitySource= navigationSegment.getEntitySet();
+                    n++;
+                }
                 Map<String, Object> data = this.entityService.getEntityAssociation(entitySetStart.getName(), keys, navigationSegments,
-                        entitySetTarget.getName(), property);
+                        entitySetTarget.getName(), property, associations);
                 if (data != null && !data.isEmpty()) {
                     return EntityProvider.writeProperty(contentType, property, data.get(property.getName()));
                 }
@@ -286,53 +344,66 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
         throw new ODataNotImplementedException();
     }
-	
-
-	  /**
-	   * @see EntitySetProcessor
-	   */
-	  @Override
-	  public ODataResponse countEntitySet(final GetEntitySetCountUriInfo uriInfo, final String contentType)
-	          throws ODataException {
-	      EdmEntitySet entitySet;
-
-	      //TODO
-	      if (uriInfo.getNavigationSegments().size() == 0) {
-	          entitySet = uriInfo.getStartEntitySet();
-	          try {
-	              Integer count = this.entityService.getCount(entitySet.getName(), uriInfo);
-	              if (count != null ) {
-	                  return EntityProvider.writeText(count.toString());
-	              }
-	          } catch (SQLException e) {
-	              logger.error(e);
-	              throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
-	          }
 
 
-	      } else if (uriInfo.getNavigationSegments().size() == 1) {
-	          // I think that this case is for relationships
-	          // navigation first level, simplified example for illustration
-	          // purposes only
-	          Map<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
-	          List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
+    /**
+     * @see EntitySetProcessor
+     */
+    @Override
+    public ODataResponse countEntitySet(final GetEntitySetCountUriInfo uriInfo, final String contentType)
+            throws ODataException {
+        EdmEntitySet entitySet;
 
-	          EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
-	          EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
+        //TODO
+        if (uriInfo.getNavigationSegments().size() == 0) {
+            entitySet = uriInfo.getStartEntitySet();
+            try {
+                Integer count = this.entityService.getCount(entitySet.getName(), uriInfo);
+                if (count != null ) {
+                    return EntityProvider.writeText(count.toString());
+                }
+            } catch (SQLException e) {
+                logger.error(e);
+                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
+            }
 
 
-	          try {
-	              Integer count = this.entityService.getCountAssociation(entitySetStart.getName(), keys, navigationSegments, entitySetTarget.getName());
-	              if (count != null ) {
-	                  return EntityProvider.writeText(count.toString());
-	              }
-	          } catch (SQLException e) {
-	              logger.error(e);
-	              throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
-	          }
+        } else if (uriInfo.getNavigationSegments().size() == 1) {
+            // I think that this case is for relationships
+            // navigation first level, simplified example for illustration
+            // purposes only
+            Map<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+            List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
+
+            EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
+            EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
 
 
-	      }
-	      throw new ODataNotImplementedException();
-	  }
+            List<EdmAssociationSet> associations= new ArrayList<EdmAssociationSet>();
+            try {
+                EdmEntitySet entitySource= null;
+                int n=0;
+                for (NavigationSegment navigationSegment : navigationSegments) {
+                    if(n==0){
+                        //We need the entitysetsource of th association to get the associationSet
+                        associations.add(uriInfo.getEntityContainer().getAssociationSet(entitySetStart, navigationSegment.getNavigationProperty()));
+                    }else{
+                        associations.add(uriInfo.getEntityContainer().getAssociationSet(entitySource, navigationSegment.getNavigationProperty()));  
+                    }
+                    entitySource= navigationSegment.getEntitySet();
+                    n++;
+                }
+                Integer count = this.entityService.getCountAssociation(entitySetStart.getName(), keys, navigationSegments, entitySetTarget.getName(), associations);
+                if (count != null ) {
+                    return EntityProvider.writeText(count.toString());
+                }
+            } catch (SQLException e) {
+                logger.error(e);
+                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
+            }
+
+
+        }
+        throw new ODataNotImplementedException();
+    }
 }

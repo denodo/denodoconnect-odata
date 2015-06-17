@@ -25,6 +25,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.olingo.odata2.api.edm.EdmAssociationSet;
 import org.apache.olingo.odata2.api.edm.EdmProperty;
 import org.apache.olingo.odata2.api.exception.ODataException;
 import org.apache.olingo.odata2.api.uri.NavigationSegment;
@@ -45,17 +46,17 @@ public interface EntityService {
 
     public  List<Map<String, Object>> getEntitySetAssociation(
             final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
-            final String tableTarget)
+            final String tableTarget, final List<EdmAssociationSet> associations)
             throws SQLException, ODataException;
 
     public Map<String, Object> getEntityAssociation(
             final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
-            final String tableTarget, final EdmProperty property)
+            final String tableTarget, final EdmProperty property, final List<EdmAssociationSet> associations)
             throws SQLException, ODataException;
 
     public Map<String, Object> getEntityAssociation(
             final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
-            final String tableTarget)
+            final String tableTarget, final List<EdmAssociationSet> associations)
             throws SQLException, ODataException;
 
     public Map<String, Object> getEntity(
@@ -66,5 +67,5 @@ public interface EntityService {
 	public Integer getCount(final String entitySetName, final GetEntitySetCountUriInfo uriInfo) throws SQLException, ODataException;
 	 
 	public Integer getCountAssociation( final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
-	        final String tableTarget) throws SQLException, ODataException;
+	        final String tableTarget, final List<EdmAssociationSet> associations) throws SQLException, ODataException;
 }

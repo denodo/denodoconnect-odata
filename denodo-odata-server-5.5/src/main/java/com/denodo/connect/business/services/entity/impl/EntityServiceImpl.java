@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.olingo.odata2.api.edm.EdmAssociationSet;
 import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.edm.EdmProperty;
 import org.apache.olingo.odata2.api.exception.ODataException;
@@ -144,43 +145,43 @@ public class EntityServiceImpl implements EntityService {
 
     public List<Map<String, Object>> getEntitySetAssociation(
             final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
-            final String tableTarget)
+            final String tableTarget, final List<EdmAssociationSet> associations)
             throws SQLException, ODataException {
 
-        return this.entityRepository.getEntitySetByAssociation(entityName, keys,navigationSegments,tableTarget);
+        return this.entityRepository.getEntitySetByAssociation(entityName, keys,navigationSegments,tableTarget, associations);
     }
 
 
     public Map<String, Object> getEntityAssociation(
             final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
-            final String tableTarget, final EdmProperty property)
+            final String tableTarget, final EdmProperty property, final List<EdmAssociationSet> associations)
             throws SQLException, ODataException {
 
-        return this.entityRepository.getEntityByAssociation(entityName, keys, navigationSegments, tableTarget, property);
+        return this.entityRepository.getEntityByAssociation(entityName, keys, navigationSegments, tableTarget, property, associations);
     }
 
 
     public Map<String, Object> getEntityAssociation(
             final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
-            final String tableTarget)
+            final String tableTarget,  final List<EdmAssociationSet> associations)
             throws SQLException, ODataException {
 
-        return this.entityRepository.getEntityByAssociation(entityName, keys,navigationSegments,tableTarget);
+        return this.entityRepository.getEntityByAssociation(entityName, keys,navigationSegments,tableTarget, associations);
     }
 
 
 
 
     public Integer getCount(String entitySetName, GetEntitySetCountUriInfo uriInfo)
-            throws SQLException {
+            throws SQLException, ODataException {
         return this.entityRepository.getCountEntitySet(entitySetName, uriInfo);
     }
     
     public Integer getCountAssociation(
             final String entityName, final Map<String, Object> keys, final List<NavigationSegment> navigationSegments,
-            final String tableTarget)
-            throws SQLException {
+            final String tableTarget,final List<EdmAssociationSet> associations)
+            throws SQLException, ODataException {
 
-        return this.entityRepository.getCountEntitySet(entityName, keys, navigationSegments, tableTarget);
+        return this.entityRepository.getCountEntitySet(entityName, keys, navigationSegments, tableTarget, associations);
     }
 }

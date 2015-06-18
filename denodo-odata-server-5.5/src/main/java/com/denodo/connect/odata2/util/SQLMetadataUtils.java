@@ -19,7 +19,7 @@
  *
  * =============================================================================
  */
-package com.denodo.connect.util;
+package com.denodo.connect.odata2.util;
 
 import java.sql.ResultSetMetaData;
 import java.sql.Types;

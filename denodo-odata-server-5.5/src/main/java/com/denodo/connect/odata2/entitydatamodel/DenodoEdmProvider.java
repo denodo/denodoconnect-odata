@@ -19,7 +19,7 @@
  *
  * =============================================================================
  */
-package com.denodo.connect.entitydatamodel;
+package com.denodo.connect.odata2.entitydatamodel;
 
 import java.sql.SQLException;
 import java.util.ArrayList;

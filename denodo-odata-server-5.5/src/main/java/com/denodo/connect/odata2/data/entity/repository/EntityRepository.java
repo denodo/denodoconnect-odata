@@ -19,7 +19,7 @@
  *
  * =============================================================================
  */
-package com.denodo.connect.business.entities.entityset.repository;
+package com.denodo.connect.odata2.data.entity.repository;
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -68,7 +68,7 @@ public class EntityRepository {
     public Map<String, Object> getEntityByAssociation(final String entityName, final Map<String, Object> keys,
             List<NavigationSegment> navigationSegments, String tableTarget, EdmProperty property, List<EdmAssociationSet> associations) throws SQLException, ODataException {
 
-        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget, property, null).get(0);
+        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget, property, associations).get(0);
     }
 
     public Map<String, Object> getEntityByAssociation(final String entityName, final Map<String, Object> keys,

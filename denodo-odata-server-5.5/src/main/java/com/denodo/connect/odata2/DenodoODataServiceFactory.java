@@ -19,9 +19,11 @@
  *
  * =============================================================================
  */
-package com.denodo.connect;
+package com.denodo.connect.odata2;
 
-import com.denodo.connect.entitydatamodel.DenodoEdmProvider;
+import com.denodo.connect.odata2.data.DenodoDataSingleProcessor;
+import com.denodo.connect.odata2.entitydatamodel.DenodoEdmProvider;
+
 import org.apache.olingo.odata2.api.ODataService;
 import org.apache.olingo.odata2.api.ODataServiceFactory;
 import org.apache.olingo.odata2.api.exception.ODataException;

@@ -19,7 +19,7 @@
  *
  * =============================================================================
  */
-package com.denodo.connect.entitydatamodel;
+package com.denodo.connect.odata2.entitydatamodel;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -30,7 +30,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.StringTokenizer;
 
-import com.denodo.connect.util.SQLMetadataUtils;
+import com.denodo.connect.odata2.util.SQLMetadataUtils;
+
 import org.apache.olingo.odata2.api.edm.EdmMultiplicity;
 import org.apache.olingo.odata2.api.edm.EdmSimpleTypeKind;
 import org.apache.olingo.odata2.api.edm.FullQualifiedName;

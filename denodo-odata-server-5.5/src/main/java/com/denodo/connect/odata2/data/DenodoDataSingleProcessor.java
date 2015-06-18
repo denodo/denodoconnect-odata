@@ -19,7 +19,7 @@
  *
  * =============================================================================
  */
-package com.denodo.connect;
+package com.denodo.connect.odata2.data;
 
 import java.net.URI;
 import java.sql.SQLException;
@@ -28,10 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.denodo.connect.business.services.entity.EntityService;
-
 import org.apache.log4j.Logger;
-import org.apache.olingo.odata2.api.edm.EdmAssociation;
 import org.apache.olingo.odata2.api.edm.EdmAssociationSet;
 import org.apache.olingo.odata2.api.edm.EdmEntitySet;
 import org.apache.olingo.odata2.api.edm.EdmException;
@@ -52,21 +49,28 @@ import org.apache.olingo.odata2.api.processor.part.EntitySimplePropertyValueProc
 import org.apache.olingo.odata2.api.uri.ExpandSelectTreeNode;
 import org.apache.olingo.odata2.api.uri.KeyPredicate;
 import org.apache.olingo.odata2.api.uri.NavigationSegment;
-import org.apache.olingo.odata2.api.uri.info.GetEntitySetCountUriInfo;
+import org.apache.olingo.odata2.api.uri.SelectItem;
 import org.apache.olingo.odata2.api.uri.UriParser;
+import org.apache.olingo.odata2.api.uri.expression.FilterExpression;
+import org.apache.olingo.odata2.api.uri.expression.OrderByExpression;
+import org.apache.olingo.odata2.api.uri.info.GetEntitySetCountUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntityUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetSimplePropertyUriInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.denodo.connect.odata2.data.entity.repository.EntityRepository;
+
 @Component
 public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
     private static final Logger logger = Logger.getLogger(DenodoDataSingleProcessor.class);
 
+
+    
     @Autowired
-    private EntityService entityService;
+    private EntityRepository entityRepository;
 
     @Override
     public ODataResponse readEntitySet(final GetEntitySetUriInfo uriInfo, final String contentType) throws ODataException {
@@ -83,7 +87,16 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             }
 
             try {
-                List<Map<String, Object>> data = this.entityService.getEntitySet(entitySet.getName(), uriInfo, keyProperties);
+                // Top System Query Option ($top)
+                Integer top = uriInfo.getTop();
+
+                // Skip System Query Option ($skip)
+                Integer skip = uriInfo.getSkip();
+                String orderByExpressionString = getOrderByExpresion(uriInfo);
+                String filterExpressionString =  getFilterExpresion(uriInfo);
+                List<String> selectedItemsAsString= getSelectedItems(uriInfo, keyProperties);
+                List<Map<String, Object>> data =  this.entityRepository.getEntitySet(entitySet.getName(), orderByExpressionString, top, skip, filterExpressionString,
+                        selectedItemsAsString);
                 if (data != null && !data.isEmpty()) {
                     URI serviceRoot = getContext().getPathInfo().getServiceRoot();
                     ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
@@ -124,7 +137,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                     n++;
                 }
 
-                List<Map<String, Object>> data = this.entityService.getEntitySetAssociation(entitySetStart.getName(), keys,
+                List<Map<String, Object>> data = this.entityRepository.getEntitySetByAssociation(entitySetStart.getName(), keys,
                         navigationSegments, entitySetTarget.getName(), associations);
                 if (data != null && !data.isEmpty()) {
                     return EntityProvider.writeFeed(contentType, entitySetTarget, data,
@@ -154,7 +167,8 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             Map<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
 
             try {
-                Map<String, Object> data = this.entityService.getEntity(entitySet.getName(), keys, uriInfo, keyProperties);
+                List <String> selectedItemsAsString = getSelectedItems(uriInfo, keyProperties);
+                Map<String, Object> data = this.entityRepository.getEntity(entitySet.getName(), keys, selectedItemsAsString, null);
                 if (data != null && !data.isEmpty()) {
                     URI serviceRoot = getContext().getPathInfo().getServiceRoot();
                     ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
@@ -196,7 +210,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                     n++;
                 }
 
-                Map<String, Object> data = this.entityService.getEntityAssociation(entitySetStart.getName(), keys, navigationSegments,
+                Map<String, Object> data = this.entityRepository.getEntityByAssociation(entitySetStart.getName(), keys, navigationSegments,
                         entitySetTarget.getName(), associations);
                 if (data != null && !data.isEmpty()) {
                     URI serviceRoot = getContext().getPathInfo().getServiceRoot();
@@ -244,7 +258,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             EdmProperty property = uriInfo.getPropertyPath().get(0);
             Map<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
             try {
-                Map<String, Object> data = this.entityService.getEntity(entitySet.getName(), keys, property);
+                Map<String, Object> data = this.entityRepository.getEntity(entitySet.getName(), keys,null, property);
                 if (data != null && !data.isEmpty()) {
 
                     return EntityProvider.writePropertyValue(property, data.get(property.getName()));
@@ -279,7 +293,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                     entitySource= navigationSegment.getEntitySet();
                     n++;
                 }
-                Map<String, Object> data = this.entityService.getEntityAssociation(entitySetStart.getName(), keys, navigationSegments,
+                Map<String, Object> data = this.entityRepository.getEntityByAssociation(entitySetStart.getName(), keys, navigationSegments,
                         entitySetTarget.getName(), associations);
                 if (data != null && !data.isEmpty()) {
                     return EntityProvider.writePropertyValue(properties.get(0), data.get(properties.get(0).getName()));
@@ -306,7 +320,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             EdmProperty property = uriInfo.getPropertyPath().get(0);
             Map<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
             try {
-                Map<String, Object> data = this.entityService.getEntity(entitySet.getName(), keys, property);
+                Map<String, Object> data = this.entityRepository.getEntity(entitySet.getName(), keys,null, property);
                 if (data != null && !data.isEmpty()) {
 
                     return EntityProvider.writeProperty(contentType, property, data.get(property.getName()));
@@ -341,7 +355,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                     entitySource= navigationSegment.getEntitySet();
                     n++;
                 }
-                Map<String, Object> data = this.entityService.getEntityAssociation(entitySetStart.getName(), keys, navigationSegments,
+                Map<String, Object> data = this.entityRepository.getEntityByAssociation(entitySetStart.getName(), keys, navigationSegments,
                         entitySetTarget.getName(), property, associations);
                 if (data != null && !data.isEmpty()) {
                     return EntityProvider.writeProperty(contentType, property, data.get(property.getName()));
@@ -369,7 +383,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         if (uriInfo.getNavigationSegments().size() == 0) {
             entitySet = uriInfo.getStartEntitySet();
             try {
-                Integer count = this.entityService.getCount(entitySet.getName(), uriInfo);
+                Integer count = this.entityRepository.getCountEntitySet(entitySet.getName(), uriInfo);
                 if (count != null ) {
                     return EntityProvider.writeText(count.toString());
                 }
@@ -391,30 +405,106 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
 
             List<EdmAssociationSet> associations= new ArrayList<EdmAssociationSet>();
-            try {
-                EdmEntitySet entitySource= null;
-                int n=0;
-                for (NavigationSegment navigationSegment : navigationSegments) {
-                    if(n==0){
-                        //We need the entitysetsource of th association to get the associationSet
-                        associations.add(uriInfo.getEntityContainer().getAssociationSet(entitySetStart, navigationSegment.getNavigationProperty()));
-                    }else{
-                        associations.add(uriInfo.getEntityContainer().getAssociationSet(entitySource, navigationSegment.getNavigationProperty()));  
-                    }
-                    entitySource= navigationSegment.getEntitySet();
-                    n++;
+            EdmEntitySet entitySource= null;
+            int n=0;
+            for (NavigationSegment navigationSegment : navigationSegments) {
+                if(n==0){
+                    //We need the entitysetsource of th association to get the associationSet
+                    associations.add(uriInfo.getEntityContainer().getAssociationSet(entitySetStart, navigationSegment.getNavigationProperty()));
+                }else{
+                    associations.add(uriInfo.getEntityContainer().getAssociationSet(entitySource, navigationSegment.getNavigationProperty()));  
                 }
-                Integer count = this.entityService.getCountAssociation(entitySetStart.getName(), keys, navigationSegments, entitySetTarget.getName(), associations);
-                if (count != null ) {
-                    return EntityProvider.writeText(count.toString());
-                }
-            } catch (SQLException e) {
-                logger.error(e);
-                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
+                entitySource= navigationSegment.getEntitySet();
+                n++;
+            }
+            Integer count = this.entityRepository.getCountEntitySet(entitySetStart.getName(), keys, navigationSegments, entitySetTarget.getName(), associations);
+            if (count != null ) {
+                return EntityProvider.writeText(count.toString());
             }
 
 
         }
         throw new ODataNotImplementedException();
+    }
+    
+
+    private static String getOrderByExpresion( final GetEntitySetUriInfo uriInfo){
+
+        // Orderby System Query Option ($orderby)
+        OrderByExpression orderByExpression = uriInfo.getOrderBy();
+        String orderByExpressionString = null;
+        if (orderByExpression != null) {
+            orderByExpressionString = orderByExpression.getExpressionString();
+        }
+        return orderByExpressionString;
+    }
+
+    private static String getFilterExpresion(final GetEntitySetUriInfo uriInfo){
+
+  
+
+        // Filter System Query Option ($filter)
+        FilterExpression filterExpression = uriInfo.getFilter();
+        String filterExpressionString = null;
+        if (filterExpression != null) {
+            filterExpressionString = filterExpression.getExpressionString();
+        }
+        return filterExpressionString;
+    }
+       
+
+    private static List<String> getSelectOptionValues(final List<SelectItem> selectedItems) {
+
+        List<String> selectValues = new ArrayList<String>();
+
+        for (SelectItem item : selectedItems) {
+            try {
+                selectValues.add(item.getProperty().getName());
+            } catch (EdmException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+
+        return selectValues;
+
+    }
+
+
+    private static  List<String> getSelectedItems( final GetEntityUriInfo uriInfo, 
+            final List<String> keyProperties)
+            throws SQLException, ODataException {
+
+        List<String> selectedItemsAsString = new ArrayList<String>();
+        if (uriInfo != null) {
+            // Select System Query Option ($select)
+            List<SelectItem> selectedItems = uriInfo.getSelect();
+            selectedItemsAsString = getSelectOptionValues(selectedItems);
+        }
+        // If there are properties selected we must get also the key properties because 
+        // they are necessary in order to get all the information to write the entry
+        if (!selectedItemsAsString.isEmpty()) {
+            selectedItemsAsString.addAll(keyProperties);
+        }
+
+        return selectedItemsAsString;
+    }
+    private static  List<String> getSelectedItems( final GetEntitySetUriInfo uriInfo, 
+            final List<String> keyProperties)
+            throws SQLException, ODataException {
+
+        List<String> selectedItemsAsString = new ArrayList<String>();
+        if (uriInfo != null) {
+            // Select System Query Option ($select)
+            List<SelectItem> selectedItems = uriInfo.getSelect();
+            selectedItemsAsString = getSelectOptionValues(selectedItems);
+        }
+        // If there are properties selected we must get also the key properties because 
+        // they are necessary in order to get all the information to write the entry
+        if (!selectedItemsAsString.isEmpty()) {
+            selectedItemsAsString.addAll(keyProperties);
+        }
+
+        return selectedItemsAsString;
     }
 }

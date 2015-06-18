@@ -97,7 +97,7 @@
   <!-- ******************************************************************* -->
   <!-- Registry of the Olingo Service Factory as a Spring bean             -->
   <!-- ******************************************************************* -->
-  <bean class="com.denodo.connect.DenodoODataServiceFactory" id="denodoServiceFactory" />
+  <bean class="com.denodo.connect.odata2.DenodoODataServiceFactory" id="denodoServiceFactory" />
 
 
   <!-- ******************************************************************* -->

@@ -19,7 +19,7 @@
  *
  * =============================================================================
  */
-package com.denodo.connect.odata2.data.entity.repository;
+package com.denodo.connect.odata2.data;
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -49,11 +49,11 @@ import org.springframework.stereotype.Repository;
 
 
 @Repository
-public class EntityRepository {
+public class EntityAccessor {
 
     @Autowired
     JdbcTemplate denodoTemplate;
-    private static final Logger logger = Logger.getLogger(EntityRepository.class);
+    private static final Logger logger = Logger.getLogger(EntityAccessor.class);
 
     public List<Map<String, Object>> getEntitySet(final String entitySetName, final String orderByExpressionString, final Integer top,
             final Integer skip, final String filterExpression, final List<String> selectedItems) throws SQLException, ODataException {

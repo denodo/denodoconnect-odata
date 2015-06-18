@@ -122,7 +122,7 @@ public class EntityAccessor {
 
 
 
-        return entitySetData.isEmpty() ? null : entitySetData;
+        return entitySetData;
     }
 
     private static String getSelectSection(final String viewName, final String tableTarget, final boolean navigation,

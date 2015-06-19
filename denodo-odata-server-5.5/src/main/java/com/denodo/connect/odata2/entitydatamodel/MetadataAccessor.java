@@ -21,17 +21,21 @@
  */
 package com.denodo.connect.odata2.entitydatamodel;
 
+import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.StringTokenizer;
 
 import com.denodo.connect.odata2.util.SQLMetadataUtils;
-
 import org.apache.olingo.odata2.api.edm.EdmMultiplicity;
 import org.apache.olingo.odata2.api.edm.EdmSimpleTypeKind;
 import org.apache.olingo.odata2.api.edm.FullQualifiedName;
@@ -49,7 +53,9 @@ import org.apache.olingo.odata2.api.edm.provider.SimpleProperty;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.SqlParameter;
 import org.springframework.jdbc.datasource.DataSourceUtils;
+import org.springframework.jdbc.support.JdbcUtils;
 import org.springframework.stereotype.Repository;
 
 
@@ -581,7 +587,7 @@ public class MetadataAccessor {
     public  List<String> getAllEntityNames() throws SQLException {
 
         // Many entities will not have primary key information in VDP environments, so we save some objects
-        List<String> entityNames = new ArrayList<String>(10);
+        final List<String> entityNames = new ArrayList<String>(10);
 
         // We obtain the connection in the most integrated possible way with the Spring infrastructure
         final Connection connection = DataSourceUtils.getConnection(this.denodoTemplate.getDataSource());
@@ -608,6 +614,110 @@ public class MetadataAccessor {
         return entityNames;
 
     }
+
+
+
+
+    private static final SqlParameter CATALOG_ELEMENTS_SQL_PARAM_NAME = new SqlParameter("name", Types.VARCHAR);
+    private static final SqlParameter CATALOG_ELEMENTS_SQL_PARAM_TYPE = new SqlParameter("type", Types.VARCHAR);
+    private static final SqlParameter CATALOG_ELEMENTS_SQL_PARAM_USERCREATOR = new SqlParameter("usercreator", Types.VARCHAR);
+    private static final SqlParameter CATALOG_ELEMENTS_SQL_PARAM_LASTUSERMODIFIER = new SqlParameter("lastusermodifier", Types.VARCHAR);
+    private static final SqlParameter CATALOG_ELEMENTS_SQL_PARAM_INITCREATEDATE = new SqlParameter("initcreatedate", Types.TIMESTAMP);
+    private static final SqlParameter CATALOG_ELEMENTS_SQL_PARAM_ENDCREATEDATE = new SqlParameter("endcreatedate", Types.TIMESTAMP);
+    private static final SqlParameter CATALOG_ELEMENTS_SQL_PARAM_INITLASTMODIFICATIONDATE = new SqlParameter("initlastmodificationdate", Types.TIMESTAMP);
+    private static final SqlParameter CATALOG_ELEMENTS_SQL_PARAM_ENDLASTMODIFICATIONDATE = new SqlParameter("endlastmodificationdate", Types.TIMESTAMP);
+    private static final SqlParameter CATALOG_ELEMENTS_SQL_PARAM_DESCRIPTION = new SqlParameter("description", Types.VARCHAR);
+
+
+
+    public Map<String,Timestamp> getViewsUpdateInfo(final Timestamp lastUpdateTimestamp) throws SQLException {
+        return doGetUpdateInfo(null, "Views", lastUpdateTimestamp);
+    }
+
+
+    public Timestamp getViewUpdateInfo(final String viewName, final Timestamp lastUpdateTimestamp) throws SQLException {
+        final Map<String,Timestamp> updateInfo = doGetUpdateInfo(viewName, "Views", lastUpdateTimestamp);
+        if (updateInfo == null || updateInfo.size() == 0) {
+            return null;
+        }
+        return updateInfo.get(viewName);
+    }
+
+
+    public Map<String,Timestamp> getAssociationsUpdateInfo(final Timestamp lastUpdateTimestamp) throws SQLException {
+        return doGetUpdateInfo(null, "Associations", lastUpdateTimestamp);
+    }
+
+
+    public Timestamp getAssociationUpdateInfo(final String associationName, final Timestamp lastUpdateTimestamp) throws SQLException {
+        final Map<String,Timestamp> updateInfo = doGetUpdateInfo(associationName, "Associations", lastUpdateTimestamp);
+        if (updateInfo == null || updateInfo.size() == 0) {
+            return null;
+        }
+        return updateInfo.get(associationName);
+    }
+
+
+    private Map<String,Timestamp> doGetUpdateInfo(
+            final String artifactName, final String type, final Timestamp lastUpdateTimestamp)
+            throws SQLException {
+
+        // We obtain the connection in the most integrated possible way with the Spring infrastructure
+        final Connection connection = DataSourceUtils.getConnection(this.denodoTemplate.getDataSource());
+
+        CallableStatement catalogElementsStatement = null;
+        ResultSet catalogElementsRs = null;
+        try{
+
+            catalogElementsStatement = connection.prepareCall("{ CALL catalog_elements(?,?,?,?,?,?,?,?,?) }");
+
+            if (artifactName == null) {
+                catalogElementsStatement.setNull(CATALOG_ELEMENTS_SQL_PARAM_NAME.getName(), Types.VARCHAR);
+            } else {
+                catalogElementsStatement.setString(CATALOG_ELEMENTS_SQL_PARAM_NAME.getName(), artifactName);
+            }
+            catalogElementsStatement.setString(CATALOG_ELEMENTS_SQL_PARAM_TYPE.getName(), type);
+            catalogElementsStatement.setNull(CATALOG_ELEMENTS_SQL_PARAM_USERCREATOR.getName(), Types.VARCHAR);
+            catalogElementsStatement.setNull(CATALOG_ELEMENTS_SQL_PARAM_LASTUSERMODIFIER.getName(), Types.VARCHAR);
+            catalogElementsStatement.setNull(CATALOG_ELEMENTS_SQL_PARAM_INITCREATEDATE.getName(), Types.TIMESTAMP);
+            catalogElementsStatement.setNull(CATALOG_ELEMENTS_SQL_PARAM_ENDCREATEDATE.getName(), Types.TIMESTAMP);
+            if (lastUpdateTimestamp == null) {
+                catalogElementsStatement.setNull(CATALOG_ELEMENTS_SQL_PARAM_INITLASTMODIFICATIONDATE.getName(), Types.TIMESTAMP);
+            } else {
+                // Note we add 1 to the specified timestamp so that we don't obtain results for artifacts which last
+                // modification was precisely the one we already knew about. We only need those that are newer than that.
+                final String lastUpdateDate = new java.sql.Timestamp(lastUpdateTimestamp.getTime() + 1).toString();
+                catalogElementsStatement.setString(CATALOG_ELEMENTS_SQL_PARAM_INITLASTMODIFICATIONDATE.getName(), lastUpdateDate);
+            }
+            catalogElementsStatement.setNull(CATALOG_ELEMENTS_SQL_PARAM_ENDLASTMODIFICATIONDATE.getName(), Types.TIMESTAMP);
+            catalogElementsStatement.setNull(CATALOG_ELEMENTS_SQL_PARAM_DESCRIPTION.getName(), Types.TIMESTAMP);
+
+            catalogElementsRs = catalogElementsStatement.executeQuery();
+
+            final Map<String,Timestamp> lastUpdateByViewName = new HashMap<String, Timestamp>(2, 1.0f);
+            while (catalogElementsRs.next()) {
+
+                final String resultArtifactName = catalogElementsRs.getString("resultname");
+                if (artifactName == null || artifactName.equals(resultArtifactName)) {
+                    // Note that, in the case we had specified an artifact name, VDP will be applying a "contains" operator
+                    // on the name and not an "equals" operator. This means that we will still need to check that the
+                    // name we asked for is specifically the one we were looking for.
+                    final Timestamp resultLastModificationDate = catalogElementsRs.getTimestamp("resultlastmodificationdate");
+                    lastUpdateByViewName.put(resultArtifactName, resultLastModificationDate);
+                }
+
+            }
+
+            return lastUpdateByViewName;
+
+        }finally{
+            JdbcUtils.closeResultSet(catalogElementsRs);
+            JdbcUtils.closeStatement(catalogElementsStatement);
+            DataSourceUtils.releaseConnection(connection, this.denodoTemplate.getDataSource());
+        }
+
+    }
+
 
 
 }

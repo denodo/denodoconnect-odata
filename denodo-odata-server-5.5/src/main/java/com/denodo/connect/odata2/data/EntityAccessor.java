@@ -21,9 +21,11 @@
  */
 package com.denodo.connect.odata2.data;
 
+import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Struct;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -34,12 +36,15 @@ import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.edm.EdmAssociationSet;
+import org.apache.olingo.odata2.api.edm.EdmEntityType;
 import org.apache.olingo.odata2.api.edm.EdmException;
-import org.apache.olingo.odata2.api.edm.EdmNavigationProperty;
 import org.apache.olingo.odata2.api.edm.EdmProperty;
 import org.apache.olingo.odata2.api.edm.EdmReferentialConstraintRole;
+import org.apache.olingo.odata2.api.edm.EdmStructuralType;
+import org.apache.olingo.odata2.api.edm.EdmTyped;
+import org.apache.olingo.odata2.api.edm.FullQualifiedName;
+import org.apache.olingo.odata2.api.edm.provider.Property;
 import org.apache.olingo.odata2.api.exception.ODataException;
-import org.apache.olingo.odata2.api.exception.ODataNotFoundException;
 import org.apache.olingo.odata2.api.uri.NavigationSegment;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetCountUriInfo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,35 +60,35 @@ public class EntityAccessor {
     JdbcTemplate denodoTemplate;
     private static final Logger logger = Logger.getLogger(EntityAccessor.class);
 
-    public List<Map<String, Object>> getEntitySet(final String entitySetName, final String orderByExpressionString, final Integer top,
+    public List<Map<String, Object>> getEntitySet(final EdmEntityType edmEntityType, final String orderByExpressionString, final Integer top,
             final Integer skip, final String filterExpression, final List<String> selectedItems) throws SQLException, ODataException {
-        return getEntityData(entitySetName, null, orderByExpressionString, top, skip, filterExpression, selectedItems, null, null, null, null);
+        return getEntityData(edmEntityType, null, orderByExpressionString, top, skip, filterExpression, selectedItems, null, null, null, null);
     }
 
-    public Map<String, Object> getEntity(final String entityName, final Map<String, Object> keys, final List<String> selectedItems,
+    public Map<String, Object> getEntity(final EdmEntityType edmEntityType, final Map<String, Object> keys, final List<String> selectedItems,
             final EdmProperty property) throws SQLException, ODataException {
-        return getEntityData(entityName, keys, null, null, null, null, selectedItems, null, null, property, null).get(0);
+        return getEntityData(edmEntityType, keys, null, null, null, null, selectedItems, null, null, property, null).get(0);
     }
 
-    public Map<String, Object> getEntityByAssociation(final String entityName, final Map<String, Object> keys,
+    public Map<String, Object> getEntityByAssociation(final EdmEntityType edmEntityType, final Map<String, Object> keys,
             List<NavigationSegment> navigationSegments, String tableTarget, EdmProperty property, List<EdmAssociationSet> associations) throws SQLException, ODataException {
 
-        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget, property, associations).get(0);
+        return getEntityData(edmEntityType, keys, null, null, null, null, null, navigationSegments, tableTarget, property, associations).get(0);
     }
 
-    public Map<String, Object> getEntityByAssociation(final String entityName, final Map<String, Object> keys,
+    public Map<String, Object> getEntityByAssociation(final EdmEntityType edmEntityType, final Map<String, Object> keys,
             List<NavigationSegment> navigationSegments, String tableTarget, List<EdmAssociationSet> associations) throws SQLException, ODataException {
 
-        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget, null,  associations).get(0);
+        return getEntityData(edmEntityType, keys, null, null, null, null, null, navigationSegments, tableTarget, null,  associations).get(0);
     }
 
-    public List<Map<String, Object>> getEntitySetByAssociation(final String entityName, final Map<String, Object> keys,
+    public List<Map<String, Object>> getEntitySetByAssociation(final EdmEntityType edmEntityType, final Map<String, Object> keys,
             List<NavigationSegment> navigationSegments, String tableTarget, List<EdmAssociationSet> associations) throws SQLException, ODataException {
 
-        return getEntityData(entityName, keys, null, null, null, null, null, navigationSegments, tableTarget, null,associations);
+        return getEntityData(edmEntityType, keys, null, null, null, null, null, navigationSegments, tableTarget, null,associations);
     }
 
-    private List<Map<String, Object>> getEntityData(final String entityName, final Map<String, Object> keys,
+    private List<Map<String, Object>> getEntityData(final EdmEntityType edmEntityType, final Map<String, Object> keys,
             final String orderByExpression, final Integer top, final Integer skip, final String filterExpression,
             final List<String> selectedItems, final List<NavigationSegment> navigationSegments, final String tableTarget,
             final EdmProperty property, List<EdmAssociationSet> associations) throws SQLException, ODataException {
@@ -96,8 +101,8 @@ public class EntityAccessor {
         filterExpressionAdapted = getStartsWithOption(filterExpressionAdapted);
         filterExpressionAdapted = getIndexOfOption(filterExpressionAdapted);
 
-        String sqlStatement = getSQLStatement(entityName, keys, filterExpressionAdapted, selectedItems, navigationSegments,
-                    tableTarget, property, false, associations);
+        String sqlStatement = getSQLStatement(edmEntityType.getName(), keys, filterExpressionAdapted, selectedItems, navigationSegments,
+                    tableTarget, property, Boolean.FALSE, associations);
         sqlStatement = addOrderByExpression(sqlStatement, orderByExpression);
         sqlStatement = addTopOption(sqlStatement, top);
         sqlStatement = addSkipOption(sqlStatement, skip);
@@ -107,14 +112,45 @@ public class EntityAccessor {
                     new RowMapper<Map<String, Object>>(){
 
             @Override
-            public Map<String, Object> mapRow(ResultSet resultSet1, int rowNum) throws SQLException {
-                ResultSetMetaData resultSetMetaData = resultSet1.getMetaData();
+            public Map<String, Object> mapRow(ResultSet resultSet, int rowNum) throws SQLException {
+                ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
                 Map<String, Object> rowData = new HashMap<String, Object>();
 
                 for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
                     String columnName = resultSetMetaData.getColumnName(i);
 
-                    rowData.put(columnName, resultSet1.getObject(i));
+//                    EdmTyped edmTyped;
+//                    List<String> propertyNames = null;
+//                    
+//                    try {
+//                        edmTyped = edmEntityType.getProperty(columnName);
+//                    
+//                        if (edmTyped.getType() instanceof EdmStructuralType) {
+//                            EdmStructuralType edmStructuralType = ((EdmStructuralType) edmTyped.getType());
+//                            propertyNames = edmStructuralType.getPropertyNames();
+//                        }
+//                    } catch (EdmException e) {
+//                        logger.error("Error getting property data: " + columnName + e);
+//                        throw new SQLException("Error getting property data: " + columnName + e);
+//                    }
+                    
+                    Object value = resultSet.getObject(i);
+                    if (value instanceof Array) {
+                        value = value.toString();
+                    } else if (value instanceof Struct) {
+                        Object[] structValues = ((Struct) value).getAttributes();
+                        //String structTypeName = ((Struct) value).getSQLTypeName();
+                        try {
+                            EdmTyped edmTyped = edmEntityType.getProperty(columnName);
+                            value = getStructAsMaps(edmTyped, columnName, structValues);
+                        } catch (EdmException e) {
+                            logger.error("Error getting property data: " + columnName + e);
+                            throw new SQLException("Error getting property data: " + columnName + e);
+                        }
+                        
+                    }
+                    
+                    rowData.put(columnName, value);
                 }
                 return rowData;
             }
@@ -396,4 +432,34 @@ public class EntityAccessor {
         return getCountEntitySet(entityName,null, null, null, null);
     }
 
+    Map<String, Object> getStructAsMaps(final EdmTyped edmTyped, final String propertyName, 
+            final Object[] structValues) throws SQLException {
+        
+        Map<String, Object> structAsMap = new HashMap<String, Object>();
+        
+        List<String> propertyNames = null;
+        
+        try {
+            
+            if (edmTyped.getType() instanceof EdmStructuralType) {
+                EdmStructuralType edmStructuralType = ((EdmStructuralType) edmTyped.getType());
+                propertyNames = edmStructuralType.getPropertyNames();
+
+                for (int i=0; i < structValues.length; i++) {
+                    
+                    Object value = structValues[i];
+                    if (value instanceof Struct) {
+                        Object[] newStructValues = ((Struct) value).getAttributes();
+                        value = getStructAsMaps(edmStructuralType.getProperty(propertyNames.get(i)), propertyNames.get(i), newStructValues);
+                    }
+                    structAsMap.put(propertyNames.get(i), value);
+                }
+            }
+        } catch (EdmException e) {
+            logger.error("Error getting property data: " + propertyName + e);
+            throw new SQLException("Error getting property data: " + propertyName + e);
+        }
+        
+        return structAsMap;
+    }
 }

@@ -84,6 +84,12 @@ public final class SQLMetadataUtils {
             case Types.VARBINARY:
                 return EdmSimpleTypeKind.Binary;
             case Types.ARRAY:
+                /*
+                 * OData 2.0 does not support Collections/Bags/Lists that
+                 * will allow us to give support to arrays as complex objects.
+                 * This support appears in OData 3.0. This should be changed 
+                 * if we introduce OData on a version 3.0 or higher.
+                 */
                 return EdmSimpleTypeKind.String;
             case Types.DATALINK:
                 return EdmSimpleTypeKind.String;
@@ -96,7 +102,7 @@ public final class SQLMetadataUtils {
             case Types.REF:
                 return EdmSimpleTypeKind.String;
             case Types.STRUCT:
-                return EdmSimpleTypeKind.String;
+                return null;
             default:
                 break;
         }
@@ -105,8 +111,9 @@ public final class SQLMetadataUtils {
 
     }
 
-
-
+    public static boolean isArrayType(final int type) {
+        return type == Types.ARRAY;
+    }
 
     public static Boolean sqlNullableToODataNullable(final int nullable) {
 

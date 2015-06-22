@@ -31,6 +31,7 @@ import org.apache.olingo.odata2.api.edm.FullQualifiedName;
 import org.apache.olingo.odata2.api.edm.provider.Association;
 import org.apache.olingo.odata2.api.edm.provider.AssociationSet;
 import org.apache.olingo.odata2.api.edm.provider.AssociationSetEnd;
+import org.apache.olingo.odata2.api.edm.provider.ComplexType;
 import org.apache.olingo.odata2.api.edm.provider.EdmProvider;
 import org.apache.olingo.odata2.api.edm.provider.EntityContainer;
 import org.apache.olingo.odata2.api.edm.provider.EntityContainerInfo;
@@ -191,6 +192,30 @@ public class DenodoEdmProvider extends EdmProvider {
             }
             schema.setEntityTypes(allEntityTypes);
 
+            
+            /*
+             * Obtaining complex types names (registers). 
+             * OData 2.0 does not support Collections/Bags/Lists that
+             * will allow us to give support to arrays as complex objects.
+             *  This support appears in OData 3.0. This should be changed if we
+             * introduce OData on a version 3.0 or higher and in this 
+             * situation we should taking into account also arrays.
+             */
+            final List<String> allComplexTypeNames = this.metadataAccessor.getAllComplexTypeNames();
+            List<FullQualifiedName> complexTypeNames = new ArrayList<FullQualifiedName>(allComplexTypeNames.size());
+            for (String complexTypeName : allComplexTypeNames) {
+                complexTypeNames.add(new FullQualifiedName(NAMESPACE_DENODO, complexTypeName));
+            }
+            
+            /*
+             * Now let's obtain all the complex entity types
+             */
+            List<ComplexType> complexTypes = new ArrayList<ComplexType>(complexTypeNames.size());
+            for (FullQualifiedName complexTypeName : complexTypeNames) {
+                complexTypes.add(getComplexType(complexTypeName));
+            }
+            schema.setComplexTypes(complexTypes);
+            
 
             /*
              * Once the Entity Type metadata has been obtained, we need to declare an Entity Container that actually
@@ -379,5 +404,17 @@ public class DenodoEdmProvider extends EdmProvider {
 
     }
 
+    @Override
+    public ComplexType getComplexType(final FullQualifiedName edmFQName) throws ODataException {
+        if (NAMESPACE_DENODO.equals(edmFQName.getNamespace())) {
+            
+            List<Property> properties = this.metadataAccessor.getComplexType(edmFQName);
+            
+            return new ComplexType().setName(edmFQName.getName()).setProperties(properties);
 
+        }
+
+        return null;
+    }
+    
 }

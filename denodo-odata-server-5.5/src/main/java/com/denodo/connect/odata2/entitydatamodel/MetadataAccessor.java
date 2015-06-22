@@ -41,6 +41,7 @@ import org.apache.olingo.odata2.api.edm.EdmSimpleTypeKind;
 import org.apache.olingo.odata2.api.edm.FullQualifiedName;
 import org.apache.olingo.odata2.api.edm.provider.Association;
 import org.apache.olingo.odata2.api.edm.provider.AssociationEnd;
+import org.apache.olingo.odata2.api.edm.provider.ComplexProperty;
 import org.apache.olingo.odata2.api.edm.provider.Documentation;
 import org.apache.olingo.odata2.api.edm.provider.Facets;
 import org.apache.olingo.odata2.api.edm.provider.Key;
@@ -60,6 +61,7 @@ import org.springframework.stereotype.Repository;
 
 
 
+
 @Repository
 public class MetadataAccessor {
 
@@ -68,7 +70,9 @@ public class MetadataAccessor {
     private static final String ASSOCIATIONS_LIST_QUERY_FORMAT = "LIST ASSOCIATIONS %s;";
     private static final String ASSOCIATION_DESC_QUERY_FORMAT = "DESC ASSOCIATION %s;";
 
-
+    private static final String REGISTER_TYPES_LIST_ALL_QUERY_FORMAT = "LIST TYPES REGISTER;";
+    private static final String COMPLEX_TYPE_DESC_QUERY_FORMAT = "DESC TYPE %s;";
+    
     @Autowired
     private JdbcTemplate denodoTemplate;
 
@@ -122,12 +126,21 @@ public class MetadataAccessor {
                  * See: https://msdn.microsoft.com/en-us/library/ms711683%28v=vs.85%29.aspx and find "ODBC 2.0 column"
                  */
 
-                final SimpleProperty property = new SimpleProperty();
+                int sqlType = columnsRs.getInt("DATA_TYPE");
+                
+                final EdmSimpleTypeKind type = SQLMetadataUtils.sqlTypeToODataType(sqlType);
 
-                final EdmSimpleTypeKind type = SQLMetadataUtils.sqlTypeToODataType(columnsRs.getInt("DATA_TYPE"));
+                Property property;
+                
+                if (type == null) {
+                    property = new ComplexProperty();
+                    ((ComplexProperty) property).setType(new FullQualifiedName(entityName.getNamespace(), columnsRs.getString("TYPE_NAME")));
+                } else {
+                    property = new SimpleProperty();
+                    ((SimpleProperty) property).setType(type);
+                }
 
                 property.setName(columnsRs.getString("COLUMN_NAME"));
-                property.setType(type);
 
                 final Facets propertyFacets = new Facets();
 
@@ -139,10 +152,21 @@ public class MetadataAccessor {
                 }
                 // Size of VARCHAR (String) columns and precision of DECIMAL columns
                 if (type == EdmSimpleTypeKind.String) {
-                    final int maxLength = columnsRs.getInt("COLUMN_SIZE");
-                    if (maxLength != Integer.MAX_VALUE) { // Integer.MAX_VALUE is returned when there is no limit
-                        if (!columnsRs.wasNull()) {
-                            propertyFacets.setMaxLength(Integer.valueOf(maxLength));
+                    /*
+                     * OData 2.0 does not support Collections/Bags/Lists that
+                     * will allow us to give support to arrays as complex objects.
+                     * Now we consider them as strings and show them using the 
+                     * toString method. In order to be able to show this information
+                     * we avoid to set an incorrect MaxLength value.
+                     * The support to Collections/Bags/Lists appears in OData 3.0. 
+                     * This should be changed if we introduce OData on a version 3.0 or higher.
+                     */     
+                    if (!SQLMetadataUtils.isArrayType(sqlType)) {
+                        final int maxLength = columnsRs.getInt("COLUMN_SIZE");
+                        if (maxLength != Integer.MAX_VALUE) { // Integer.MAX_VALUE is returned when there is no limit
+                            if (!columnsRs.wasNull()) {
+                                propertyFacets.setMaxLength(Integer.valueOf(maxLength));
+                            }
                         }
                     }
                 } else if (type == EdmSimpleTypeKind.Decimal) {
@@ -616,8 +640,6 @@ public class MetadataAccessor {
     }
 
 
-
-
     private static final SqlParameter CATALOG_ELEMENTS_SQL_PARAM_NAME = new SqlParameter("name", Types.VARCHAR);
     private static final SqlParameter CATALOG_ELEMENTS_SQL_PARAM_TYPE = new SqlParameter("type", Types.VARCHAR);
     private static final SqlParameter CATALOG_ELEMENTS_SQL_PARAM_USERCREATOR = new SqlParameter("usercreator", Types.VARCHAR);
@@ -719,6 +741,65 @@ public class MetadataAccessor {
     }
 
 
+    public List<String> getAllComplexTypeNames() {
+        
+        /*
+         * FIRST STEP: Obtain the list of names of all registers (without restricting to a specific entity)
+         */
+
+        final List<String> registerNames =
+                this.denodoTemplate.query(REGISTER_TYPES_LIST_ALL_QUERY_FORMAT, new RowMapper<String>() {
+
+                    @Override
+                    public String mapRow(final ResultSet rs, final int rowNum) throws SQLException {
+                        return rs.getString(1);
+                    }}
+
+                );
+        
+        /*
+         * A second step should be to obtain the list of names of all arrays and add them to the returned list. 
+         * OData 2.0 does not support Collections/Bags/Lists that will allow us to give support for arrays
+         *  as complex objects. This support appears in OData 3.0. This should be changed if we introduce OData 
+         * on a version 3.0 or higher and in this situation we should taking into account also arrays.
+         */
+        
+        
+        if (registerNames == null || registerNames.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return registerNames;
+        
+    }
+
+    public List<Property> getComplexType(final FullQualifiedName edmFQName) {
+        
+        final String descComplexTypeQuery = String.format(COMPLEX_TYPE_DESC_QUERY_FORMAT, edmFQName.getName());
+
+        final List<Property> complexTypes =
+                this.denodoTemplate.query(descComplexTypeQuery, new RowMapper<Property>() {
+                    @Override
+                    public Property mapRow(final ResultSet rs, final int rowNum) throws SQLException {
+                        final EdmSimpleTypeKind type = SQLMetadataUtils.sqlTypeToODataType(rs.getInt("TYPECODE"));
+                        
+                        Property property;
+                        
+                        if (type == null) {
+                            property = new ComplexProperty();
+                            ((ComplexProperty) property).setType(new FullQualifiedName(edmFQName.getNamespace(), rs.getString("TYPE")));
+                        } else {
+                            property = new SimpleProperty();
+                            ((SimpleProperty) property).setType(type);
+                        }
+
+                        property.setName(rs.getString("FIELD"));
+                        
+                        return property;
+                    }}
+                );
+        return complexTypes;
+    }
 
 }
 

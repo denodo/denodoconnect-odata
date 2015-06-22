@@ -118,28 +118,13 @@ public class EntityAccessor {
 
                 for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
                     String columnName = resultSetMetaData.getColumnName(i);
-
-//                    EdmTyped edmTyped;
-//                    List<String> propertyNames = null;
-//                    
-//                    try {
-//                        edmTyped = edmEntityType.getProperty(columnName);
-//                    
-//                        if (edmTyped.getType() instanceof EdmStructuralType) {
-//                            EdmStructuralType edmStructuralType = ((EdmStructuralType) edmTyped.getType());
-//                            propertyNames = edmStructuralType.getPropertyNames();
-//                        }
-//                    } catch (EdmException e) {
-//                        logger.error("Error getting property data: " + columnName + e);
-//                        throw new SQLException("Error getting property data: " + columnName + e);
-//                    }
                     
                     Object value = resultSet.getObject(i);
                     if (value instanceof Array) {
                         value = value.toString();
                     } else if (value instanceof Struct) {
                         Object[] structValues = ((Struct) value).getAttributes();
-                        //String structTypeName = ((Struct) value).getSQLTypeName();
+
                         try {
                             EdmTyped edmTyped = edmEntityType.getProperty(columnName);
                             value = getStructAsMaps(edmTyped, columnName, structValues);
@@ -432,6 +417,7 @@ public class EntityAccessor {
         return getCountEntitySet(entityName,null, null, null, null);
     }
 
+    // Structs data should be represented as maps where the key is the name of the property
     Map<String, Object> getStructAsMaps(final EdmTyped edmTyped, final String propertyName, 
             final Object[] structValues) throws SQLException {
         

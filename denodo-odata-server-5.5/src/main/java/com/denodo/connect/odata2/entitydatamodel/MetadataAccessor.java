@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
-import com.denodo.connect.odata2.util.SQLMetadataUtils;
 import org.apache.olingo.odata2.api.edm.EdmMultiplicity;
 import org.apache.olingo.odata2.api.edm.EdmSimpleTypeKind;
 import org.apache.olingo.odata2.api.edm.FullQualifiedName;
@@ -58,6 +57,8 @@ import org.springframework.jdbc.core.SqlParameter;
 import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.jdbc.support.JdbcUtils;
 import org.springframework.stereotype.Repository;
+
+import com.denodo.connect.odata2.util.SQLMetadataUtils;
 
 
 
@@ -473,13 +474,16 @@ public class MetadataAccessor {
 
                         final String associationDescription = rs.getString("ASSOCIATION_DESCRIPTION");
 
-                        final String leftRole = rs.getString("LEFT_ROLE");
+                        // As you can see in the Virtual DataPort Administration Guide (section 8.2 ASSOCIATIONS)
+                        // the role name of an end point is specified in the other side of the association. We must
+                        // take this into account to build the association.
                         final String leftViewName = rs.getString("LEFT_VIEW_NAME");
+                        final String leftRole = rs.getString("RIGHT_ROLE");
                         final EdmMultiplicity leftMultiplicity =
                                 SQLMetadataUtils.sqlMultiplicityToODataMultiplicity(rs.getString("LEFT_MULTIPLICITY"));
 
-                        final String rightRole = rs.getString("RIGHT_ROLE");
                         final String rightViewName = rs.getString("RIGHT_VIEW_NAME");
+                        final String rightRole = rs.getString("LEFT_ROLE");
                         final EdmMultiplicity rightMultiplicity =
                                 SQLMetadataUtils.sqlMultiplicityToODataMultiplicity(rs.getString("RIGHT_MULTIPLICITY"));
 

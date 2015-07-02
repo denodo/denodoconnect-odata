@@ -55,6 +55,7 @@ import org.apache.olingo.odata2.api.uri.expression.BinaryExpression;
 import org.apache.olingo.odata2.api.uri.expression.CommonExpression;
 import org.apache.olingo.odata2.api.uri.expression.FilterExpression;
 import org.apache.olingo.odata2.api.uri.expression.MemberExpression;
+import org.apache.olingo.odata2.api.uri.expression.MethodExpression;
 import org.apache.olingo.odata2.api.uri.expression.OrderByExpression;
 import org.apache.olingo.odata2.api.uri.expression.PropertyExpression;
 import org.apache.olingo.odata2.api.uri.info.GetComplexPropertyUriInfo;
@@ -434,34 +435,61 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         String filterExpressionString = null;
         if (filterExpression != null) {
             if (filterExpression.getExpression() instanceof BinaryExpression) {
-                StringBuilder sb = new StringBuilder();
-                BinaryExpression binaryExpression = ((BinaryExpression) filterExpression.getExpression());
-                
-                if (binaryExpression.getLeftOperand() instanceof MemberExpression) {
-                    // It is a property of a complex type
-                    sb.append(getPropertyPath((MemberExpression) binaryExpression.getLeftOperand()));
-                } else {
-                    sb.append(binaryExpression.getLeftOperand().getUriLiteral());
-                }
-                
-                sb.append(" ");
-                
-                sb.append(binaryExpression.getOperator().toString());
-                
-                sb.append(" ");
-                
-                if (binaryExpression.getRightOperand() instanceof MemberExpression) {
-                    // It is a property of a complex type
-                    sb.append(getPropertyPath((MemberExpression) binaryExpression.getRightOperand()));
-                } else {
-                    sb.append(binaryExpression.getRightOperand().getUriLiteral());
-                }
-                filterExpressionString = sb.toString();
+                filterExpressionString = processBinaryExpression((BinaryExpression) filterExpression.getExpression());
             } else {
                 filterExpressionString = filterExpression.getExpressionString();    
             }
         }
         return filterExpressionString;
+    }
+    
+    private static String processBinaryExpression(final BinaryExpression binaryExpression) {
+        
+        StringBuilder sb = new StringBuilder();
+        
+        sb.append(processOperand(binaryExpression.getLeftOperand()));
+        
+        sb.append(" ");
+        
+        sb.append(binaryExpression.getOperator().toString());
+        
+        sb.append(" ");
+        
+        sb.append(processOperand(binaryExpression.getRightOperand()));
+        
+        return sb.toString();
+    }
+    
+    private static String processOperand(final CommonExpression operand) {
+        
+        StringBuilder sb = new StringBuilder();
+        
+        if (operand instanceof MemberExpression) {
+            // It is a property of a complex type
+            sb.append(getPropertyPath((MemberExpression) operand));
+        } else if (operand instanceof BinaryExpression) {
+            sb.append(processBinaryExpression((BinaryExpression) operand));
+        } else {
+            if (operand instanceof MethodExpression) {
+                // Leave the string: method(param1, param2, param3,...)
+                sb.append(((MethodExpression) operand).getMethod());
+                List<CommonExpression> params = ((MethodExpression) operand).getParameters();
+                sb.append("(");
+                for (CommonExpression p : params) {
+                    sb.append(p.getUriLiteral());
+                    sb.append(",");
+                }
+                
+                // remove the last extra comma
+                sb.deleteCharAt(sb.length()-1);
+                
+                sb.append(")");
+            } else {
+                sb.append(operand.getUriLiteral());
+            }
+        }
+        
+        return sb.toString();
     }
 
     private static String getPropertyPath(final CommonExpression expression) {

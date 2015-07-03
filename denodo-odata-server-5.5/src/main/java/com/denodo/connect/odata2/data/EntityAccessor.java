@@ -83,9 +83,10 @@ public class EntityAccessor {
     }
 
     public List<Map<String, Object>> getEntitySetByAssociation(final EdmEntityType edmEntityType, final LinkedHashMap<String, Object> keys,
-            List<NavigationSegment> navigationSegments, EdmEntityType edmEntityTypeTarget) throws SQLException, ODataException {
+            List<NavigationSegment> navigationSegments, EdmEntityType edmEntityTypeTarget, final String orderByExpressionString, final Integer top,
+            final Integer skip, final String filterExpression, final List<String> selectedItems) throws SQLException, ODataException {
 
-        return getEntityData(edmEntityType, keys, null, null, null, null, null, navigationSegments, edmEntityTypeTarget, null);
+        return getEntityData(edmEntityType, keys, orderByExpressionString, top, skip, filterExpression, selectedItems, navigationSegments, edmEntityTypeTarget, null);
     }
 
     private List<Map<String, Object>> getEntityData(final EdmEntityType edmEntityType, final LinkedHashMap<String, Object> keys,

@@ -487,7 +487,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 List<CommonExpression> params = ((MethodExpression) operand).getParameters();
                 sb.append("(");
                 for (CommonExpression p : params) {
-                    sb.append(p.getUriLiteral());
+                    sb.append(processExpressionToComplexRepresentation(p));
                     sb.append(",");
                 }
                 

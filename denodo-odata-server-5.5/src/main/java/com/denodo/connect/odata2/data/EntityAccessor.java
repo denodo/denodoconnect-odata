@@ -286,7 +286,8 @@ public class EntityAccessor {
 
     private static String getSubstringofOption(final String filterExpression) {
         if (filterExpression != null) {
-            final Pattern pattern = Pattern.compile("(.*)(substringof)\\((')(\\w+)('),(\\w+)\\)( eq true| eq false)?(.*)");
+            //final Pattern pattern = Pattern.compile("(.*)(substringof)\\((')([\\w+\\/*\\w+]+)('),(\\w+)\\)( eq true| eq false)?(.*)");
+            final Pattern pattern = Pattern.compile("(.*)(substringof)\\((')(\\w+)('),(.+)\\)( eq true| eq false)?(.*)");
 
             final Matcher matcher = pattern.matcher(filterExpression);
             if (!matcher.find()) {
@@ -299,10 +300,11 @@ public class EntityAccessor {
                 newFilterExpression.append(matcher.group(1));
 
                 final String substring = matcher.group(4);
-                final String columnName = matcher.group(6);
+                //final String propertyName = getPropertyAsRegisterIfNecessary(matcher.group(6));
+                final String propertyName = matcher.group(6);
                 final String condition = matcher.group(7);
 
-                newFilterExpression.append(columnName).append(getCondition(condition)).append("'%").append(substring).append("%'");
+                newFilterExpression.append(propertyName).append(getCondition(condition)).append("'%").append(substring).append("%'");
                 newFilterExpression.append(matcher.group(8));
             }
 
@@ -313,7 +315,7 @@ public class EntityAccessor {
 
     private static String getStartsWithOption(final String filterExpression) {
         if (filterExpression != null) {
-            final Pattern pattern = Pattern.compile("(.*)(startswith)\\((\\w+),(')(\\w+)(')\\)( eq true| eq false)?(.*)");
+            final Pattern pattern = Pattern.compile("(.*)(startswith)\\((.+),(')(\\w+)(')\\)( eq true| eq false)?(.*)");
 
             final Matcher matcher = pattern.matcher(filterExpression);
             if (!matcher.find()) {
@@ -437,7 +439,7 @@ public class EntityAccessor {
     }
     
     /**
-     * Gets the select expression using the property path. If there is more tha one element in the 
+     * Gets the select expression using the property path. If there is more than one element in the 
      * propertyPath list it means that the property is a register.
      * 
      * @param propertyPath

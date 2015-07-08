@@ -50,6 +50,7 @@ import org.apache.olingo.odata2.api.uri.ExpandSelectTreeNode;
 import org.apache.olingo.odata2.api.uri.KeyPredicate;
 import org.apache.olingo.odata2.api.uri.NavigationSegment;
 import org.apache.olingo.odata2.api.uri.SelectItem;
+import org.apache.olingo.odata2.api.uri.UriInfo;
 import org.apache.olingo.odata2.api.uri.UriParser;
 import org.apache.olingo.odata2.api.uri.expression.BinaryExpression;
 import org.apache.olingo.odata2.api.uri.expression.CommonExpression;
@@ -61,6 +62,7 @@ import org.apache.olingo.odata2.api.uri.expression.OrderExpression;
 import org.apache.olingo.odata2.api.uri.expression.PropertyExpression;
 import org.apache.olingo.odata2.api.uri.info.GetComplexPropertyUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetCountUriInfo;
+import org.apache.olingo.odata2.api.uri.info.GetEntitySetLinksUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntityUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetSimplePropertyUriInfo;
@@ -98,8 +100,8 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             // Skip System Query Option ($skip)
             Integer skip = uriInfo.getSkip();
             
-            String orderByExpressionString = getOrderByExpresion(uriInfo);
-            String filterExpressionString =  getFilterExpresion(uriInfo);
+            String orderByExpressionString = getOrderByExpresion((UriInfo) uriInfo);
+            String filterExpressionString =  getFilterExpresion((UriInfo) uriInfo);
             List<String> selectedItemsAsString;
             selectedItemsAsString = getSelectedItems(uriInfo, keyProperties);
 
@@ -128,7 +130,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 // expand/select tree
                 ExpandSelectTreeNode expandSelectTreeNode = UriParser.createExpandSelectTree(uriInfo.getSelect(), uriInfo.getExpand());
                 propertiesBuilder.expandSelectTree(expandSelectTreeNode);
-
+                
                 return EntityProvider.writeFeed(contentType, entitySetTarget, data, propertiesBuilder.build());
             }
 
@@ -416,8 +418,54 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         throw new ODataNotImplementedException();
     }
 
+    @Override
+    public ODataResponse readEntityLinks(final GetEntitySetLinksUriInfo uriInfo, final String contentType)
+        throws ODataException {
+        
+        try {
+            EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
+            EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
 
-    private static String getOrderByExpresion( final GetEntitySetUriInfo uriInfo){
+            List<Map<String, Object>> data = null;
+    
+            // Top System Query Option ($top)
+            Integer top = uriInfo.getTop();
+    
+            // Skip System Query Option ($skip)
+            Integer skip = uriInfo.getSkip();
+            
+            String orderByExpressionString = getOrderByExpresion((UriInfo) uriInfo);
+            String filterExpressionString =  getFilterExpresion((UriInfo) uriInfo);
+            
+            
+            if (uriInfo.getNavigationSegments().size() >= 1) {
+    
+                LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+                List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
+
+                // Query option $select cannot be applied
+                data = this.entityAccessor.getEntitySetByAssociation(entitySetStart.getEntityType(), keys,
+                            navigationSegments, entitySetTarget.getEntityType(), orderByExpressionString, top, skip, filterExpressionString,
+                            null);
+
+            }
+        
+            if (data != null) {
+                URI serviceRoot = getContext().getPathInfo().getServiceRoot();
+                ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
+                
+                return EntityProvider.writeLinks(contentType, entitySetTarget, data, propertiesBuilder.build());
+            }
+        } catch (SQLException e) {
+            logger.error(e);
+            throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
+        }
+
+        throw new ODataNotImplementedException();
+        
+    }
+    
+    private static String getOrderByExpresion( final UriInfo uriInfo){
 
         // Orderby System Query Option ($orderby)
         OrderByExpression orderByExpression = uriInfo.getOrderBy();
@@ -439,7 +487,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         return orderByExpressionString;
     }
 
-    private static String getFilterExpresion(final GetEntitySetUriInfo uriInfo){
+    private static String getFilterExpresion(final UriInfo uriInfo){
 
         // Filter System Query Option ($filter)
         FilterExpression filterExpression = uriInfo.getFilter();

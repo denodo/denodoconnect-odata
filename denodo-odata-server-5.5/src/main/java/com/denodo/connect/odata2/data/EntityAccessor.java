@@ -286,7 +286,6 @@ public class EntityAccessor {
 
     private static String getSubstringofOption(final String filterExpression) {
         if (filterExpression != null) {
-            //final Pattern pattern = Pattern.compile("(.*)(substringof)\\((')([\\w+\\/*\\w+]+)('),(\\w+)\\)( eq true| eq false)?(.*)");
             final Pattern pattern = Pattern.compile("(.*)(substringof)\\((')(\\w+)('),(.+)\\)( eq true| eq false)?(.*)");
 
             final Matcher matcher = pattern.matcher(filterExpression);

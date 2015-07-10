@@ -47,8 +47,13 @@ public class RequestHandler extends HttpServletRequestWrapper {
        int start= url.indexOf("/",url.indexOf(".svc"));
        int end =  url.indexOf("/",start+1);
        //The url is changed to eliminate the name of the database, in this way olingo can read the request correctly, 
-       // and with other filter we can set up the connection with the database
-       String newUrl= url.substring(0,start).concat(url.substring(end,url.length()));
+        // and with other filter we can set up the connection with the database
+        String newUrl;
+        if (end == -1) {
+            newUrl = url.substring(0, start);
+        } else {
+            newUrl = url.substring(0, start).concat(url.substring(end, url.length()));
+        }
        
        logger.debug("Changed url request: "+ newUrl);
        return newUrl; 

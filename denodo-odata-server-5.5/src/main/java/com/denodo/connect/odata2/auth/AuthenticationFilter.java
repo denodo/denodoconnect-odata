@@ -31,20 +31,19 @@ public class AuthenticationFilter implements Filter {
     private static final String BASIC_AUTH_KEYWORD = "Basic ";
 
 
-    // OData auth convenience constants
-    private final static String AUTHORIZATION_CHALLENGE_ATTRIBUTE = "WWW-AUTHENTICATE"; // TODO Review this "authorizationChallenge";
+    // OData AUTH convenience constants
+    private final static String AUTHORIZATION_CHALLENGE_ATTRIBUTE = "WWW-AUTHENTICATE";
     private final static String AUTHORIZATION_CHALLENGE_REALM = "Denodo_OData_Service";
     private final static String AUTHORIZATION_CHALLENGE_BASIC = SecurityContext.BASIC_AUTH + " realm=\""
             + AUTHORIZATION_CHALLENGE_REALM + "\", accept-charset=\"" + CHARACTER_ENCODING + "\"";
 
-    // Parameters
-    private static final String LOGOUT_PARAMETER = "logout";
+
+    // URI Examples: http://localhost:8080/denodo-odata2-server-5.5/denodo-odata.svc/admin
+    // TODO Create a thread local connection variable.
 
     @Override
     public void init(final FilterConfig filterConfig) throws ServletException {
         // Do nothing
-
-        // TODO Is it necessary to set auth_type ?
     }
 
     @Override
@@ -55,54 +54,37 @@ public class AuthenticationFilter implements Filter {
         final HttpServletRequest request = (HttpServletRequest) req;
         final HttpServletResponse response = (HttpServletResponse) res;
 
-        // TODO When request contains LOGOUT as param/part of the URL >> sendRedirect to resource URI (remove Logout part)
-        // Base64 commons.codecs
-
-        if (request.getParameterMap().containsKey(LOGOUT_PARAMETER)
-                || request.getParameterMap().containsKey(LOGOUT_PARAMETER.toUpperCase())) {
-            showLogin(response);
-            return;
-        }
-
-        // Get AUTH request segment
-        String authorizationHeader = request.getHeader(AUTH_KEYWORD);
+        // Check request header contains BASIC AUTH segment
+        final String authorizationHeader = request.getHeader(AUTH_KEYWORD);
         if (authorizationHeader == null || !StringUtils.startsWithIgnoreCase(authorizationHeader, BASIC_AUTH_KEYWORD)) {
+            logger.trace("HTTP request does not contain AUTH segment");
             showLogin(response);
             return;
-        } else {
-
-            // TODO Extract this to a method
-            // Retrieve credentials
-            authorizationHeader = authorizationHeader.substring(BASIC_AUTH_KEYWORD.length());
-            final String decoded = new String(Base64.decodeBase64(authorizationHeader), CHARACTER_ENCODING);
-            final String[] values = StringUtils.split(decoded, ':');
-            String username = "";
-            String password = "";
-
-            // normal pages
-            if (values.length < 2) {
-                showLogin(response);
-                return;
-            } else {
-                username = values[0];
-                password = values[1];
-            }
-
-            /***/
-            final String dataSourceName = retrieveDataSourceNameFromUrl(request.getRequestURL().toString());
-            request.setAttribute(UserAuthenticationInfo.REQUEST_ATTRIBUTE_NAME, new UserAuthenticationInfo(username,
-                    password, StringUtils.isEmpty(dataSourceName) ? null : dataSourceName));
-
-            // TODO What to do if dataSourceName is null ? Invalid URL?!
-
-
-            // TODO Get the connection with SPRING // If error >>> showLogin
-
-//            chain.doFilter(req, res);
-
-            // TODO Clean session
+        }
+        // Retrieve credentials
+        final String[] credentials = retrieveCredentials(authorizationHeader);
+        if(credentials == null) {
+            logger.trace("Invalid credentials");
+            showLogin(response);
+            return;
         }
 
+        // TODO What to do if dataSourceName is null ? Invalid URL?!
+        final String dataSourceName = retrieveDataSourceNameFromUrl(request.getRequestURL().toString());
+        request.setAttribute(UserAuthenticationInfo.REQUEST_ATTRIBUTE_NAME, new UserAuthenticationInfo(credentials[0],
+                credentials[1], StringUtils.isEmpty(dataSourceName) ? null : dataSourceName));
+
+
+        // TODO Get the connection with SPRING // If error >>> showLogin
+        // TODO Clean session
+//        DataSourceUtils.getConnection(dataSource);
+
+        // TODO Uncomment this
+        // chain.doFilter(req, res);
+
+
+//        // Ver si este es el método adecuado
+//        DataSourceUtils.releaseConnection(con, dataSource);
 
         logger.trace("AuthenticationFilter.doFilter(...) finishes");
     }

@@ -106,8 +106,7 @@ public class EntityAccessor {
         String sqlStatement = getSQLStatement(edmEntityType.getName(), keys, filterExpressionAdapted, selectedItems, navigationSegments,
                 tableTarget, propertyPath, Boolean.FALSE);
         sqlStatement = addOrderByExpression(sqlStatement, orderByExpression);
-        sqlStatement = addTopOption(sqlStatement, top);
-        sqlStatement = addSkipOption(sqlStatement, skip);
+        sqlStatement = addSkipTopOption(sqlStatement, skip, top);
         logger.debug("Executing query: " + sqlStatement);
 
         entitySetData=(List<Map<String, Object>>)this.denodoTemplate.query(sqlStatement, 
@@ -251,36 +250,35 @@ public class EntityAccessor {
         return sb.toString();
     }
 
-    private static String addTopOption(final String sqlStatement, final Integer top) {
-        StringBuilder sb = new StringBuilder(sqlStatement);
-        if (top != null) {
-            int topAsInt = top.intValue();
-            // If a value less than 0 is specified, the URI should be considered
-            // malformed.
-            if (topAsInt >= 0) {
-                sb.append(" LIMIT ");
-                sb.append(top);
-            }
-        }
-        return sb.toString();
-    }
 
-    private static String addSkipOption(final String sqlStatement, final Integer skip) {
+    private static String addSkipTopOption(final String sqlStatement, final Integer skip, final Integer top) {
         StringBuilder sb = new StringBuilder(sqlStatement);
-        if (skip != null) {
+        if (skip != null ) {
             int skipAsInt = skip.intValue();
+           
             // If a value less than 0 is specified, the URI should be considered
             // malformed.
             if (skipAsInt >= 0) {
                 sb.append(" OFFSET ");
                 sb.append(skip);
                 sb.append(" ROWS");
-                // TODO: This must be removed when the Task #22418 - Problem
-                // with OFFSET clause is resolved
-                sb.append(" LIMIT ");
-                sb.append(Integer.MAX_VALUE);
             }
         }
+        if(top!=null){
+            int topAsInt = top.intValue();
+            if(topAsInt >=0){
+                
+                sb.append(" LIMIT ");
+                sb.append(top);
+            }
+        }else{
+            // TODO: This must be removed when the Task #22418 - Problem
+            // with OFFSET clause is resolved
+            sb.append(" LIMIT ");
+            sb.append(Integer.MAX_VALUE);
+            
+        }
+    
         return sb.toString();
     }
 

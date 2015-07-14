@@ -6,12 +6,12 @@ public class UserAuthenticationInfo {
 
     private final String login;
     private final String password;
-    private final String datasource;
+    private final String databaseName;
 
-    public UserAuthenticationInfo(final String login, final String password, final String datasource){
+    public UserAuthenticationInfo(final String login, final String password, final String databaseName){
         this.login = login;
         this.password = password;
-        this.datasource = datasource;
+        this.databaseName = databaseName;
     }
 
     public String getLogin() {
@@ -22,8 +22,8 @@ public class UserAuthenticationInfo {
         return this.password;
     }
 
-    public String getDatasource() {
-        return this.datasource;
+    public String getDatabaseName() {
+        return this.databaseName;
     }
 
 }

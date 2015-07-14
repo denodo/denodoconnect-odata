@@ -91,6 +91,10 @@
   <bean class="org.springframework.jdbc.core.JdbcTemplate"
         p:dataSource-ref="dataSource"/>
 
+  <!-- ******************************************************************* -->
+  <!-- AUTHORIZATION DATA SOURCE                                               -->
+  <!-- ******************************************************************* -->
+  <bean class="com.denodo.connect.odata2.datasource.AuthDataSource"/>
 
   <!-- ******************************************************************* -->
   <!-- APACHE OLINGO - ODATA SERVER CONFIGURATION                          -->

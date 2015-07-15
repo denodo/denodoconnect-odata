@@ -234,7 +234,16 @@ public class EntityAccessor {
             } else {
                 sb.append(" AND ");
             }
-            sb.append(filterExpression);
+            
+      //vdp not accepts "eq null", so it is changed 'eq' by 'is'
+            if ( filterExpression.matches(".*?eq.*?null.*?")) {
+                sb.append(filterExpression.replace("eq.*?null", "is null"));
+            }else if (filterExpression.matches(".*?ne.*?null.*?")) {
+                sb.append(filterExpression.replace("ne.*?null", "is not null"));
+            } else {
+                sb.append(filterExpression);
+            }
+           
         }
 
         return sb.toString();

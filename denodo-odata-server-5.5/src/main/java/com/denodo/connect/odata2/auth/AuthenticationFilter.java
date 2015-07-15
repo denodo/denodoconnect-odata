@@ -49,6 +49,10 @@ public class AuthenticationFilter implements Filter {
     private static final String SERVER_NAME_VALUE = "localhost";
     private static final String PORT_VALUE = "9999";
 
+    // ERRORS
+    private static final String AUTH_ERROR = "The username or password is incorrect";
+    private static final String NOT_FOUND_ERROR = "not found"; // TODO Use other scan method rather than not found
+
     private ServletContext servletContext = null;
 
     @Override
@@ -80,10 +84,14 @@ public class AuthenticationFilter implements Filter {
             return;
         }
 
-        // TODO What to do if dataSourceName is null ? Invalid URL?!
         final String dataBaseName = retrieveDataSourceNameFromUrl(request.getRequestURL().toString());
+        if(StringUtils.isEmpty(dataBaseName)){
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
         final UserAuthenticationInfo userAuthInfo = new UserAuthenticationInfo(credentials[0], credentials[1],
-                StringUtils.isEmpty(dataBaseName) ? null : dataBaseName);
+                dataBaseName);
+
 
         // Get data source implementation
         final AuthDataSource authDataSource = WebApplicationContextUtils.getWebApplicationContext(this.servletContext).
@@ -102,10 +110,19 @@ public class AuthenticationFilter implements Filter {
             dataSourceConnection = DataSourceUtils.getConnection(authDataSource);
             chain.doFilter(req, res);
         } catch (final CannotGetJdbcConnectionException e) {
-            // FIXME If error >>> showLogin ????? // Show an error page
-            // TODO Invalid schema >> 404 ?
-            logger.error("Couldn't get the connection " + e + " for dataSource");
-            throw e;
+            if(e.getCause().getMessage().contains(AUTH_ERROR)){ // Check invalid credentials
+                logger.error("Invalid user/pass");
+                showLogin(response);
+                return;
+            } else if(e.getCause().getMessage().contains(NOT_FOUND_ERROR)){ // Check invalid database name
+                // TODO Use Pattern to match Database <name> not found?
+                logger.error("Database not found");
+                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            } else {
+                logger.error("Couldn't get the connection " + e + " for dataSource");
+                throw e;
+            }
         } finally {
             // Clean the session
             if(dataSourceConnection != null){
@@ -135,7 +152,6 @@ public class AuthenticationFilter implements Filter {
         response.setCharacterEncoding(CHARACTER_ENCODING);
         response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
     }
-
 
     /**
      * This method extracts from an Odata-like URL the name of data source.
@@ -177,7 +193,7 @@ public class AuthenticationFilter implements Filter {
         parameters.put(AuthDataSource.DBMS_NAME, DBMS_VALUE);
         parameters.put(AuthDataSource.SERVER_NAME, SERVER_NAME_VALUE);
         parameters.put(AuthDataSource.PORT_NUMBER_NAME, PORT_VALUE);
-        parameters.put(AuthDataSource.DATA_SOURCE_NAME, userAuthenticationInfo.getDatabaseName());
+        parameters.put(AuthDataSource.DATA_BASE_NAME, userAuthenticationInfo.getDatabaseName());
         parameters.put(AuthDataSource.USER_NAME, userAuthenticationInfo.getLogin());
         parameters.put(AuthDataSource.PASSWORD_NAME, userAuthenticationInfo.getPassword());
 

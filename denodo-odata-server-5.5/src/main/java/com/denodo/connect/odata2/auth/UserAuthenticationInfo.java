@@ -26,4 +26,11 @@ public class UserAuthenticationInfo {
         return this.databaseName;
     }
 
+    @Override
+    public String toString() {
+        return "UserAuthenticationInfo [login=" + this.login + ", password=" + this.password + ", databaseName="
+                + this.databaseName + "]";
+    }
+
+
 }

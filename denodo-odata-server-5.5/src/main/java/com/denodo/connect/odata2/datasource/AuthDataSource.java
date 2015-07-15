@@ -21,7 +21,7 @@ public class AuthDataSource implements DataSource {
     public final static String PORT_NUMBER_NAME = "portNumber";
     public final static String USER_NAME = "user";
     public final static String PASSWORD_NAME = "password";
-    public final static String DATA_SOURCE_NAME = "password";
+    public final static String DATA_BASE_NAME = "databaseName";
 
     // TODO Place this constant somewhere else
     public static final String DRIVER_CLASS_NAME = "com.denodo.vdp.jdbc.Driver";
@@ -95,7 +95,7 @@ public class AuthDataSource implements DataSource {
 
     private String buildConnectionUrl() {
         return "jdbc:" + this.parameters.get().get(DBMS_NAME) + "://" + this.parameters.get().get(SERVER_NAME) + ":"
-                + this.parameters.get().get(PORT_NUMBER_NAME) + "/" + this.parameters.get().get(DATA_SOURCE_NAME);
+                + this.parameters.get().get(PORT_NUMBER_NAME) + "/" + this.parameters.get().get(DATA_BASE_NAME);
     }
 
     @Override

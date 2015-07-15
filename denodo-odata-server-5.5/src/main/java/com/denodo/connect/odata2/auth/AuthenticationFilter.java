@@ -45,9 +45,9 @@ public class AuthenticationFilter implements Filter {
             + AUTHORIZATION_CHALLENGE_REALM + "\", accept-charset=\"" + CHARACTER_ENCODING + "\"";
 
     // Connection parameters
-    private static final String DBMS_VALUE = "vdb";
-    private static final String SERVER_NAME_VALUE = "localhost";
-    private static final String PORT_VALUE = "9999";
+//    private static final String DBMS_VALUE = "vdb";
+//    private static final String SERVER_NAME_VALUE = "localhost";
+//    private static final String PORT_VALUE = "9999";
 
     // ERRORS
     private static final String AUTH_ERROR = "The username or password is incorrect";
@@ -184,15 +184,12 @@ public class AuthenticationFilter implements Filter {
 
 
     /**
-     * This method
-     * @param userAuthenticationInfo
+     * This method fills a map with data required to get an authorized connection to VDP
+     * @param userAuthenticationInfo required user/pass to access a data base.
      * @return
      */
     private static Map<String,String> fillParametersMap(final UserAuthenticationInfo userAuthenticationInfo){
         final Map<String,String> parameters = new HashMap<String,String>();
-        parameters.put(AuthDataSource.DBMS_NAME, DBMS_VALUE);
-        parameters.put(AuthDataSource.SERVER_NAME, SERVER_NAME_VALUE);
-        parameters.put(AuthDataSource.PORT_NUMBER_NAME, PORT_VALUE);
         parameters.put(AuthDataSource.DATA_BASE_NAME, userAuthenticationInfo.getDatabaseName());
         parameters.put(AuthDataSource.USER_NAME, userAuthenticationInfo.getLogin());
         parameters.put(AuthDataSource.PASSWORD_NAME, userAuthenticationInfo.getPassword());

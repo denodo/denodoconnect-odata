@@ -15,16 +15,16 @@ public class AuthDataSource implements DataSource {
 
     private static final Logger logger = Logger.getLogger(AuthDataSource.class);
 
+    // TODO Dependences of VDP
+    public static final String DRIVER_CLASS_NAME_VALUE = "com.denodo.vdp.jdbc.Driver";
+    public static final String SUBPROTOCOL_VALUE = "vdb";
 
-    public final static String DBMS_NAME = "dbms";
-    public final static String SERVER_NAME = "serverName";
-    public final static String PORT_NUMBER_NAME = "portNumber";
     public final static String USER_NAME = "user";
     public final static String PASSWORD_NAME = "password";
     public final static String DATA_BASE_NAME = "databaseName";
 
-    // TODO Place this constant somewhere else
-    public static final String DRIVER_CLASS_NAME = "com.denodo.vdp.jdbc.Driver";
+    private String host;
+    private String port;
 
     private final ThreadLocal<Map<String,String>> parameters = new ThreadLocal<Map<String,String>>();
 
@@ -33,15 +33,31 @@ public class AuthDataSource implements DataSource {
 
     static{
         try{
-            Class.forName(DRIVER_CLASS_NAME);
+            Class.forName(DRIVER_CLASS_NAME_VALUE);
         } catch (final Exception e) {
-            logger.error("Cannot load driver " + DRIVER_CLASS_NAME + " due to " + e);
+            logger.error("Cannot load driver " + DRIVER_CLASS_NAME_VALUE + " due to " + e);
             throw new ExceptionInInitializerError(e);
         }
     }
 
     public AuthDataSource(){
         super();
+    }
+
+    public String getHost() {
+        return this.host;
+    }
+
+    public void setHost(final String host) {
+        this.host = host;
+    }
+
+    public String getPort() {
+        return this.port;
+    }
+
+    public void setPort(final String port) {
+        this.port = port;
     }
 
     public void setParameters(final Map<String,String> parameters){
@@ -80,11 +96,12 @@ public class AuthDataSource implements DataSource {
 
     @Override
     public Connection getConnection() throws SQLException {
-        // Fill connection properties with user pass
+        // Fill connection properties with user/pass credential
         final Properties connectionProps = new Properties();
-        connectionProps.put("user", this.parameters.get().get(USER_NAME));
-        connectionProps.put("password", this.parameters.get().get(PASSWORD_NAME));
-
+        if (this.parameters.get() != null) {
+            connectionProps.put("user", this.parameters.get().get(USER_NAME));
+            connectionProps.put("password", this.parameters.get().get(PASSWORD_NAME));
+        }
         return DriverManager.getConnection(this.buildConnectionUrl(), connectionProps);
     }
 
@@ -94,8 +111,8 @@ public class AuthDataSource implements DataSource {
     }
 
     private String buildConnectionUrl() {
-        return "jdbc:" + this.parameters.get().get(DBMS_NAME) + "://" + this.parameters.get().get(SERVER_NAME) + ":"
-                + this.parameters.get().get(PORT_NUMBER_NAME) + "/" + this.parameters.get().get(DATA_BASE_NAME);
+        return "jdbc:" + SUBPROTOCOL_VALUE + "://" + this.getHost() + ":" + this.getPort() + "/"
+                + this.parameters.get().get(DATA_BASE_NAME);
     }
 
     @Override

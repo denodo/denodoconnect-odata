@@ -2,6 +2,7 @@ package com.denodo.connect.odata2.filter;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 
@@ -20,7 +21,8 @@ public class DataBaseFilter implements Filter {
     throws IOException, ServletException {
         
         final RequestHandler requestHandler = new RequestHandler((HttpServletRequest)request);
-        filterChain.doFilter(requestHandler, response);
+        final ResponseHandler responseHadnler= new ResponseHandler((HttpServletResponse) response);
+        filterChain.doFilter(requestHandler, responseHadnler);
     }
 
   

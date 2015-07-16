@@ -74,15 +74,9 @@
   <!-- of the open-session-in-view filter can use up all the available     -->
   <!-- connections when they are not needed.                               -->
   <!-- ******************************************************************* -->
-  <bean id="dataSourceTarget"
-        class="org.apache.commons.dbcp.BasicDataSource"
-        destroy-method="close" p:driverClassName="${datasource.driver}"
-        p:url="${datasource.url}" p:username="${datasource.username}"
-        p:password="${datasource.password}" />
-
   <bean id="dataSource"
-        class="org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy"
-        p:targetDataSource-ref="dataSourceTarget" />
+        class="com.denodo.connect.odata2.datasource.AuthDataSource"
+        p:host="${vdp.host}" p:port="${vdp.port}" />
 
 
   <!-- ******************************************************************* -->
@@ -90,7 +84,7 @@
   <!-- ******************************************************************* -->
   <bean class="org.springframework.jdbc.core.JdbcTemplate"
         p:dataSource-ref="dataSource"/>
-
+        
 
   <!-- ******************************************************************* -->
   <!-- APACHE OLINGO - ODATA SERVER CONFIGURATION                          -->

@@ -61,6 +61,7 @@ import org.apache.olingo.odata2.api.uri.expression.OrderByExpression;
 import org.apache.olingo.odata2.api.uri.expression.OrderExpression;
 import org.apache.olingo.odata2.api.uri.expression.PropertyExpression;
 import org.apache.olingo.odata2.api.uri.info.GetComplexPropertyUriInfo;
+import org.apache.olingo.odata2.api.uri.info.GetEntityLinkUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetCountUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetLinksUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetUriInfo;
@@ -464,6 +465,43 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         throw new ODataNotImplementedException();
         
     }
+    
+    @Override
+    public ODataResponse readEntityLink(GetEntityLinkUriInfo uriInfo, String contentType) throws ODataException {
+        try {
+            EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
+            EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
+
+            Map<String, Object> data = null;
+            
+            if (uriInfo.getNavigationSegments().size() >= 1) {
+    
+                LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+                List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
+
+                // Query option $select cannot be applied
+                data = this.entityAccessor.getEntityByAssociation(entitySetStart.getEntityType(), keys,
+                            navigationSegments, entitySetTarget.getEntityType(),
+                            null);
+
+            }
+        
+            if (data != null) {
+                URI serviceRoot = getContext().getPathInfo().getServiceRoot();
+                ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
+                
+                return EntityProvider.writeLink(contentType, entitySetTarget, data, propertiesBuilder.build());
+            }
+        } catch (SQLException e) {
+            logger.error(e);
+            throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
+        }
+
+        throw new ODataNotImplementedException();
+        
+
+    }
+
     
     private static String getOrderByExpresion( final UriInfo uriInfo){
 

@@ -21,11 +21,13 @@
 <beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:p="http://www.springframework.org/schema/p"
        xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:util="http://www.springframework.org/schema/util"
        xmlns:odata="http://www.apache.org/olingo/odata2/spring/odata"
        xmlns="http://www.springframework.org/schema/beans"
        xsi:schemaLocation="
-           http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
-           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd
+           http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.1.xsd
+           http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.1.xsd
            http://www.apache.org/olingo/odata2/spring/odata http://www.apache.org/olingo/odata2/spring/odata.xsd">
 
 
@@ -38,6 +40,17 @@
   <!-- they can be assigned with "${propertyname}".                        -->
   <!-- ******************************************************************* -->
   <context:property-placeholder location="classpath:business.properties" />
+
+
+  <!-- ******************************************************************* -->
+  <!-- CONFIGURATION MAP                                                   -->
+  <!-- ******************************************************************* -->
+  <!-- We will put here some properties we need in several places          -->
+  <!-- throughout the code.                                                -->
+  <!-- ******************************************************************* -->
+  <util:properties id="odataconfig">
+    <prop key="serveraddress">${odataserver.address}</prop>
+  </util:properties>
 
 
   <!-- ******************************************************************* -->
@@ -74,23 +87,16 @@
   <!-- of the open-session-in-view filter can use up all the available     -->
   <!-- connections when they are not needed.                               -->
   <!-- ******************************************************************* -->
-  <bean id="dataSourceTarget"
-        class="org.apache.commons.dbcp.BasicDataSource"
-        destroy-method="close" p:driverClassName="${datasource.driver}"
-        p:url="${datasource.url}" p:username="${datasource.username}"
-        p:password="${datasource.password}" />
-
   <bean id="dataSource"
-        class="org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy"
-        p:targetDataSource-ref="dataSourceTarget" />
+        class="com.denodo.connect.odata2.datasource.DenodoODataAuthDataSource"
+        p:host="${vdp.host}" p:port="${vdp.port}" />
 
 
   <!-- ******************************************************************* -->
   <!-- SPRING JDBC TEMPLATE                                                -->
   <!-- ******************************************************************* -->
-  <bean class="org.springframework.jdbc.core.JdbcTemplate"
-        p:dataSource-ref="dataSource"/>
-
+  <bean class="org.springframework.jdbc.core.JdbcTemplate" p:dataSource-ref="dataSource"/>
+        
 
   <!-- ******************************************************************* -->
   <!-- APACHE OLINGO - ODATA SERVER CONFIGURATION                          -->
@@ -105,6 +111,7 @@
   <!-- ******************************************************************* -->
   <!-- Creation of the OData server, using the Denodo Service Factory      -->
   <!-- ******************************************************************* -->
-  <odata:server address="/denodo-odata.svc" factory="denodoServiceFactory" id="denodoService" />
+  <odata:server address="${odataserver.address}" factory="denodoServiceFactory" id="denodoService" />
+
 
 </beans>

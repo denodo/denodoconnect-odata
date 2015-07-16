@@ -680,21 +680,37 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
         return selectedItemsAsString;
     }
-    
-    private static  List<String> getSelectedItems( final GetEntitySetUriInfo uriInfo, 
-            final List<String> keyProperties)
-                    throws SQLException, ODataException {
+
+    private static List<String> getSelectedItems(final GetEntitySetUriInfo uriInfo, final List<String> keyProperties) throws SQLException,
+            ODataException {
 
         List<String> selectedItemsAsString = new ArrayList<String>();
         if (uriInfo != null) {
             // Select System Query Option ($select)
             List<SelectItem> selectedItems = uriInfo.getSelect();
-            selectedItemsAsString = getSelectOptionValues(selectedItems);
-        }
-        // If there are properties selected we must get also the key properties because 
-        // they are necessary in order to get all the information to write the entry
-        if (!selectedItemsAsString.isEmpty()) {
-            selectedItemsAsString.addAll(keyProperties);
+            if (!selectedItems.isEmpty()) {
+                boolean star = false;
+                for (SelectItem selectItem : selectedItems) {
+                    if (selectItem.isStar()) {
+                        star = true;
+                        break;
+                    }
+                }
+                if (star) {
+                    selectedItemsAsString.add("*");
+                } else {
+                    selectedItemsAsString = getSelectOptionValues(selectedItems);
+                    // If there are properties selected we must get also the key
+                    // properties
+                    // because
+                    // they are necessary in order to get all the information to
+                    // write the
+                    // entry
+                    if (!selectedItemsAsString.isEmpty()) {
+                        selectedItemsAsString.addAll(keyProperties);
+                    }
+                }
+            }
         }
 
         return selectedItemsAsString;

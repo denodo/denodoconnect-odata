@@ -28,73 +28,67 @@
   <welcome-file-list>
     <welcome-file>index.html</welcome-file>
   </welcome-file-list>
-  
-  
-  
-    <!-- ******************* -->
-    <!-- Filters             -->
-    <!-- ******************* -->
-    <filter>
-        <filter-name>AuthenticationFilter</filter-name>
-        <filter-class>com.denodo.connect.odata2.auth.AuthenticationFilter</filter-class>
-    </filter>
-    <filter-mapping>
-        <filter-name>AuthenticationFilter</filter-name>
-        <url-pattern>/*</url-pattern>
-    </filter-mapping>
-  
-
-    <!-- ******************* -->
-    <!-- Context Parameters  -->
-    <!-- ******************* -->
 
 
-    <context-param>
-        <param-name>log4jConfigLocation</param-name>
-        <param-value>classpath:log4j.properties</param-value>
-    </context-param>
-    
-    <context-param>
-        <param-name>contextConfigLocation</param-name>
-        <param-value>classpath:applicationContext.xml</param-value>
-    </context-param>
-    
-    
-    <!-- ******************* -->
-    <!-- Listeners           -->
-    <!-- ******************* -->
+  <!-- ******************* -->
+  <!-- Filters             -->
+  <!-- ******************* -->
+  <filter>
+    <filter-name>DenodoODataFilter</filter-name>
+    <filter-class>com.denodo.connect.odata2.filter.DenodoODataFilter</filter-class>
+  </filter>
+  <filter-mapping>
+    <filter-name>DenodoODataFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
 
-    <listener>
-        <listener-class>
-            org.springframework.web.util.Log4jConfigListener
-        </listener-class>
-    </listener>
 
-    <listener>
-        <listener-class>
-            org.springframework.web.context.ContextLoaderListener
-        </listener-class>
-    </listener>
-    
-    <filter>
-        <filter-name>databaseFilter</filter-name>
-        <filter-class>com.denodo.connect.odata2.filter.DataBaseFilter</filter-class>
-    </filter>
+  <!-- ******************* -->
+  <!-- Servlets            -->
+  <!-- ******************* -->
 
-    <filter-mapping>
-        <filter-name>databaseFilter</filter-name>
-        <url-pattern>*</url-pattern>
-    </filter-mapping>
-    
-    <servlet>
-        <display-name>CXFServlet</display-name>
-        <servlet-name>CXFServlet</servlet-name>
-        <servlet-class>org.apache.cxf.transport.servlet.CXFServlet</servlet-class>
-    </servlet>
-    <servlet-mapping>
-        <servlet-name>CXFServlet</servlet-name>
-        <url-pattern>/*</url-pattern>
-    </servlet-mapping>
-    
-    
+  <servlet>
+    <display-name>CXFServlet</display-name>
+    <servlet-name>CXFServlet</servlet-name>
+    <servlet-class>org.apache.cxf.transport.servlet.CXFServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>CXFServlet</servlet-name>
+    <url-pattern>/*</url-pattern>
+  </servlet-mapping>
+
+
+  <!-- ******************* -->
+  <!-- Context Parameters  -->
+  <!-- ******************* -->
+
+
+  <context-param>
+    <param-name>log4jConfigLocation</param-name>
+    <param-value>classpath:log4j.properties</param-value>
+  </context-param>
+
+  <context-param>
+    <param-name>contextConfigLocation</param-name>
+    <param-value>classpath:applicationContext.xml</param-value>
+  </context-param>
+
+
+  <!-- ******************* -->
+  <!-- Listeners           -->
+  <!-- ******************* -->
+
+  <listener>
+    <listener-class>
+      org.springframework.web.util.Log4jConfigListener
+    </listener-class>
+  </listener>
+
+  <listener>
+    <listener-class>
+      org.springframework.web.context.ContextLoaderListener
+    </listener-class>
+  </listener>
+
+
 </web-app>

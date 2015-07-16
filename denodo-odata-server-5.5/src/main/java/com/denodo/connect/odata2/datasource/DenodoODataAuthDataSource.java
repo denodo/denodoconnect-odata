@@ -4,6 +4,7 @@ import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.util.Map;
 import java.util.Properties;
 
@@ -11,9 +12,9 @@ import javax.sql.DataSource;
 
 import org.apache.log4j.Logger;
 
-public class AuthDataSource implements DataSource {
+public class DenodoODataAuthDataSource implements DataSource {
 
-    private static final Logger logger = Logger.getLogger(AuthDataSource.class);
+    private static final Logger logger = Logger.getLogger(DenodoODataAuthDataSource.class);
 
     // TODO Dependences of VDP
     public static final String DRIVER_CLASS_NAME_VALUE = "com.denodo.vdp.jdbc.Driver";
@@ -40,7 +41,7 @@ public class AuthDataSource implements DataSource {
         }
     }
 
-    public AuthDataSource(){
+    public DenodoODataAuthDataSource(){
         super();
     }
 
@@ -83,6 +84,12 @@ public class AuthDataSource implements DataSource {
     public int getLoginTimeout() throws SQLException {
         return this.loginTimeout;
     }
+
+
+    public java.util.logging.Logger getParentLogger() throws SQLFeatureNotSupportedException {
+        throw new SQLFeatureNotSupportedException("CommonDataSource#getParentLogger() not supported");
+    }
+
 
     @Override
     public <T> T unwrap(final Class<T> iface) throws SQLException {

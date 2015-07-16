@@ -1,4 +1,4 @@
-package com.denodo.connect.odata2.auth;
+package com.denodo.connect.odata2.filter;
 
 public class UserAuthenticationInfo {
 

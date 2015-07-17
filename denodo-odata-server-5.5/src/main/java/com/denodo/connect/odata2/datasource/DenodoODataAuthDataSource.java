@@ -11,7 +11,6 @@ import java.util.Properties;
 import javax.sql.DataSource;
 
 import org.apache.log4j.Logger;
-import org.springframework.jdbc.CannotGetJdbcConnectionException;
 
 public class DenodoODataAuthDataSource implements DataSource {
 
@@ -119,12 +118,12 @@ public class DenodoODataAuthDataSource implements DataSource {
         Connection connection = null;
         try {
             connection = DriverManager.getConnection(this.buildConnectionUrl(), connectionProps);
-        } catch (final CannotGetJdbcConnectionException e) {
-            if (e.getCause().getMessage().contains(AUTHENTICATION_ERROR)) { // Check invalid credentials
+        } catch (final SQLException e) {
+            if (e.getMessage().contains(AUTHENTICATION_ERROR)) { // Check invalid credentials
                 throw new DenodoODataAuthenticationException(e);
             }
 
-            if (e.getCause().getMessage().contains(AUTHORIZATION_ERROR)) { // Check insufficient privileges
+            if (e.getMessage().contains(AUTHORIZATION_ERROR)) { // Check insufficient privileges
                 throw new DenodoODataAuthorizationException(e);
             }
             logger.error(e);

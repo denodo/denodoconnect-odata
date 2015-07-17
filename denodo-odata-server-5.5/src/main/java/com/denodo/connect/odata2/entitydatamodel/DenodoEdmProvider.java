@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.denodo.connect.odata2.datasource.DenodoODataAuthorizationException;
 import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.edm.FullQualifiedName;
@@ -44,6 +45,7 @@ import org.apache.olingo.odata2.api.edm.provider.NavigationProperty;
 import org.apache.olingo.odata2.api.edm.provider.Property;
 import org.apache.olingo.odata2.api.edm.provider.Schema;
 import org.apache.olingo.odata2.api.exception.ODataException;
+import org.apache.olingo.odata2.api.exception.ODataForbiddenException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -115,7 +117,7 @@ public class DenodoEdmProvider extends EdmProvider {
                  * THIRD STEP: Obtain the navigation properties for the entity
                  */
                 final List<NavigationProperty> navigationProperties =
-                        (allAssociations == null?
+                        (allAssociations == null ?
                                 this.metadataAccessor.getEntityNavigationProperties(entityName) :
                                 this.metadataAccessor.getEntityNavigationProperties(entityName, allAssociations));
 
@@ -132,6 +134,8 @@ public class DenodoEdmProvider extends EdmProvider {
 
             }
 
+        } catch (final DenodoODataAuthorizationException e) {
+            throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
         } catch (final SQLException e) {
             logger.error("An exception was raised while obtaining entity type " + entityName, e);
             throw new EdmException(EdmException.COMMON, e);
@@ -267,6 +271,8 @@ public class DenodoEdmProvider extends EdmProvider {
             return schemas;
 
 
+        } catch (final DenodoODataAuthorizationException e) {
+            throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
         } catch (final SQLException e) {
             logger.error("An exception was raised while obtaining schemas", e);
             throw new EdmException(EdmException.COMMON, e);
@@ -285,6 +291,8 @@ public class DenodoEdmProvider extends EdmProvider {
                 return this.metadataAccessor.getAssociation(associationName);
             }
 
+        } catch (final DenodoODataAuthorizationException e) {
+            throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
         } catch (final SQLException e) {
             logger.error("An exception was raised while obtaining association " + associationName, e);
             throw new EdmException(EdmException.COMMON, e);
@@ -355,6 +363,8 @@ public class DenodoEdmProvider extends EdmProvider {
 
             return null;
 
+        } catch (final DenodoODataAuthorizationException e) {
+            throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
         } catch (final SQLException e) {
             logger.error("An exception was raised while obtaining association " + associationName, e);
             throw new EdmException(EdmException.COMMON, e);
@@ -403,17 +413,20 @@ public class DenodoEdmProvider extends EdmProvider {
 
     }
 
+
+
     @Override
     public ComplexType getComplexType(final FullQualifiedName edmFQName) throws ODataException {
+
         if (NAMESPACE_DENODO.equals(edmFQName.getNamespace())) {
             
-            List<Property> properties = this.metadataAccessor.getComplexType(edmFQName);
-            
+            final List<Property> properties = this.metadataAccessor.getComplexType(edmFQName);
             return new ComplexType().setName(edmFQName.getName()).setProperties(properties);
 
         }
 
         throw new EdmException(EdmException.COMMON);
+
     }
     
 }

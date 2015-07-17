@@ -2,6 +2,7 @@ package com.denodo.connect.odata2.filter;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.sql.Connection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -21,10 +22,13 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.jdbc.CannotGetJdbcConnectionException;
+import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 
 import com.denodo.connect.odata2.datasource.DenodoODataAuthDataSource;
+import com.denodo.connect.odata2.datasource.DenodoODataAuthenticationException;
+import com.denodo.connect.odata2.datasource.DenodoODataAuthorizationException;
 
 
 public class DenodoODataFilter implements Filter {
@@ -141,29 +145,37 @@ public class DenodoODataFilter implements Filter {
         final DenodoODataRequestWrapper wrappedRequest = new DenodoODataRequestWrapper(request, dataBaseName);
         final DenodoODataResponseWrapper wrappedResponse = new DenodoODataResponseWrapper(response, request, dataBaseName);
 
-        try {
-            chain.doFilter(wrappedRequest, wrappedResponse);
-            final int httpResponseCode = wrappedResponse.getHttpResponseStatus();
-            logger.trace("HTTP response code" + httpResponseCode);
+        Connection dataSourceConnection = null;
 
-            /*
-             * This implementation does not work due to committed response by Olingo
-             */
-            if(httpResponseCode == HttpServletResponse.SC_UNAUTHORIZED){
-                logger.error("Invalid user/pass");
-                showLogin(response);
-                return;
-            }
-        } catch (final CannotGetJdbcConnectionException e) { // TODO Check this
+        try {
+            // Try to get a connection
+            dataSourceConnection = DataSourceUtils.getConnection(this.authDataSource);
+        } catch (final DenodoODataAuthenticationException e) {
+            logger.error("Invalid user/pass");
+            showLogin(response);
+            return;
+        } catch (final DenodoODataAuthorizationException e) {
+            // *** The management of these exceptions is omitted to
+            // allow Olingo to generate adecuate json/xml response
+              logger.error("Insufficient privileges");
+
+        } catch (final CannotGetJdbcConnectionException e) {
             if (e.getCause().getMessage().contains(NOT_FOUND_ERROR)) { // Check invalid database name
-                // TODO Use Pattern to match Database <name> not found?
+
                 logger.error("Database not found");
-                response.sendError(HttpServletResponse.SC_NOT_FOUND);
-                return;
+
             }
             logger.error("Couldn't get the connection " + e + " for dataSource");
             throw e;
+        } finally {
+            // Clean the session
+            if (dataSourceConnection != null) {
+                DataSourceUtils.releaseConnection(dataSourceConnection, this.authDataSource);
+            }
         }
+        // Delegate
+        chain.doFilter(wrappedRequest, wrappedResponse);
+
         logger.trace("AuthenticationFilter.doFilter(...) finishes");
     }
 

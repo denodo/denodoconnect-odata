@@ -26,7 +26,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.denodo.connect.odata2.datasource.DenodoODataAuthenticationException;
 import com.denodo.connect.odata2.datasource.DenodoODataAuthorizationException;
+import com.denodo.connect.odata2.exceptions.ODataUnauthorizedException;
 import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.edm.FullQualifiedName;
@@ -134,6 +136,8 @@ public class DenodoEdmProvider extends EdmProvider {
 
             }
 
+        } catch (final DenodoODataAuthenticationException e) {
+            throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
         } catch (final SQLException e) {
@@ -271,6 +275,8 @@ public class DenodoEdmProvider extends EdmProvider {
             return schemas;
 
 
+        } catch (final DenodoODataAuthenticationException e) {
+            throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
         } catch (final SQLException e) {
@@ -291,6 +297,8 @@ public class DenodoEdmProvider extends EdmProvider {
                 return this.metadataAccessor.getAssociation(associationName);
             }
 
+        } catch (final DenodoODataAuthenticationException e) {
+            throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
         } catch (final SQLException e) {
@@ -363,6 +371,8 @@ public class DenodoEdmProvider extends EdmProvider {
 
             return null;
 
+        } catch (final DenodoODataAuthenticationException e) {
+            throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
         } catch (final SQLException e) {

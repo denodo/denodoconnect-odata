@@ -1,22 +1,11 @@
 package com.denodo.connect.odata2.datasource;
 
+public class DenodoODataAuthenticationException extends RuntimeException {
 
-public class DenodoODataAuthenticationException {
+    private static final long serialVersionUID = -7962108894437178198L;
 
-    private final String cause;
-
-    public DenodoODataAuthenticationException(final String cause) {
-        super();
-        this.cause = cause;
-    }
-
-    public String getCause() {
-        return this.cause;
-    }
-
-    @Override
-    public String toString() {
-        return "DenodoODataAuthenticationException [cause=" + this.cause + "]";
+    public DenodoODataAuthenticationException(final Throwable cause) {
+        super(cause);
     }
 
 }

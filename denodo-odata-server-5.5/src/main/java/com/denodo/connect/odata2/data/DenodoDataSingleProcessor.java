@@ -41,6 +41,7 @@ import org.apache.olingo.odata2.api.exception.ODataException;
 import org.apache.olingo.odata2.api.exception.ODataForbiddenException;
 import org.apache.olingo.odata2.api.exception.ODataNotFoundException;
 import org.apache.olingo.odata2.api.exception.ODataNotImplementedException;
+import org.apache.olingo.odata2.api.processor.ODataContext;
 import org.apache.olingo.odata2.api.processor.ODataResponse;
 import org.apache.olingo.odata2.api.processor.ODataSingleProcessor;
 import org.apache.olingo.odata2.api.processor.part.EntityComplexPropertyProcessor;
@@ -107,6 +108,25 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             Integer skip = uriInfo.getSkip();
             
             String skiptoken= uriInfo.getSkipToken();
+            Integer topPagination=pageSize;
+            Integer skipPagination=0;
+            if(top!=null){
+               if(top<topPagination){
+                   topPagination=top;
+               }
+            }
+            if(skiptoken!=null){
+                if(skip!=null){
+                    
+                    skipPagination=skip+topPagination*Integer.valueOf(skiptoken);
+                }else{
+                    skipPagination=topPagination*Integer.valueOf(skiptoken);
+                }
+            skiptoken=String.valueOf(Integer.valueOf(skiptoken)+1);
+            }else{
+                skipPagination=skip;
+                skiptoken="1";
+            }
             
             String orderByExpressionString = getOrderByExpresion((UriInfo) uriInfo);
             String filterExpressionString =  getFilterExpresion((UriInfo) uriInfo);
@@ -118,7 +138,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             
             if (uriInfo.getNavigationSegments().size() == 0) {
                     
-                data =  this.entityAccessor.getEntitySet(entitySetTarget.getEntityType(), orderByExpressionString, top, skip, filterExpressionString,
+                data =  this.entityAccessor.getEntitySet(entitySetTarget.getEntityType(), orderByExpressionString, topPagination, skipPagination, filterExpressionString,
                             selectedItemsAsString);
                 
             } else if (uriInfo.getNavigationSegments().size() == 1) {
@@ -127,7 +147,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
     
                 data = this.entityAccessor.getEntitySetByAssociation(entitySetStart.getEntityType(), keys,
-                            navigationSegments, entitySetTarget.getEntityType(), orderByExpressionString, top, skip, filterExpressionString,
+                            navigationSegments, entitySetTarget.getEntityType(), orderByExpressionString, topPagination, skipPagination, filterExpressionString,
                             selectedItemsAsString);
             }
             if (data != null ) {
@@ -138,7 +158,23 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 // expand/select tree
                 ExpandSelectTreeNode expandSelectTreeNode = UriParser.createExpandSelectTree(uriInfo.getSelect(), uriInfo.getExpand());
                 propertiesBuilder.expandSelectTree(expandSelectTreeNode);
-                
+             
+                String nextLink = null;
+                ODataContext context = getContext();
+                // Limit the number of returned entities and provide a "next" link
+                // if there are further entities.
+                // Almost all system query options in the current request must be carried
+                // over to the URI for the "next" link, with the exception of $skiptoken
+                // and $skip.
+             // TODO: Percent-encode "next" link.
+                if((skip!=null && skip>=data.size()) ||data.size()>=pageSize ){
+                    nextLink = context.getPathInfo().getServiceRoot().relativize(context.getPathInfo().getRequestUri()).toString().replaceAll("\\$skiptoken=.+?&?", "")
+//  TODO check if is necessary                          .replaceAll("\\$skip=.+?&?", "")
+                            .replaceFirst("(?:\\?|&)$", ""); // Remove potentially trailing "?" or "&" left over from remove actions above.
+                    nextLink += (nextLink.contains("?") ? "&" : "?")
+                            + "$skiptoken="+skiptoken;
+                    propertiesBuilder.nextLink(nextLink);
+                }
                 return EntityProvider.writeFeed(contentType, entitySetTarget, data, propertiesBuilder.build());
             }
         } catch (final DenodoODataAuthenticationException e) {

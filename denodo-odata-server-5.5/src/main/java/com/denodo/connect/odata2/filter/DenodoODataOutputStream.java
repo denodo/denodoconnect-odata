@@ -11,9 +11,12 @@ public final class DenodoODataOutputStream extends ServletOutputStream {
     private final String dataBaseNameURLFragment;
     private final byte[] absoluteURLMarker;
     private final byte[] absoluteURLMarkerReplacement;
+    private final byte m0;
 
     private final ServletOutputStream out;
 
+    private byte[] overflow;
+    private int overflowLen;
 
 
     public DenodoODataOutputStream(
@@ -24,6 +27,7 @@ public final class DenodoODataOutputStream extends ServletOutputStream {
         this.dataBaseNameURLFragment = "/" + dataBaseName;
         this.absoluteURLMarker = computeURLMarker(request, this.dataBaseNameURLFragment, responseCharacterEncoding);
         this.absoluteURLMarkerReplacement = computeURLMarkerReplacement(this.absoluteURLMarker, this.dataBaseNameURLFragment, responseCharacterEncoding);
+        this.m0 = this.absoluteURLMarker[0]; // We will use this as a fail-fast marker in order to quickly discard most bytes
     }
 
 
@@ -55,11 +59,11 @@ public final class DenodoODataOutputStream extends ServletOutputStream {
 
 
 
+    // This method will not do anything special because everytime it will be called by the OData serialization layer,
+    // it will be called through a previous "write(byte[], int, int)". So it is here because it is abstract
+    // in OutputStream and in order to provide a suitable debugging point should anything go wrong with this.
     @Override
     public void write(final int b) throws IOException {
-        // This method will not do anything special because everytime it will be called by the OData serialization layer,
-        // it will be called through a previous "write(byte[], int, int)". So an overridden method is here just in order
-        // to provide a suitable debugging point should anything go wrong with this.
         this.out.write(b);
     }
 
@@ -72,57 +76,137 @@ public final class DenodoODataOutputStream extends ServletOutputStream {
     public void write(final byte[] buffer, final int off, final int len) throws IOException {
 
         int writeOff = off;
+        int writeLen = len;
 
-        int i = off;
-        int maxi = off + len;
+        if (this.overflowLen > 0) {
 
-        while (i < maxi) {
+            final int overflowMatch = matchAbsoluteMarkerStart(buffer, writeOff, writeLen, writeOff, this.overflowLen);
 
-            if (isAbsoluteMarkerStart(buffer, off, len, i)) {
-                super.write(buffer, writeOff, i - writeOff); // flush everything until this point
+            if (overflowMatch == 0) {
+
+                // the first chars in this new buffer confirm there is no match. So simply empty the overflow
+                // buffer and move on
+                super.write(this.overflow, 0, this.overflowLen);
+                this.overflowLen = 0;
+
+            } else if (overflowMatch == this.absoluteURLMarker.length){
+
+                // We have a match!
                 super.write(this.absoluteURLMarkerReplacement, 0, this.absoluteURLMarkerReplacement.length);
-                i += this.absoluteURLMarker.length;
-                writeOff = i;
+                final int newMatchedChars = this.absoluteURLMarker.length - this.overflowLen;
+                this.overflowLen = 0;
+                writeOff += newMatchedChars;
+                writeLen -= newMatchedChars;
+
+
             } else {
-                i++;
+
+                // we still have a partial match (the new buffer might be really small), so we just grow the overflow
+
+                System.arraycopy(buffer, writeOff, this.overflow, this.overflowLen, (overflowMatch - this.overflowLen));
+                this.overflowLen = overflowMatch;
+                return;
+
             }
 
         }
 
-        super.write(buffer, writeOff, maxi - writeOff);
+
+        int i = writeOff;
+        final int maxi = writeOff + writeLen;
+
+        while (i < maxi) {
+
+            if (buffer[i] != this.m0) { // fail-fast. If it doesn't match the first char, simply continue iterating
+                i++;
+                continue;
+            }
+
+            final int match = matchAbsoluteMarkerStart(buffer, writeOff, writeLen, i, 0);
+
+            if (match == 0) {
+
+                i++;
+
+            } else if (match == this.absoluteURLMarker.length) {
+
+                super.write(buffer, writeOff, i - writeOff); // flush everything until this point
+                super.write(this.absoluteURLMarkerReplacement, 0, this.absoluteURLMarkerReplacement.length);
+                writeLen -= ((i - writeOff) + this.absoluteURLMarker.length);
+                writeOff = i + this.absoluteURLMarker.length;
+                i = writeOff;
+
+            } else {
+
+                // We have a partial match (the buffer off+len end before we can completely match)!
+                // If this happens, we know the last "match" chars in the buffer might be a match, but we are not sure
+                // yet. So we will write them to an overflow buffer and wait for the following write call to come
+
+                super.write(buffer, writeOff, i - writeOff); // flush everything until this point
+
+                if (this.overflow == null) {
+                    this.overflow = new byte[this.absoluteURLMarker.length];
+                    this.overflowLen = 0;
+                }
+
+                System.arraycopy(buffer, i, this.overflow, 0, match);
+                this.overflowLen = match;
+                return;
+
+            }
+
+        }
+
+        super.write(buffer, writeOff, writeLen);
 
     }
 
 
 
-    private boolean isAbsoluteMarkerStart(final byte[] buffer, final int off, final int len, final int index) {
 
-        if (buffer[index] != this.absoluteURLMarker[0]) {
+
+    @Override
+    public void close() throws IOException {
+
+        // There might be some overflow unwritten yet... so just flush it (no match possible)
+        if (this.overflowLen > 0) {
+            super.write(this.overflow, 0, this.overflowLen);
+            this.overflowLen = 0;
+        }
+
+        super.close();
+
+    }
+
+
+
+
+    private int matchAbsoluteMarkerStart(final byte[] buffer, final int off, final int len, final int bufferIndex, final int markerIndex) {
+
+        if (buffer[bufferIndex] != this.absoluteURLMarker[markerIndex]) {
             // fail fast - most cases will simply fall here so that we don't introduce much overhead
-            return false;
+            return 0;
         }
 
-        if (index + this.absoluteURLMarker.length >= (off+len)) {
-            // TODO We should do some kind of overflow management here! But for now, just return false
-            return false;
-        }
+        final int remainingMarkerLength = this.absoluteURLMarker.length - markerIndex;
 
-        int i = index;
-        int j = 0;
-        final int maxi = i + this.absoluteURLMarker.length;
+        int j = markerIndex;
+        final int maxi = Math.min(bufferIndex + remainingMarkerLength, off + len);
+        int i = bufferIndex;
         while (i < maxi) {
 
             if (buffer[i] != this.absoluteURLMarker[j]) {
-                return false;
+                return 0; // there were some matched characters, but we know it's a no-match, so zero
             }
 
             i++; j++;
 
         }
 
-        return true;
+        return j;
 
     }
+
 
 
 

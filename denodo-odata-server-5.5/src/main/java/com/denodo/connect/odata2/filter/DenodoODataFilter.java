@@ -25,6 +25,7 @@ import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 
 import com.denodo.connect.odata2.datasource.DenodoODataAuthDataSource;
+import com.denodo.connect.odata2.datasource.DenodoODataAuthenticationException;
 
 
 public class DenodoODataFilter implements Filter {
@@ -43,17 +44,13 @@ public class DenodoODataFilter implements Filter {
     private static final String AUTHORIZATION_CHALLENGE_BASIC = SecurityContext.BASIC_AUTH + " realm=\""
             + AUTHORIZATION_CHALLENGE_REALM + "\", accept-charset=\"" + CHARACTER_ENCODING + "\"";
 
-    // ERRORS
-    private static final String AUTH_ERROR = "The username or password is incorrect";
-    private static final String NOT_FOUND_ERROR = "not found"; // TODO Use other scan method rather than not found
-
 
     private ServletContext servletContext = null;
     private String serverAddress = null;
     private DenodoODataAuthDataSource authDataSource = null;
 
-
-
+    // ERRORS
+    private static final String NOT_FOUND_ERROR = "not found"; // TODO Use other scan method rather than not found
 
     public DenodoODataFilter() {
         super();
@@ -147,20 +144,19 @@ public class DenodoODataFilter implements Filter {
 
         try {
             chain.doFilter(wrappedRequest, wrappedResponse);
-        } catch (final CannotGetJdbcConnectionException e) {
-            if(e.getCause().getMessage().contains(AUTH_ERROR)){ // Check invalid credentials
-                logger.error("Invalid user/pass");
-                showLogin(response);
-                return;
-            } else if(e.getCause().getMessage().contains(NOT_FOUND_ERROR)){ // Check invalid database name
+        } catch (final DenodoODataAuthenticationException e) {
+            logger.error("Invalid user/pass");
+            showLogin(response);
+            return;
+        } catch (final CannotGetJdbcConnectionException e) { // TODO Check this
+            if (e.getCause().getMessage().contains(NOT_FOUND_ERROR)) { // Check invalid database name
                 // TODO Use Pattern to match Database <name> not found?
                 logger.error("Database not found");
                 response.sendError(HttpServletResponse.SC_NOT_FOUND);
                 return;
-            } else {
-                logger.error("Couldn't get the connection " + e + " for dataSource");
-                throw e;
             }
+            logger.error("Couldn't get the connection " + e + " for dataSource");
+            throw e;
         }
         logger.trace("AuthenticationFilter.doFilter(...) finishes");
     }

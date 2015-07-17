@@ -11,6 +11,7 @@ import java.util.Properties;
 import javax.sql.DataSource;
 
 import org.apache.log4j.Logger;
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
 
 public class DenodoODataAuthDataSource implements DataSource {
 
@@ -23,6 +24,11 @@ public class DenodoODataAuthDataSource implements DataSource {
     public final static String USER_NAME = "user";
     public final static String PASSWORD_NAME = "password";
     public final static String DATA_BASE_NAME = "databaseName";
+
+    // ERRORS
+    private static final String AUTHENTICATION_ERROR = "The username or password is incorrect";
+    private static final String AUTHORIZATION_ERROR = "Insufficient privileges to connect to the database";
+
 
     private String host;
     private String port;
@@ -109,7 +115,23 @@ public class DenodoODataAuthDataSource implements DataSource {
             connectionProps.put("user", this.parameters.get().get(USER_NAME));
             connectionProps.put("password", this.parameters.get().get(PASSWORD_NAME));
         }
-        return DriverManager.getConnection(this.buildConnectionUrl(), connectionProps);
+
+        Connection connection = null;
+        try {
+            connection = DriverManager.getConnection(this.buildConnectionUrl(), connectionProps);
+        } catch (final CannotGetJdbcConnectionException e) {
+            if (e.getCause().getMessage().contains(AUTHENTICATION_ERROR)) { // Check invalid credentials
+                throw new DenodoODataAuthenticationException(e);
+            }
+
+            if (e.getCause().getMessage().contains(AUTHORIZATION_ERROR)) { // Check insufficient privileges
+                throw new DenodoODataAuthorizationException(e);
+            }
+            logger.error(e);
+            throw e;
+        }
+
+        return connection;
     }
 
     @Override

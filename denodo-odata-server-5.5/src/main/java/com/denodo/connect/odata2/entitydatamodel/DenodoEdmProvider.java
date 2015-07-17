@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.edm.FullQualifiedName;
 import org.apache.olingo.odata2.api.edm.provider.Association;
 import org.apache.olingo.odata2.api.edm.provider.AssociationSet;
@@ -78,7 +79,7 @@ public class DenodoEdmProvider extends EdmProvider {
             return this.denodoEntityContainerInfo;
         }
         // We don't know the entity container we are being asked about
-        return null;
+        throw new EdmException(EdmException.COMMON);
     }
 
 
@@ -133,7 +134,7 @@ public class DenodoEdmProvider extends EdmProvider {
 
         } catch (final SQLException e) {
             logger.error("An exception was raised while obtaining entity type " + entityName, e);
-            throw new ODataException(e);
+            throw new EdmException(EdmException.COMMON, e);
         }
 
         return null;
@@ -268,7 +269,7 @@ public class DenodoEdmProvider extends EdmProvider {
 
         } catch (final SQLException e) {
             logger.error("An exception was raised while obtaining schemas", e);
-            throw new ODataException(e);
+            throw new EdmException(EdmException.COMMON, e);
         }
 
     }
@@ -286,10 +287,10 @@ public class DenodoEdmProvider extends EdmProvider {
 
         } catch (final SQLException e) {
             logger.error("An exception was raised while obtaining association " + associationName, e);
-            throw new ODataException(e);
+            throw new EdmException(EdmException.COMMON, e);
         }
 
-        return null;
+        throw new EdmException(EdmException.COMMON);
 
     }
 
@@ -310,7 +311,7 @@ public class DenodoEdmProvider extends EdmProvider {
 
         }
 
-        return null;
+        throw new EdmException(EdmException.COMMON);
 
     }
 
@@ -348,9 +349,7 @@ public class DenodoEdmProvider extends EdmProvider {
                     return associationSet;
                 }
 
-                throw new ODataException(
-                        "Source entity set name \"" + sourceEntitySetName + "\" and role \"" + sourceEntitySetRole + "\" " +
-                        "do not correspond to any of the ends of the \"" + associationSet.getName() + "\" association set");
+                throw new EdmException(EdmException.COMMON);
 
             }
 
@@ -358,7 +357,7 @@ public class DenodoEdmProvider extends EdmProvider {
 
         } catch (final SQLException e) {
             logger.error("An exception was raised while obtaining association " + associationName, e);
-            throw new ODataException(e);
+            throw new EdmException(EdmException.COMMON, e);
         }
 
     }
@@ -414,7 +413,7 @@ public class DenodoEdmProvider extends EdmProvider {
 
         }
 
-        return null;
+        throw new EdmException(EdmException.COMMON);
     }
     
 }

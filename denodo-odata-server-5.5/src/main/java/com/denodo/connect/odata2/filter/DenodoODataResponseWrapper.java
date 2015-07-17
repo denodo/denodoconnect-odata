@@ -8,7 +8,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletResponseWrapper;
 
-public class DenodoODataResponseWrapper extends HttpServletResponseWrapper{
+public final class DenodoODataResponseWrapper extends HttpServletResponseWrapper{
 
 
     /*
@@ -17,11 +17,16 @@ public class DenodoODataResponseWrapper extends HttpServletResponseWrapper{
      *
      * This means that, in order to obtain URIs that include the database name (which we have to strip at the filter
      * so that the OData infrastructure doesn't see it as a collection name), we need to
+     *
+     * Also, we need to wrap the setStatus(int) method and provide a way to return the status code so that we can use
+     * it. Servlet 3 added a getStatus() method to HttpServletResponse, but we want compatibility with earlier versions
+     * of the Servlet API
      */
 
     private final HttpServletRequest request;
     private final String dataBaseName;
     private DenodoODataOutputStream outputStream = null;
+    private int httpResponseStatus = HttpServletResponse.SC_OK;
 
 
     public DenodoODataResponseWrapper(final HttpServletResponse response, final HttpServletRequest request, final String dataBaseName) {
@@ -30,6 +35,18 @@ public class DenodoODataResponseWrapper extends HttpServletResponseWrapper{
         this.dataBaseName = dataBaseName;
     }
 
+
+
+    @Override
+    public void setStatus(final int sc) {
+        this.httpResponseStatus = sc;
+        super.setStatus(sc);
+    }
+
+
+    public int getHttpResponseStatus() {
+        return this.httpResponseStatus;
+    }
 
 
 

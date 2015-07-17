@@ -4,7 +4,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 
 
-public class DenodoODataRequestWrapper extends HttpServletRequestWrapper {
+public final class DenodoODataRequestWrapper extends HttpServletRequestWrapper {
 
     private final String dataBaseNameURLFragment;
 

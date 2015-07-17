@@ -2,7 +2,6 @@ package com.denodo.connect.odata2.filter;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.sql.Connection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -18,14 +17,14 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.SecurityContext;
 
-import com.denodo.connect.odata2.datasource.DenodoODataAuthDataSource;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.jdbc.CannotGetJdbcConnectionException;
-import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
+
+import com.denodo.connect.odata2.datasource.DenodoODataAuthDataSource;
 
 
 public class DenodoODataFilter implements Filter {
@@ -81,7 +80,7 @@ public class DenodoODataFilter implements Filter {
                     if (this.authDataSource == null) {
                         throw new ServletException("Denodo OData Auth Data Source not properly initialized");
                     }
-                    
+
                     final Properties odataconfig = (Properties) appCtx.getBean("odataconfig");
                     this.serverAddress = odataconfig.getProperty("serveraddress");
                     if (this.serverAddress == null || this.serverAddress.trim().length() == 0) {
@@ -107,8 +106,8 @@ public class DenodoODataFilter implements Filter {
 
         logger.trace("AuthenticationFilter.doFilter(...) starts");
 
-        ensureInitialized();
-        
+        this.ensureInitialized();
+
         final HttpServletRequest request = (HttpServletRequest) req;
         final HttpServletResponse response = (HttpServletResponse) res;
 
@@ -136,24 +135,17 @@ public class DenodoODataFilter implements Filter {
         }
 
         final UserAuthenticationInfo userAuthInfo = new UserAuthenticationInfo(credentials[0], credentials[1], dataBaseName);
-        
+
         // Set connection parameters
         this.authDataSource.setParameters(DenodoODataFilter.fillParametersMap(userAuthInfo));
-        
+
         logger.trace("Acquired data source: " + this.authDataSource);
 
 
         final DenodoODataRequestWrapper wrappedRequest = new DenodoODataRequestWrapper(request, dataBaseName);
         final DenodoODataResponseWrapper wrappedResponse = new DenodoODataResponseWrapper(response, request, dataBaseName);
 
-
-
-        // TODO This connection creation must be removed (it's unnecessary)
-        Connection dataSourceConnection = null;
-
         try {
-            // Try to get a connection
-            dataSourceConnection = DataSourceUtils.getConnection(this.authDataSource);
             chain.doFilter(wrappedRequest, wrappedResponse);
         } catch (final CannotGetJdbcConnectionException e) {
             if(e.getCause().getMessage().contains(AUTH_ERROR)){ // Check invalid credentials
@@ -168,11 +160,6 @@ public class DenodoODataFilter implements Filter {
             } else {
                 logger.error("Couldn't get the connection " + e + " for dataSource");
                 throw e;
-            }
-        } finally {
-            // Clean the session
-            if(dataSourceConnection != null){
-                DataSourceUtils.releaseConnection(dataSourceConnection, this.authDataSource);
             }
         }
         logger.trace("AuthenticationFilter.doFilter(...) finishes");

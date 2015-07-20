@@ -39,15 +39,12 @@ import org.apache.olingo.odata2.api.ep.EntityProviderWriteProperties;
 import org.apache.olingo.odata2.api.ep.EntityProviderWriteProperties.ODataEntityProviderPropertiesBuilder;
 import org.apache.olingo.odata2.api.exception.ODataException;
 import org.apache.olingo.odata2.api.exception.ODataForbiddenException;
+import org.apache.olingo.odata2.api.exception.ODataInternalServerErrorException;
 import org.apache.olingo.odata2.api.exception.ODataNotFoundException;
 import org.apache.olingo.odata2.api.exception.ODataNotImplementedException;
 import org.apache.olingo.odata2.api.processor.ODataContext;
 import org.apache.olingo.odata2.api.processor.ODataResponse;
 import org.apache.olingo.odata2.api.processor.ODataSingleProcessor;
-import org.apache.olingo.odata2.api.processor.part.EntityComplexPropertyProcessor;
-import org.apache.olingo.odata2.api.processor.part.EntitySetProcessor;
-import org.apache.olingo.odata2.api.processor.part.EntitySimplePropertyProcessor;
-import org.apache.olingo.odata2.api.processor.part.EntitySimplePropertyValueProcessor;
 import org.apache.olingo.odata2.api.uri.ExpandSelectTreeNode;
 import org.apache.olingo.odata2.api.uri.KeyPredicate;
 import org.apache.olingo.odata2.api.uri.NavigationSegment;
@@ -74,6 +71,7 @@ import org.springframework.stereotype.Component;
 
 import com.denodo.connect.odata2.datasource.DenodoODataAuthenticationException;
 import com.denodo.connect.odata2.datasource.DenodoODataAuthorizationException;
+import com.denodo.connect.odata2.datasource.DenodoODataConnectException;
 import com.denodo.connect.odata2.exceptions.ODataUnauthorizedException;
 
 @Component
@@ -88,25 +86,25 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
     @Override
     public ODataResponse readEntitySet(final GetEntitySetUriInfo uriInfo, final String contentType) throws ODataException {
-        
+
         try {
-            EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
-            EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
-        
+            final EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
+            final EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
+
             List<String> keyProperties = new ArrayList<String>();
 
             try {
                 keyProperties = entitySetTarget.getEntityType().getKeyPropertyNames();
-            } catch (EdmException e ){
+            } catch (final EdmException e ){
                 logger.debug("The entitySet "+entitySetTarget.getName()+" has not keys");
             }
-        
+
             // Top System Query Option ($top)
-            Integer top = uriInfo.getTop();
+            final Integer top = uriInfo.getTop();
 
             // Skip System Query Option ($skip)
-            Integer skip = uriInfo.getSkip();
-            
+            final Integer skip = uriInfo.getSkip();
+
             String skiptoken= uriInfo.getSkipToken();
             Integer topPagination=pageSize;
             Integer skipPagination=0;
@@ -117,7 +115,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             }
             if(skiptoken!=null){
                 if(skip!=null){
-                    
+
                     skipPagination=skip+topPagination*Integer.valueOf(skiptoken);
                 }else{
                     skipPagination=topPagination*Integer.valueOf(skiptoken);
@@ -127,40 +125,40 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 skipPagination=skip;
                 skiptoken="1";
             }
-            
-            String orderByExpressionString = getOrderByExpresion((UriInfo) uriInfo);
-            String filterExpressionString =  getFilterExpresion((UriInfo) uriInfo);
+
+            final String orderByExpressionString = getOrderByExpresion((UriInfo) uriInfo);
+            final String filterExpressionString =  getFilterExpresion((UriInfo) uriInfo);
             List<String> selectedItemsAsString;
             selectedItemsAsString = getSelectedItems(uriInfo, keyProperties);
 
-        
+
             List<Map<String, Object>> data = null;
-            
+
             if (uriInfo.getNavigationSegments().size() == 0) {
-                    
+
                 data =  this.entityAccessor.getEntitySet(entitySetTarget.getEntityType(), orderByExpressionString, topPagination, skipPagination, filterExpressionString,
                             selectedItemsAsString);
-                
+
             } else if (uriInfo.getNavigationSegments().size() == 1) {
                 // navigation first level
-                LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
-                List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
-    
+                final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+                final List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
+
                 data = this.entityAccessor.getEntitySetByAssociation(entitySetStart.getEntityType(), keys,
                             navigationSegments, entitySetTarget.getEntityType(), orderByExpressionString, topPagination, skipPagination, filterExpressionString,
                             selectedItemsAsString);
             }
             if (data != null ) {
-                URI serviceRoot = getContext().getPathInfo().getServiceRoot();
-                ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
+                final URI serviceRoot = this.getContext().getPathInfo().getServiceRoot();
+                final ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
 
                 // Transform the list of selected properties into an
                 // expand/select tree
-                ExpandSelectTreeNode expandSelectTreeNode = UriParser.createExpandSelectTree(uriInfo.getSelect(), uriInfo.getExpand());
+                final ExpandSelectTreeNode expandSelectTreeNode = UriParser.createExpandSelectTree(uriInfo.getSelect(), uriInfo.getExpand());
                 propertiesBuilder.expandSelectTree(expandSelectTreeNode);
-             
+
                 String nextLink = null;
-                ODataContext context = getContext();
+                final ODataContext context = this.getContext();
                 // Limit the number of returned entities and provide a "next" link
                 // if there are further entities.
                 // Almost all system query options in the current request must be carried
@@ -177,15 +175,17 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 }
                 return EntityProvider.writeFeed(contentType, entitySetTarget, data, propertiesBuilder.build());
             }
+        } catch (final DenodoODataConnectException e) {
+            throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
         } catch (final DenodoODataAuthenticationException e) {
             throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             logger.error(e);
             throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
         }
-        
+
         throw new ODataNotImplementedException();
     }
 
@@ -194,63 +194,67 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
         EdmEntitySet entitySetToWrite = null;
         Map<String, Object> data = null;
-        
+
         if (uriInfo.getNavigationSegments().size() == 0) {
-            EdmEntitySet entitySet = uriInfo.getStartEntitySet();
-            
+            final EdmEntitySet entitySet = uriInfo.getStartEntitySet();
+
             entitySetToWrite = entitySet;
-            
+
             List<String> keyProperties = new ArrayList<String>();
             try {
                 keyProperties = entitySet.getEntityType().getKeyPropertyNames();
-            } catch (EdmException e ){
+            } catch (final EdmException e ){
                 logger.debug("The entitySet "+entitySet.getName()+" has not keys");
             }
 
-            LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+            final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
 
             try {
-                List <String> selectedItemsAsString = getSelectedItems(uriInfo, keyProperties);
+                final List <String> selectedItemsAsString = getSelectedItems(uriInfo, keyProperties);
                 data = this.entityAccessor.getEntity(entitySet.getEntityType(), keys, selectedItemsAsString, null);
+            } catch (final DenodoODataConnectException e) {
+                throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
             } catch (final DenodoODataAuthenticationException e) {
                 throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 logger.error(e);
                 throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
         } else if (uriInfo.getNavigationSegments().size() >= 1) {
-            LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
-            List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
-            EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
-            EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
+            final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+            final List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
+            final EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
+            final EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
 
             entitySetToWrite = entitySetTarget;
-            
+
             try {
 
                 data = this.entityAccessor.getEntityByAssociation(entitySetStart.getEntityType(), keys, navigationSegments,
                         entitySetTarget.getEntityType());
+            } catch (final DenodoODataConnectException e) {
+                throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
             } catch (final DenodoODataAuthenticationException e) {
                 throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 logger.error(e);
                 throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
         }
-        
+
         if (data != null) {
-            URI serviceRoot = getContext().getPathInfo().getServiceRoot();
-            ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
+            final URI serviceRoot = this.getContext().getPathInfo().getServiceRoot();
+            final ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
 
             // Transform the list of selected properties into an
             // expand/select tree
-            ExpandSelectTreeNode expandSelectTreeNode = UriParser.createExpandSelectTree(uriInfo.getSelect(), uriInfo.getExpand());
+            final ExpandSelectTreeNode expandSelectTreeNode = UriParser.createExpandSelectTree(uriInfo.getSelect(), uriInfo.getExpand());
             propertiesBuilder.expandSelectTree(expandSelectTreeNode);
 
             return EntityProvider.writeEntry(contentType, entitySetToWrite, data, propertiesBuilder.build());
@@ -260,11 +264,11 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
     }
 
     private static LinkedHashMap<String, Object> getKeyValues(final List<KeyPredicate> keyList) throws ODataException {
-        LinkedHashMap<String, Object> keys = new LinkedHashMap<String, Object>();
-        for (KeyPredicate key : keyList) {
-            EdmProperty property = key.getProperty();
-            EdmSimpleType type = (EdmSimpleType) property.getType();
-            Object value = type.valueOfString(key.getLiteral(), EdmLiteralKind.DEFAULT, property.getFacets(), Object.class);
+        final LinkedHashMap<String, Object> keys = new LinkedHashMap<String, Object>();
+        for (final KeyPredicate key : keyList) {
+            final EdmProperty property = key.getProperty();
+            final EdmSimpleType type = (EdmSimpleType) property.getType();
+            final Object value = type.valueOfString(key.getLiteral(), EdmLiteralKind.DEFAULT, property.getFacets(), Object.class);
             keys.put(property.getName(), value);
         }
         return keys;
@@ -277,53 +281,57 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
     public ODataResponse readEntitySimplePropertyValue(final GetSimplePropertyUriInfo uriInfo, final String contentType)
             throws ODataException {
         if (uriInfo.getNavigationSegments().size() == 0) {
-            EdmEntitySet entitySet = uriInfo.getStartEntitySet();
+            final EdmEntitySet entitySet = uriInfo.getStartEntitySet();
 
-            // Gets the path used to select a (simple or complex) property of an entity. 
+            // Gets the path used to select a (simple or complex) property of an entity.
             // If it is a simple property this list should have only one element, otherwise
             // each element is the path to a simple element of a register
-            List<EdmProperty> propertyPath = uriInfo.getPropertyPath();
-            LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+            final List<EdmProperty> propertyPath = uriInfo.getPropertyPath();
+            final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
             try {
-                Map<String, Object> data = this.entityAccessor.getEntity(entitySet.getEntityType(), keys, null, propertyPath);
+                final Map<String, Object> data = this.entityAccessor.getEntity(entitySet.getEntityType(), keys, null, propertyPath);
                 if (data != null) {
 
-                    EdmProperty property = propertyPath.get(propertyPath.size()-1);
+                    final EdmProperty property = propertyPath.get(propertyPath.size()-1);
                     return EntityProvider.writePropertyValue(property, data.get(property.getName()));
                 }
+            } catch (final DenodoODataConnectException e) {
+                throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
             } catch (final DenodoODataAuthenticationException e) {
                 throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 logger.error(e);
                 throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
 
         } else if (uriInfo.getNavigationSegments().size() >= 1) {
-            // Gets the path used to select a (simple or complex) property of an entity. 
+            // Gets the path used to select a (simple or complex) property of an entity.
             // If it is a simple property this list should have only one element, otherwise
             // each element is the path to a simple element of a register
-            List<EdmProperty> propertyPath = uriInfo.getPropertyPath();
-            LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
-            List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
-            EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
-            EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
+            final List<EdmProperty> propertyPath = uriInfo.getPropertyPath();
+            final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+            final List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
+            final EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
+            final EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
 
             try {
 
-                Map<String, Object> data = this.entityAccessor.getEntityByAssociation(entitySetStart.getEntityType(), keys, navigationSegments,
+                final Map<String, Object> data = this.entityAccessor.getEntityByAssociation(entitySetStart.getEntityType(), keys, navigationSegments,
                         entitySetTarget.getEntityType(), propertyPath);
                 if (data != null) {
-                    EdmProperty property = propertyPath.get(propertyPath.size()-1);
+                    final EdmProperty property = propertyPath.get(propertyPath.size()-1);
                     return EntityProvider.writePropertyValue(property, data.get(property.getName()));
                 }
+            } catch (final DenodoODataConnectException e) {
+                throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
             } catch (final DenodoODataAuthenticationException e) {
                 throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 logger.error(e);
                 throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
@@ -340,52 +348,56 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
     public ODataResponse readEntitySimpleProperty(final GetSimplePropertyUriInfo uriInfo, final String contentType) throws ODataException {
 
         if (uriInfo.getNavigationSegments().size() == 0) {
-            EdmEntitySet entitySet = uriInfo.getStartEntitySet();
+            final EdmEntitySet entitySet = uriInfo.getStartEntitySet();
 
-            // Gets the path used to select a (simple or complex) property of an entity. 
+            // Gets the path used to select a (simple or complex) property of an entity.
             // If it is a simple property this list should have only one element, otherwise
             // each element is the path to a simple element of a register
-            List<EdmProperty> propertyPath = uriInfo.getPropertyPath();
-            LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+            final List<EdmProperty> propertyPath = uriInfo.getPropertyPath();
+            final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
             try {
-                Map<String, Object> data = this.entityAccessor.getEntity(entitySet.getEntityType(), keys, null, propertyPath);
+                final Map<String, Object> data = this.entityAccessor.getEntity(entitySet.getEntityType(), keys, null, propertyPath);
                 if (data != null ) {
-                    EdmProperty property = propertyPath.get(propertyPath.size()-1);
+                    final EdmProperty property = propertyPath.get(propertyPath.size()-1);
                     return EntityProvider.writeProperty(contentType, property, data.get(property.getName()));
                 }
+            } catch (final DenodoODataConnectException e) {
+                throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
             } catch (final DenodoODataAuthenticationException e) {
                 throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 logger.error(e);
                 throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
 
         } else if (uriInfo.getNavigationSegments().size() >= 1) {
-            // Gets the path used to select a (simple or complex) property of an entity. 
+            // Gets the path used to select a (simple or complex) property of an entity.
             // If it is a simple property this list should have only one element, otherwise
             // each element is the path to a simple element of a register
-            List<EdmProperty> propertyPath = uriInfo.getPropertyPath();
-            LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
-            List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
-            EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
-            EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
+            final List<EdmProperty> propertyPath = uriInfo.getPropertyPath();
+            final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+            final List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
+            final EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
+            final EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
 
             try {
 
-                Map<String, Object> data = this.entityAccessor.getEntityByAssociation(entitySetStart.getEntityType(), keys, navigationSegments,
+                final Map<String, Object> data = this.entityAccessor.getEntityByAssociation(entitySetStart.getEntityType(), keys, navigationSegments,
                         entitySetTarget.getEntityType(), propertyPath);
                 if (data != null ) {
-                    EdmProperty property = propertyPath.get(propertyPath.size()-1);
+                    final EdmProperty property = propertyPath.get(propertyPath.size()-1);
                     return EntityProvider.writeProperty(contentType, property, data.get(property.getName()));
                 }
+            } catch (final DenodoODataConnectException e) {
+                throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
             } catch (final DenodoODataAuthenticationException e) {
                 throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 logger.error(e);
                 throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
@@ -394,7 +406,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
         throw new ODataNotImplementedException();
     }
-    
+
     /**
      * @see EntityComplexPropertyProcessor
      */
@@ -402,50 +414,54 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
     public ODataResponse readEntityComplexProperty(final GetComplexPropertyUriInfo uriInfo, final String contentType)
             throws ODataException {
         if (uriInfo.getNavigationSegments().size() == 0) {
-            EdmEntitySet entitySet = uriInfo.getStartEntitySet();
+            final EdmEntitySet entitySet = uriInfo.getStartEntitySet();
 
-            // Gets the path used to select a (simple or complex) property of an entity. 
+            // Gets the path used to select a (simple or complex) property of an entity.
             // If it is a simple property this list should have only one element, otherwise
             // each element is the path to a simple element of a register
-            List<EdmProperty> propertyPath = uriInfo.getPropertyPath();
-            LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+            final List<EdmProperty> propertyPath = uriInfo.getPropertyPath();
+            final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
             try {
-                Map<String, Object> data = this.entityAccessor.getEntity(entitySet.getEntityType(), keys, null, propertyPath);
+                final Map<String, Object> data = this.entityAccessor.getEntity(entitySet.getEntityType(), keys, null, propertyPath);
                 if (data != null ) {
-                    EdmProperty property = propertyPath.get(propertyPath.size()-1);
+                    final EdmProperty property = propertyPath.get(propertyPath.size()-1);
                     return EntityProvider.writeProperty(contentType, property, data.get(property.getName()));
                 }
+            } catch (final DenodoODataConnectException e) {
+                throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
             } catch (final DenodoODataAuthenticationException e) {
                 throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 logger.error(e);
                 throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
         } else if (uriInfo.getNavigationSegments().size() >= 1) {
-            // Gets the path used to select a (simple or complex) property of an entity. 
+            // Gets the path used to select a (simple or complex) property of an entity.
             // If it is a simple property this list should have only one element, otherwise
             // each element is the path to a simple element of a register
-            List<EdmProperty> propertyPath = uriInfo.getPropertyPath();
-            LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
-            List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
-            EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
-            EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
+            final List<EdmProperty> propertyPath = uriInfo.getPropertyPath();
+            final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+            final List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
+            final EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
+            final EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
 
             try {
-                Map<String, Object> data = this.entityAccessor.getEntityByAssociation(entitySetStart.getEntityType(), keys, navigationSegments,
+                final Map<String, Object> data = this.entityAccessor.getEntityByAssociation(entitySetStart.getEntityType(), keys, navigationSegments,
                         entitySetTarget.getEntityType(), propertyPath);
                 if (data != null ) {
-                    EdmProperty property = propertyPath.get(propertyPath.size()-1);
+                    final EdmProperty property = propertyPath.get(propertyPath.size()-1);
                     return EntityProvider.writeProperty(contentType, property, data.get(property.getName()));
                 }
+            } catch (final DenodoODataConnectException e) {
+                throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
             } catch (final DenodoODataAuthenticationException e) {
                 throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 logger.error(e);
                 throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
@@ -468,15 +484,17 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         if (uriInfo.getNavigationSegments().size() == 0) {
             entitySet = uriInfo.getStartEntitySet();
             try {
-                Integer count = this.entityAccessor.getCountEntitySet(entitySet.getName(), uriInfo);
+                final Integer count = this.entityAccessor.getCountEntitySet(entitySet.getName(), uriInfo);
                 if (count != null ) {
                     return EntityProvider.writeText(count.toString());
                 }
+            } catch (final DenodoODataConnectException e) {
+                throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
             } catch (final DenodoODataAuthenticationException e) {
                 throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 logger.error(e);
                 throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
@@ -484,13 +502,13 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
         } else if (uriInfo.getNavigationSegments().size() == 1) {
             // navigation first level
-            LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
-            List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
+            final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+            final List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
 
-            EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
-            EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
+            final EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
+            final EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
 
-            Integer count = this.entityAccessor.getCountEntitySet(entitySetStart.getName(), keys, navigationSegments, entitySetTarget.getName());
+            final Integer count = this.entityAccessor.getCountEntitySet(entitySetStart.getName(), keys, navigationSegments, entitySetTarget.getName());
             if (count != null ) {
                 return EntityProvider.writeText(count.toString());
             }
@@ -503,27 +521,27 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
     @Override
     public ODataResponse readEntityLinks(final GetEntitySetLinksUriInfo uriInfo, final String contentType)
         throws ODataException {
-        
+
         try {
-            EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
-            EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
+            final EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
+            final EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
 
             List<Map<String, Object>> data = null;
-    
+
             // Top System Query Option ($top)
-            Integer top = uriInfo.getTop();
-    
+            final Integer top = uriInfo.getTop();
+
             // Skip System Query Option ($skip)
-            Integer skip = uriInfo.getSkip();
-            
-            String orderByExpressionString = getOrderByExpresion((UriInfo) uriInfo);
-            String filterExpressionString =  getFilterExpresion((UriInfo) uriInfo);
-            
-            
+            final Integer skip = uriInfo.getSkip();
+
+            final String orderByExpressionString = getOrderByExpresion((UriInfo) uriInfo);
+            final String filterExpressionString =  getFilterExpresion((UriInfo) uriInfo);
+
+
             if (uriInfo.getNavigationSegments().size() >= 1) {
-    
-                LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
-                List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
+
+                final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+                final List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
 
                 // Query option $select cannot be applied
                 data = this.entityAccessor.getEntitySetByAssociation(entitySetStart.getEntityType(), keys,
@@ -531,38 +549,40 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                             null);
 
             }
-        
+
             if (data != null) {
-                URI serviceRoot = getContext().getPathInfo().getServiceRoot();
-                ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
-                
+                final URI serviceRoot = this.getContext().getPathInfo().getServiceRoot();
+                final ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
+
                 return EntityProvider.writeLinks(contentType, entitySetTarget, data, propertiesBuilder.build());
             }
+        } catch (final DenodoODataConnectException e) {
+            throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
         } catch (final DenodoODataAuthenticationException e) {
             throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             logger.error(e);
             throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
         }
 
         throw new ODataNotImplementedException();
-        
+
     }
-    
+
     @Override
-    public ODataResponse readEntityLink(GetEntityLinkUriInfo uriInfo, String contentType) throws ODataException {
+    public ODataResponse readEntityLink(final GetEntityLinkUriInfo uriInfo, final String contentType) throws ODataException {
         try {
-            EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
-            EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
+            final EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
+            final EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
 
             Map<String, Object> data = null;
-            
+
             if (uriInfo.getNavigationSegments().size() >= 1) {
-    
-                LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
-                List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
+
+                final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+                final List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
 
                 // Query option $select cannot be applied
                 data = this.entityAccessor.getEntityByAssociation(entitySetStart.getEntityType(), keys,
@@ -570,37 +590,39 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                             null);
 
             }
-        
+
             if (data != null) {
-                URI serviceRoot = getContext().getPathInfo().getServiceRoot();
-                ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
-                
+                final URI serviceRoot = this.getContext().getPathInfo().getServiceRoot();
+                final ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
+
                 return EntityProvider.writeLink(contentType, entitySetTarget, data, propertiesBuilder.build());
             }
+        } catch (final DenodoODataConnectException e) {
+            throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
         } catch (final DenodoODataAuthenticationException e) {
             throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             logger.error(e);
             throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
         }
 
         throw new ODataNotImplementedException();
-        
+
 
     }
 
-    
+
     private static String getOrderByExpresion( final UriInfo uriInfo){
 
         // Orderby System Query Option ($orderby)
-        OrderByExpression orderByExpression = uriInfo.getOrderBy();
+        final OrderByExpression orderByExpression = uriInfo.getOrderBy();
         String orderByExpressionString = null;
         if (orderByExpression != null) {
-            StringBuilder sb = new StringBuilder();
-            List<OrderExpression> orders = orderByExpression.getOrders();
-            for (OrderExpression order : orders) {
+            final StringBuilder sb = new StringBuilder();
+            final List<OrderExpression> orders = orderByExpression.getOrders();
+            for (final OrderExpression order : orders) {
                 sb.append(processExpressionToComplexRepresentation(order.getExpression()));
                 sb.append(" ");
                 sb.append(order.getSortOrder().toString());
@@ -608,7 +630,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             }
             // remove the last extra comma
             sb.deleteCharAt(sb.length()-1);
-            
+
             orderByExpressionString = sb.toString();
         }
         return orderByExpressionString;
@@ -617,82 +639,82 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
     private static String getFilterExpresion(final UriInfo uriInfo){
 
         // Filter System Query Option ($filter)
-        FilterExpression filterExpression = uriInfo.getFilter();
+        final FilterExpression filterExpression = uriInfo.getFilter();
         String filterExpressionString = null;
         if (filterExpression != null) {
             if (filterExpression.getExpression() instanceof BinaryExpression) {
                 filterExpressionString = processBinaryExpression((BinaryExpression) filterExpression.getExpression());
             } else {
-                filterExpressionString = filterExpression.getExpressionString();    
+                filterExpressionString = filterExpression.getExpressionString();
             }
         }
         return filterExpressionString;
     }
-    
+
     private static String processBinaryExpression(final BinaryExpression binaryExpression) {
-        
-        StringBuilder sb = new StringBuilder();
-        
+
+        final StringBuilder sb = new StringBuilder();
+
         sb.append(processExpressionToComplexRepresentation(binaryExpression.getLeftOperand()));
-        
+
         sb.append(" ");
-        
+
         sb.append(binaryExpression.getOperator().toString());
-        
+
         sb.append(" ");
-        
+
         sb.append(processExpressionToComplexRepresentation(binaryExpression.getRightOperand()));
-        
+
         return sb.toString();
     }
-    
+
     private static String processExpressionToComplexRepresentation(final CommonExpression operand) {
-        
-        StringBuilder sb = new StringBuilder();
-        
+
+        final StringBuilder sb = new StringBuilder();
+
         if (operand instanceof MemberExpression) {
             // It is a property of a complex type
-            sb.append(getPropertyPath((MemberExpression) operand));
+            sb.append(getPropertyPath(operand));
         } else if (operand instanceof BinaryExpression) {
             sb.append(processBinaryExpression((BinaryExpression) operand));
         } else {
             if (operand instanceof MethodExpression) {
                 // Leave the string: method(param1, param2, param3,...)
                 sb.append(((MethodExpression) operand).getMethod());
-                List<CommonExpression> params = ((MethodExpression) operand).getParameters();
+                final List<CommonExpression> params = ((MethodExpression) operand).getParameters();
                 sb.append("(");
-                for (CommonExpression p : params) {
+                for (final CommonExpression p : params) {
                     sb.append(processExpressionToComplexRepresentation(p));
                     sb.append(",");
                 }
-                
+
                 // remove the last extra comma
                 sb.deleteCharAt(sb.length()-1);
-                
+
                 sb.append(")");
             } else {
                 sb.append(operand.getUriLiteral());
             }
         }
-        
+
         return sb.toString();
     }
 
     private static String getPropertyPath(final CommonExpression expression) {
-        
+
         String propertyPathAsString = getPropertyPathAsString(expression);
         // Get the representation in order to access using VDP
         propertyPathAsString = transformComplexProperties(propertyPathAsString);
-        
+
         return propertyPathAsString;
     }
-    
-    // Change the property path with elements separated with points ".".  
-    // The correct representation has the first item between parentheses. 
+
+    // Change the property path with elements separated with points ".".
+    // The correct representation has the first item between parentheses.
     private  static String transformComplexProperties(final String propertyPathAsString) {
-        StringBuilder sb = new StringBuilder();
-        
-        String[] propertyPathAsArray = propertyPathAsString.split("\\.");
+        final StringBuilder sb = new StringBuilder();
+
+        final String[] propertyPathAsArray = propertyPathAsString.split("\\.");
 
         for (int i=0; i < propertyPathAsArray.length; i++) {
             if (i == 0) {
@@ -706,18 +728,18 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 sb.append(".");
             }
         }
-        
+
         return sb.toString();
     }
-    
+
     private static String getPropertyPathAsString (final CommonExpression expression) {
-        
-        StringBuilder sb = new StringBuilder();
-        
-        // A member expression node is inserted in the expression tree for any member operator ("/") 
-        // which is used to reference a property of an complex type or entity type. 
+
+        final StringBuilder sb = new StringBuilder();
+
+        // A member expression node is inserted in the expression tree for any member operator ("/")
+        // which is used to reference a property of an complex type or entity type.
         if (expression instanceof MemberExpression) {
-            // It has two parts: path and property. 
+            // It has two parts: path and property.
             if (!(((MemberExpression) expression).getPath() instanceof PropertyExpression)) {
                 sb.append(getPropertyPathAsString(((MemberExpression) expression).getPath()));
             } else {
@@ -729,19 +751,19 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             } else {
                 sb.append(((PropertyExpression) ((MemberExpression) expression).getProperty()).getPropertyName());
             }
-        } 
-        
+        }
+
         return sb.toString();
     }
-    
+
     private static List<String> getSelectOptionValues(final List<SelectItem> selectedItems) {
 
-        List<String> selectValues = new ArrayList<String>();
+        final List<String> selectValues = new ArrayList<String>();
 
-        for (SelectItem item : selectedItems) {
+        for (final SelectItem item : selectedItems) {
             try {
                 selectValues.add(item.getProperty().getName());
-            } catch (EdmException e) {
+            } catch (final EdmException e) {
                 logger.error(e);
             }
         }
@@ -751,17 +773,17 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
     }
 
 
-    private static  List<String> getSelectedItems( final GetEntityUriInfo uriInfo, 
+    private static  List<String> getSelectedItems( final GetEntityUriInfo uriInfo,
             final List<String> keyProperties)
                     throws SQLException, ODataException {
 
         List<String> selectedItemsAsString = new ArrayList<String>();
         if (uriInfo != null) {
             // Select System Query Option ($select)
-            List<SelectItem> selectedItems = uriInfo.getSelect();
+            final List<SelectItem> selectedItems = uriInfo.getSelect();
             if (!selectedItems.isEmpty()) {
                 boolean star = false;
-                for (SelectItem selectItem : selectedItems) {
+                for (final SelectItem selectItem : selectedItems) {
                     if (selectItem.isStar()) {
                         star = true;
                         break;
@@ -789,10 +811,10 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         List<String> selectedItemsAsString = new ArrayList<String>();
         if (uriInfo != null) {
             // Select System Query Option ($select)
-            List<SelectItem> selectedItems = uriInfo.getSelect();
+            final List<SelectItem> selectedItems = uriInfo.getSelect();
             if (!selectedItems.isEmpty()) {
                 boolean star = false;
-                for (SelectItem selectItem : selectedItems) {
+                for (final SelectItem selectItem : selectedItems) {
                     if (selectItem.isStar()) {
                         star = true;
                         break;

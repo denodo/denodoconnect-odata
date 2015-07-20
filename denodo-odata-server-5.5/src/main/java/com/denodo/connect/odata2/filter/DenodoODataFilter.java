@@ -29,6 +29,7 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
 import com.denodo.connect.odata2.datasource.DenodoODataAuthDataSource;
 import com.denodo.connect.odata2.datasource.DenodoODataAuthenticationException;
 import com.denodo.connect.odata2.datasource.DenodoODataAuthorizationException;
+import com.denodo.connect.odata2.datasource.DenodoODataConnectException;
 
 
 public class DenodoODataFilter implements Filter {
@@ -150,6 +151,8 @@ public class DenodoODataFilter implements Filter {
         try {
             // Try to get a connection
             dataSourceConnection = DataSourceUtils.getConnection(this.authDataSource);
+        } catch (final DenodoODataConnectException e) {
+            logger.error("Connection refused");
         } catch (final DenodoODataAuthenticationException e) {
             logger.error("Invalid user/pass");
             showLogin(response);

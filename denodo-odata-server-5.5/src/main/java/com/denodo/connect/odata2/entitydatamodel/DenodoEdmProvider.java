@@ -26,9 +26,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.denodo.connect.odata2.datasource.DenodoODataAuthenticationException;
-import com.denodo.connect.odata2.datasource.DenodoODataAuthorizationException;
-import com.denodo.connect.odata2.exceptions.ODataUnauthorizedException;
 import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.edm.FullQualifiedName;
@@ -48,8 +45,14 @@ import org.apache.olingo.odata2.api.edm.provider.Property;
 import org.apache.olingo.odata2.api.edm.provider.Schema;
 import org.apache.olingo.odata2.api.exception.ODataException;
 import org.apache.olingo.odata2.api.exception.ODataForbiddenException;
+import org.apache.olingo.odata2.api.exception.ODataInternalServerErrorException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import com.denodo.connect.odata2.datasource.DenodoODataAuthenticationException;
+import com.denodo.connect.odata2.datasource.DenodoODataAuthorizationException;
+import com.denodo.connect.odata2.datasource.DenodoODataConnectException;
+import com.denodo.connect.odata2.exceptions.ODataUnauthorizedException;
 
 @Component
 public class DenodoEdmProvider extends EdmProvider {
@@ -91,7 +94,7 @@ public class DenodoEdmProvider extends EdmProvider {
 
     @Override
     public EntityType getEntityType(final FullQualifiedName entityName) throws ODataException {
-        return getEntityType(entityName, null);
+        return this.getEntityType(entityName, null);
     }
 
 
@@ -136,6 +139,8 @@ public class DenodoEdmProvider extends EdmProvider {
 
             }
 
+        } catch (final DenodoODataConnectException e) {
+            throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
         } catch (final DenodoODataAuthenticationException e) {
             throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
         } catch (final DenodoODataAuthorizationException e) {
@@ -197,34 +202,34 @@ public class DenodoEdmProvider extends EdmProvider {
              */
             final List<EntityType> allEntityTypes = new ArrayList<EntityType>(allEntityNames.size());
             for (final String entityName : allEntityNames) {
-                allEntityTypes.add(getEntityType(new FullQualifiedName(NAMESPACE_DENODO, entityName), allAssociations));
+                allEntityTypes.add(this.getEntityType(new FullQualifiedName(NAMESPACE_DENODO, entityName), allAssociations));
             }
             schema.setEntityTypes(allEntityTypes);
 
-            
+
             /*
-             * Obtaining complex types names (registers). 
+             * Obtaining complex types names (registers).
              * OData 2.0 does not support Collections/Bags/Lists that
              * will allow us to give support to arrays as complex objects.
              *  This support appears in OData 3.0. This should be changed if we
-             * introduce OData on a version 3.0 or higher and in this 
+             * introduce OData on a version 3.0 or higher and in this
              * situation we should taking into account also arrays.
              */
             final List<String> allComplexTypeNames = this.metadataAccessor.getAllComplexTypeNames();
-            List<FullQualifiedName> complexTypeNames = new ArrayList<FullQualifiedName>(allComplexTypeNames.size());
-            for (String complexTypeName : allComplexTypeNames) {
+            final List<FullQualifiedName> complexTypeNames = new ArrayList<FullQualifiedName>(allComplexTypeNames.size());
+            for (final String complexTypeName : allComplexTypeNames) {
                 complexTypeNames.add(new FullQualifiedName(NAMESPACE_DENODO, complexTypeName));
             }
-            
+
             /*
              * Now let's obtain all the complex entity types
              */
-            List<ComplexType> complexTypes = new ArrayList<ComplexType>(complexTypeNames.size());
-            for (FullQualifiedName complexTypeName : complexTypeNames) {
-                complexTypes.add(getComplexType(complexTypeName));
+            final List<ComplexType> complexTypes = new ArrayList<ComplexType>(complexTypeNames.size());
+            for (final FullQualifiedName complexTypeName : complexTypeNames) {
+                complexTypes.add(this.getComplexType(complexTypeName));
             }
             schema.setComplexTypes(complexTypes);
-            
+
 
             /*
              * Once the Entity Type metadata has been obtained, we need to declare an Entity Container that actually
@@ -274,7 +279,8 @@ public class DenodoEdmProvider extends EdmProvider {
 
             return schemas;
 
-
+        } catch (final DenodoODataConnectException e) {
+            throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
         } catch (final DenodoODataAuthenticationException e) {
             throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
         } catch (final DenodoODataAuthorizationException e) {
@@ -296,7 +302,8 @@ public class DenodoEdmProvider extends EdmProvider {
             if (NAMESPACE_DENODO.equals(associationName.getNamespace())) {
                 return this.metadataAccessor.getAssociation(associationName);
             }
-
+        } catch (final DenodoODataConnectException e) {
+            throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
         } catch (final DenodoODataAuthenticationException e) {
             throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
         } catch (final DenodoODataAuthorizationException e) {
@@ -320,7 +327,7 @@ public class DenodoEdmProvider extends EdmProvider {
 
             // Calling the metadata repository here might seem overkill, but we actually need a way to know
             // if the required entity exists or not, so we have to query the data store
-            final EntityType entityType = getEntityType(new FullQualifiedName(NAMESPACE_DENODO, name));
+            final EntityType entityType = this.getEntityType(new FullQualifiedName(NAMESPACE_DENODO, name));
             if (entityType != null) {
                 return computeEntitySet(entityType);
             }
@@ -370,7 +377,8 @@ public class DenodoEdmProvider extends EdmProvider {
             }
 
             return null;
-
+        } catch (final DenodoODataConnectException e) {
+            throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
         } catch (final DenodoODataAuthenticationException e) {
             throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
         } catch (final DenodoODataAuthorizationException e) {
@@ -429,7 +437,7 @@ public class DenodoEdmProvider extends EdmProvider {
     public ComplexType getComplexType(final FullQualifiedName edmFQName) throws ODataException {
 
         if (NAMESPACE_DENODO.equals(edmFQName.getNamespace())) {
-            
+
             final List<Property> properties = this.metadataAccessor.getComplexType(edmFQName);
             return new ComplexType().setName(edmFQName.getName()).setProperties(properties);
 
@@ -438,5 +446,5 @@ public class DenodoEdmProvider extends EdmProvider {
         throw new EdmException(EdmException.COMMON);
 
     }
-    
+
 }

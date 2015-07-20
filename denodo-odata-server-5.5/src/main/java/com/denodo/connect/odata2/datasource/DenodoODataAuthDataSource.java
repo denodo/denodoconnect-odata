@@ -27,6 +27,7 @@ public class DenodoODataAuthDataSource implements DataSource {
     // ERRORS
     private static final String AUTHENTICATION_ERROR = "The username or password is incorrect";
     private static final String AUTHORIZATION_ERROR = "Insufficient privileges to connect to the database";
+    private static final String CONNECTION_REFUSED_ERROR = "Connection refused";
 
 
     private String host;
@@ -119,6 +120,10 @@ public class DenodoODataAuthDataSource implements DataSource {
         try {
             connection = DriverManager.getConnection(this.buildConnectionUrl(), connectionProps);
         } catch (final SQLException e) {
+            if (e.getMessage().contains(CONNECTION_REFUSED_ERROR)) { // Check connection refused
+                logger.error(e);
+                throw new DenodoODataConnectException(e);
+            }
             if (e.getMessage().contains(AUTHENTICATION_ERROR)) { // Check invalid credentials
                 logger.error(e);
                 throw new DenodoODataAuthenticationException(e);

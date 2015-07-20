@@ -67,19 +67,33 @@ public class EntityAccessor {
 
     public Map<String, Object> getEntity(final EdmEntityType edmEntityType, final LinkedHashMap<String, Object> keys, final List<String> selectedItems,
             final List<EdmProperty> propertyPath) throws SQLException, ODataException {
-        return getEntityData(edmEntityType, keys, null, null, null, null, selectedItems, null, null, propertyPath).get(0);
+        List<Map<String, Object>> entities= getEntityData(edmEntityType, keys, null, null, null, null, selectedItems, null, null, propertyPath);
+        if(entities!=null && !entities.isEmpty()){
+            return entities.get(0); 
+        }else {
+            return null;
+        }
+
     }
 
     public Map<String, Object> getEntityByAssociation(final EdmEntityType edmEntityType, final LinkedHashMap<String, Object> keys,
             List<NavigationSegment> navigationSegments, EdmEntityType edmEntityTypeTarget, List<EdmProperty> propertyPath) throws SQLException, ODataException {
-
-        return getEntityData(edmEntityType, keys, null, null, null, null, null, navigationSegments, edmEntityTypeTarget, propertyPath).get(0);
+        List<Map<String, Object>> entities= getEntityData(edmEntityType, keys, null, null, null, null, null, navigationSegments, edmEntityTypeTarget, propertyPath);
+        if(entities!=null && !entities.isEmpty()){
+            return entities.get(0); 
+        }else {
+            return null;
+        }
     }
 
     public Map<String, Object> getEntityByAssociation(final EdmEntityType edmEntityType, final LinkedHashMap<String, Object> keys,
             List<NavigationSegment> navigationSegments, EdmEntityType edmEntityTypeTarget) throws SQLException, ODataException {
-
-        return getEntityData(edmEntityType, keys, null, null, null, null, null, navigationSegments, edmEntityTypeTarget, null).get(0);
+        List<Map<String, Object>> entities=getEntityData(edmEntityType, keys, null, null, null, null, null, navigationSegments, edmEntityTypeTarget, null);
+        if(entities!=null && !entities.isEmpty()){
+            return entities.get(0); 
+        }else {
+            return null;
+        }
     }
 
     public List<Map<String, Object>> getEntitySetByAssociation(final EdmEntityType edmEntityType, final LinkedHashMap<String, Object> keys,

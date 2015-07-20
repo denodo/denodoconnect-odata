@@ -70,6 +70,7 @@ import org.apache.olingo.odata2.api.uri.info.GetEntitySetUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntityUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetSimplePropertyUriInfo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.denodo.connect.odata2.datasource.DenodoODataAuthenticationException;
@@ -81,7 +82,9 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
     private static final Logger logger = Logger.getLogger(DenodoDataSingleProcessor.class);
 
-    private static int pageSize= 100;
+    
+    @Value("${server.pageSize}")
+    private Integer pageSize;
 
     @Autowired
     private EntityAccessor entityAccessor;
@@ -256,7 +259,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             return EntityProvider.writeEntry(contentType, entitySetToWrite, data, propertiesBuilder.build());
         }
 
-        throw new ODataNotImplementedException();
+        throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
     }
 
     private static LinkedHashMap<String, Object> getKeyValues(final List<KeyPredicate> keyList) throws ODataException {
@@ -319,6 +322,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                     EdmProperty property = propertyPath.get(propertyPath.size()-1);
                     return EntityProvider.writePropertyValue(property, data.get(property.getName()));
                 }
+                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             } catch (final DenodoODataAuthenticationException e) {
                 throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
             } catch (final DenodoODataAuthorizationException e) {
@@ -381,6 +385,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                     EdmProperty property = propertyPath.get(propertyPath.size()-1);
                     return EntityProvider.writeProperty(contentType, property, data.get(property.getName()));
                 }
+                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             } catch (final DenodoODataAuthenticationException e) {
                 throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
             } catch (final DenodoODataAuthorizationException e) {
@@ -441,6 +446,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                     EdmProperty property = propertyPath.get(propertyPath.size()-1);
                     return EntityProvider.writeProperty(contentType, property, data.get(property.getName()));
                 }
+                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             } catch (final DenodoODataAuthenticationException e) {
                 throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
             } catch (final DenodoODataAuthorizationException e) {
@@ -577,6 +583,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 
                 return EntityProvider.writeLink(contentType, entitySetTarget, data, propertiesBuilder.build());
             }
+            throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
         } catch (final DenodoODataAuthenticationException e) {
             throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
         } catch (final DenodoODataAuthorizationException e) {
@@ -585,8 +592,6 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             logger.error(e);
             throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
         }
-
-        throw new ODataNotImplementedException();
         
 
     }

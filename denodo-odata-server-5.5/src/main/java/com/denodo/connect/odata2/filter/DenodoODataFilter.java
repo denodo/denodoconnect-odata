@@ -156,14 +156,11 @@ public class DenodoODataFilter implements Filter {
             return;
         } catch (final DenodoODataAuthorizationException e) {
             // *** The management of these exceptions is omitted to
-            // allow Olingo to generate adecuate json/xml response
+            // allow Olingo to generate adequate json/xml response
               logger.error("Insufficient privileges");
-
         } catch (final CannotGetJdbcConnectionException e) {
             if (e.getCause().getMessage().contains(NOT_FOUND_ERROR)) { // Check invalid database name
-
                 logger.error("Database not found");
-
             }
             logger.error("Couldn't get the connection " + e + " for dataSource");
             throw e;

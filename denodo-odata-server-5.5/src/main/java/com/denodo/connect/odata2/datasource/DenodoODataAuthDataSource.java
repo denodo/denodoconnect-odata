@@ -120,10 +120,12 @@ public class DenodoODataAuthDataSource implements DataSource {
             connection = DriverManager.getConnection(this.buildConnectionUrl(), connectionProps);
         } catch (final SQLException e) {
             if (e.getMessage().contains(AUTHENTICATION_ERROR)) { // Check invalid credentials
+                logger.error(e);
                 throw new DenodoODataAuthenticationException(e);
             }
 
             if (e.getMessage().contains(AUTHORIZATION_ERROR)) { // Check insufficient privileges
+                logger.error(e);
                 throw new DenodoODataAuthorizationException(e);
             }
             logger.error(e);

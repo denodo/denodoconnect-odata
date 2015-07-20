@@ -30,6 +30,7 @@ import com.denodo.connect.odata2.datasource.DenodoODataAuthDataSource;
 import com.denodo.connect.odata2.datasource.DenodoODataAuthenticationException;
 import com.denodo.connect.odata2.datasource.DenodoODataAuthorizationException;
 import com.denodo.connect.odata2.datasource.DenodoODataConnectException;
+import com.denodo.connect.odata2.datasource.DenodoODataResourceNotFoundException;
 
 
 public class DenodoODataFilter implements Filter {
@@ -152,19 +153,26 @@ public class DenodoODataFilter implements Filter {
             // Try to get a connection
             dataSourceConnection = DataSourceUtils.getConnection(this.authDataSource);
         } catch (final DenodoODataConnectException e) {
+            /*
+             * The management of this exception is omitted to
+             * allow Olingo to generate adequate json/xml response
+             */
             logger.error("Connection refused");
         } catch (final DenodoODataAuthenticationException e) {
             logger.error("Invalid user/pass");
             showLogin(response);
             return;
         } catch (final DenodoODataAuthorizationException e) {
-            // *** The management of these exceptions is omitted to
-            // allow Olingo to generate adequate json/xml response
+            /*
+             * The management of this exception is omitted to
+             * allow Olingo to generate adequate json/xml response
+             */
               logger.error("Insufficient privileges");
+        } catch (final DenodoODataResourceNotFoundException e) {
+            logger.error("Database not found");
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
         } catch (final CannotGetJdbcConnectionException e) {
-            if (e.getCause().getMessage().contains(NOT_FOUND_ERROR)) { // Check invalid database name
-                logger.error("Database not found");
-            }
             logger.error("Couldn't get the connection " + e + " for dataSource");
             throw e;
         } finally {

@@ -28,6 +28,7 @@ public class DenodoODataAuthDataSource implements DataSource {
     private static final String AUTHENTICATION_ERROR = "The username or password is incorrect";
     private static final String AUTHORIZATION_ERROR = "Insufficient privileges to connect to the database";
     private static final String CONNECTION_REFUSED_ERROR = "Connection refused";
+    private static final String DATABASE_NOT_FOUND_ERROR = "not found";
 
 
     private String host;
@@ -128,10 +129,14 @@ public class DenodoODataAuthDataSource implements DataSource {
                 logger.error(e);
                 throw new DenodoODataAuthenticationException(e);
             }
-
             if (e.getMessage().contains(AUTHORIZATION_ERROR)) { // Check insufficient privileges
                 logger.error(e);
                 throw new DenodoODataAuthorizationException(e);
+            }
+            // TODO Improve this pattern-matching
+            if (e.getMessage().contains(DATABASE_NOT_FOUND_ERROR)) { // Check data base name exists
+                logger.error(e);
+                throw new DenodoODataResourceNotFoundException(e);
             }
             logger.error(e);
             throw e;

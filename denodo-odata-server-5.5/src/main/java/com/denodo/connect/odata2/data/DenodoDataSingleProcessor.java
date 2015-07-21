@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
+import org.apache.olingo.odata2.api.commons.InlineCount;
 import org.apache.olingo.odata2.api.edm.EdmEntitySet;
 import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.edm.EdmLiteralKind;
@@ -109,7 +110,8 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             final Integer skip = uriInfo.getSkip();
 
             String skiptoken= uriInfo.getSkipToken();
-            Integer topPagination=pageSize;
+            InlineCount inlineCount= uriInfo.getInlineCount();
+            Integer topPagination=this.pageSize;
             Integer skipPagination=0;
             if(top!=null){
                if(top<topPagination){
@@ -133,14 +135,17 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             final String filterExpressionString =  getFilterExpresion((UriInfo) uriInfo);
             List<String> selectedItemsAsString;
             selectedItemsAsString = getSelectedItems(uriInfo, keyProperties);
-
-
+            Integer count = null;          
             List<Map<String, Object>> data = null;
-
+            
             if (uriInfo.getNavigationSegments().size() == 0) {
 
                 data =  this.entityAccessor.getEntitySet(entitySetTarget.getEntityType(), orderByExpressionString, topPagination, skipPagination, filterExpressionString,
                             selectedItemsAsString);
+                if(inlineCount!=null && inlineCount.equals(InlineCount.ALLPAGES)){
+                    count=this.entityAccessor.getCountEntitySet(entitySetStart.getName(), null,filterExpressionString, null, entitySetTarget.getName());
+                 }
+               
 
             } else if (uriInfo.getNavigationSegments().size() == 1) {
                 // navigation first level
@@ -150,6 +155,9 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 data = this.entityAccessor.getEntitySetByAssociation(entitySetStart.getEntityType(), keys,
                             navigationSegments, entitySetTarget.getEntityType(), orderByExpressionString, topPagination, skipPagination, filterExpressionString,
                             selectedItemsAsString);
+                if(inlineCount!=null && inlineCount.equals(InlineCount.ALLPAGES)){
+                    count=this.entityAccessor.getCountEntitySet(entitySetStart.getName(), keys,filterExpressionString, navigationSegments, entitySetTarget.getName());
+                 }
             }
             if (data != null ) {
                 final URI serviceRoot = this.getContext().getPathInfo().getServiceRoot();
@@ -176,6 +184,13 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                             + "$skiptoken="+skiptoken;
                     propertiesBuilder.nextLink(nextLink);
                 }
+                
+             
+               if(count!=null){
+                   propertiesBuilder.inlineCount(count);
+                   propertiesBuilder.inlineCountType(inlineCount);
+               }
+                
                 return EntityProvider.writeFeed(contentType, entitySetTarget, data, propertiesBuilder.build());
             }
         } catch (final DenodoODataConnectException e) {
@@ -514,7 +529,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             final EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
             final EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
 
-            final Integer count = this.entityAccessor.getCountEntitySet(entitySetStart.getName(), keys, navigationSegments, entitySetTarget.getName());
+            final Integer count = this.entityAccessor.getCountEntitySet(entitySetStart.getName(), keys, null, navigationSegments, entitySetTarget.getName());
             if (count != null ) {
                 return EntityProvider.writeText(count.toString());
             }

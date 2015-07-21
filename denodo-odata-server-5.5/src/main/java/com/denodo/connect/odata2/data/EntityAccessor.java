@@ -405,11 +405,11 @@ public class EntityAccessor {
         return sb.toString();
     }
 
-    public Integer getCountEntitySet(final String entityName, final LinkedHashMap<String, Object> keys, final List<NavigationSegment> navigationSegments, 
+    public Integer getCountEntitySet(final String entityName, final LinkedHashMap<String, Object> keys, final String filterExpression, final List<NavigationSegment> navigationSegments, 
             final String tableTarget) throws ODataException{
 
         try {
-            String sqlStatement = getSQLStatement(entityName, keys, null, null, navigationSegments,
+            String sqlStatement = getSQLStatement(entityName, keys, filterExpression, null, navigationSegments,
                     tableTarget, null, Boolean.TRUE);
             logger.debug("Executing query: " + sqlStatement);
 
@@ -423,7 +423,7 @@ public class EntityAccessor {
     }
 
     public Integer getCountEntitySet(final String entityName, GetEntitySetCountUriInfo uriInfo) throws SQLException, ODataException {
-        return getCountEntitySet(entityName,null, null, null);
+        return getCountEntitySet(entityName,null, null, null, null);
     }
 
     // Structs data should be represented as maps where the key is the name of the property

@@ -54,9 +54,6 @@ public class DenodoODataFilter implements Filter {
     private String serverAddress = null;
     private DenodoODataAuthDataSource authDataSource = null;
 
-    // ERRORS
-    private static final String NOT_FOUND_ERROR = "not found"; // TODO Use other scan method rather than not found
-
     public DenodoODataFilter() {
         super();
     }

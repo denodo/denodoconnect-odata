@@ -46,12 +46,14 @@ import org.apache.olingo.odata2.api.edm.provider.Schema;
 import org.apache.olingo.odata2.api.exception.ODataException;
 import org.apache.olingo.odata2.api.exception.ODataForbiddenException;
 import org.apache.olingo.odata2.api.exception.ODataInternalServerErrorException;
+import org.apache.olingo.odata2.api.exception.ODataNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.denodo.connect.odata2.datasource.DenodoODataAuthenticationException;
 import com.denodo.connect.odata2.datasource.DenodoODataAuthorizationException;
 import com.denodo.connect.odata2.datasource.DenodoODataConnectException;
+import com.denodo.connect.odata2.datasource.DenodoODataResourceNotFoundException;
 import com.denodo.connect.odata2.exceptions.ODataUnauthorizedException;
 
 @Component
@@ -145,6 +147,8 @@ public class DenodoEdmProvider extends EdmProvider {
             throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
+        } catch (final DenodoODataResourceNotFoundException e) {
+            throw new ODataNotFoundException(ODataNotFoundException.ENTITY, e);
         } catch (final SQLException e) {
             logger.error("An exception was raised while obtaining entity type " + entityName, e);
             throw new EdmException(EdmException.COMMON, e);

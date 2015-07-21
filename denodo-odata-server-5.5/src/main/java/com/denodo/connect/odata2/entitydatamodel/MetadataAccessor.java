@@ -58,6 +58,7 @@ import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.jdbc.support.JdbcUtils;
 import org.springframework.stereotype.Repository;
 
+import com.denodo.connect.odata2.datasource.DenodoODataResourceNotFoundException;
 import com.denodo.connect.odata2.util.SQLMetadataUtils;
 
 
@@ -73,7 +74,7 @@ public class MetadataAccessor {
 
     private static final String REGISTER_TYPES_LIST_ALL_QUERY_FORMAT = "LIST TYPES REGISTER;";
     private static final String COMPLEX_TYPE_DESC_QUERY_FORMAT = "DESC TYPE %s;";
-    
+
     @Autowired
     private JdbcTemplate denodoTemplate;
 
@@ -98,8 +99,27 @@ public class MetadataAccessor {
 
             final DatabaseMetaData metadata = connection.getMetaData();
 
+
+            // Check if data base exists
+            final ResultSet tablesRs = metadata.getTables(connection.getCatalog(), null, entityName.getName(), (String []) null);
+            boolean existsTable = false;
+            while(tablesRs.next()){
+                if(tablesRs.getString("TABLE_NAME").equalsIgnoreCase(entityName.getName())){
+                    existsTable = true;
+                    break;
+                }
+            }
+
+            if(!existsTable){
+                throw new DenodoODataResourceNotFoundException("Table with name '" + entityName.getName()
+                        + "'does not exists");
+            }
+
+
             final ResultSet columnsRs =
                     metadata.getColumns(connection.getCatalog(), null, entityName.getName(), null);
+
+
 
             while (columnsRs.next()) {
 
@@ -127,12 +147,12 @@ public class MetadataAccessor {
                  * See: https://msdn.microsoft.com/en-us/library/ms711683%28v=vs.85%29.aspx and find "ODBC 2.0 column"
                  */
 
-                int sqlType = columnsRs.getInt("DATA_TYPE");
-                
+                final int sqlType = columnsRs.getInt("DATA_TYPE");
+
                 final EdmSimpleTypeKind type = SQLMetadataUtils.sqlTypeToODataType(sqlType);
 
                 Property property;
-                
+
                 if (type == null) {
                     property = new ComplexProperty();
                     ((ComplexProperty) property).setType(new FullQualifiedName(entityName.getNamespace(), columnsRs.getString("TYPE_NAME")));
@@ -156,12 +176,12 @@ public class MetadataAccessor {
                     /*
                      * OData 2.0 does not support Collections/Bags/Lists that
                      * will allow us to give support to arrays as complex objects.
-                     * Now we consider them as strings and show them using the 
+                     * Now we consider them as strings and show them using the
                      * toString method. In order to be able to show this information
                      * we avoid to set an incorrect MaxLength value.
-                     * The support to Collections/Bags/Lists appears in OData 3.0. 
+                     * The support to Collections/Bags/Lists appears in OData 3.0.
                      * This should be changed if we introduce OData on a version 3.0 or higher.
-                     */     
+                     */
                     if (!SQLMetadataUtils.isArrayType(sqlType)) {
                         final int maxLength = columnsRs.getInt("COLUMN_SIZE");
                         if (maxLength != Integer.MAX_VALUE) { // Integer.MAX_VALUE is returned when there is no limit
@@ -260,7 +280,7 @@ public class MetadataAccessor {
          * First we obtain all the metadatas for the associations of this entity. They contain the data required
          * to build the NavigationProperties we need
          */
-        final List<Association> associations = getAssociationsForEntity(entityName);
+        final List<Association> associations = this.getAssociationsForEntity(entityName);
 
         /*
          * Now we must convert this list of metadata into NavigationProperties
@@ -382,7 +402,7 @@ public class MetadataAccessor {
         final List<Association> associations = new ArrayList<Association>(associationNames.size());
         for (final String associationName : associationNames) {
             final FullQualifiedName associationFQName = new FullQualifiedName(namespace, associationName);
-            associations.add(getAssociation(associationFQName));
+            associations.add(this.getAssociation(associationFQName));
         }
 
         return associations;
@@ -422,7 +442,7 @@ public class MetadataAccessor {
         final List<Association> associations = new ArrayList<Association>(associationNames.size());
         for (final String associationName : associationNames) {
             final FullQualifiedName associationFQName = new FullQualifiedName(entityName.getNamespace(), associationName);
-            associations.add(getAssociation(associationFQName));
+            associations.add(this.getAssociation(associationFQName));
         }
 
         return associations;
@@ -657,12 +677,12 @@ public class MetadataAccessor {
 
 
     public Map<String,Timestamp> getViewsUpdateInfo(final Timestamp lastUpdateTimestamp) throws SQLException {
-        return doGetUpdateInfo(null, "Views", lastUpdateTimestamp);
+        return this.doGetUpdateInfo(null, "Views", lastUpdateTimestamp);
     }
 
 
     public Timestamp getViewUpdateInfo(final String viewName, final Timestamp lastUpdateTimestamp) throws SQLException {
-        final Map<String,Timestamp> updateInfo = doGetUpdateInfo(viewName, "Views", lastUpdateTimestamp);
+        final Map<String,Timestamp> updateInfo = this.doGetUpdateInfo(viewName, "Views", lastUpdateTimestamp);
         if (updateInfo == null || updateInfo.size() == 0) {
             return null;
         }
@@ -671,12 +691,12 @@ public class MetadataAccessor {
 
 
     public Map<String,Timestamp> getAssociationsUpdateInfo(final Timestamp lastUpdateTimestamp) throws SQLException {
-        return doGetUpdateInfo(null, "Associations", lastUpdateTimestamp);
+        return this.doGetUpdateInfo(null, "Associations", lastUpdateTimestamp);
     }
 
 
     public Timestamp getAssociationUpdateInfo(final String associationName, final Timestamp lastUpdateTimestamp) throws SQLException {
-        final Map<String,Timestamp> updateInfo = doGetUpdateInfo(associationName, "Associations", lastUpdateTimestamp);
+        final Map<String,Timestamp> updateInfo = this.doGetUpdateInfo(associationName, "Associations", lastUpdateTimestamp);
         if (updateInfo == null || updateInfo.size() == 0) {
             return null;
         }
@@ -746,7 +766,7 @@ public class MetadataAccessor {
 
 
     public List<String> getAllComplexTypeNames() {
-        
+
         /*
          * FIRST STEP: Obtain the list of names of all registers (without restricting to a specific entity)
          */
@@ -760,25 +780,25 @@ public class MetadataAccessor {
                     }}
 
                 );
-        
+
         /*
-         * A second step should be to obtain the list of names of all arrays and add them to the returned list. 
+         * A second step should be to obtain the list of names of all arrays and add them to the returned list.
          * OData 2.0 does not support Collections/Bags/Lists that will allow us to give support for arrays
-         *  as complex objects. This support appears in OData 3.0. This should be changed if we introduce OData 
+         *  as complex objects. This support appears in OData 3.0. This should be changed if we introduce OData
          * on a version 3.0 or higher and in this situation we should taking into account also arrays.
          */
-        
-        
+
+
         if (registerNames == null || registerNames.isEmpty()) {
             return Collections.emptyList();
         }
 
         return registerNames;
-        
+
     }
 
     public List<Property> getComplexType(final FullQualifiedName edmFQName) {
-        
+
         final String descComplexTypeQuery = String.format(COMPLEX_TYPE_DESC_QUERY_FORMAT, edmFQName.getName());
 
         final List<Property> complexTypes =
@@ -786,9 +806,9 @@ public class MetadataAccessor {
                     @Override
                     public Property mapRow(final ResultSet rs, final int rowNum) throws SQLException {
                         final EdmSimpleTypeKind type = SQLMetadataUtils.sqlTypeToODataType(rs.getInt("TYPECODE"));
-                        
+
                         Property property;
-                        
+
                         if (type == null) {
                             property = new ComplexProperty();
                             ((ComplexProperty) property).setType(new FullQualifiedName(edmFQName.getNamespace(), rs.getString("TYPE")));
@@ -798,7 +818,7 @@ public class MetadataAccessor {
                         }
 
                         property.setName(rs.getString("FIELD"));
-                        
+
                         return property;
                     }}
                 );

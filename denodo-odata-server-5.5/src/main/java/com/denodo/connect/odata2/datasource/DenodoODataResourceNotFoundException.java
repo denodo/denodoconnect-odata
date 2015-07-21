@@ -7,4 +7,8 @@ public class DenodoODataResourceNotFoundException extends RuntimeException {
     public DenodoODataResourceNotFoundException(final Throwable cause) {
         super(cause);
     }
+
+    public DenodoODataResourceNotFoundException(final String message) {
+        super(message);
+    }
 }

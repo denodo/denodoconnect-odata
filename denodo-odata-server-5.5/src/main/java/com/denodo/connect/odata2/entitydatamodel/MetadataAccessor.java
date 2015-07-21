@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
+import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.edm.EdmMultiplicity;
 import org.apache.olingo.odata2.api.edm.EdmSimpleTypeKind;
 import org.apache.olingo.odata2.api.edm.FullQualifiedName;
@@ -66,6 +67,9 @@ import com.denodo.connect.odata2.util.SQLMetadataUtils;
 
 @Repository
 public class MetadataAccessor {
+
+    private static final Logger logger = Logger.getLogger(MetadataAccessor.class);
+
 
 
     private static final String ASSOCIATIONS_LIST_ALL_QUERY_FORMAT = "LIST ASSOCIATIONS;";
@@ -111,6 +115,7 @@ public class MetadataAccessor {
             }
 
             if(!existsTable){
+                logger.error("Table with name '" + entityName.getName() + "'does not exist");
                 throw new DenodoODataResourceNotFoundException("Table with name '" + entityName.getName()
                         + "'does not exists");
             }

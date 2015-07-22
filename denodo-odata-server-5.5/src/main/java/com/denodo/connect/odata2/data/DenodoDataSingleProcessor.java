@@ -176,7 +176,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 // over to the URI for the "next" link, with the exception of $skiptoken
                 // and $skip.
              // TODO: Percent-encode "next" link.
-                if((skip!=null && skip>=data.size()) ||data.size()>=pageSize ){
+                if (data.size() > this.pageSize ) {
                     nextLink = (context.getPathInfo().getRequestUri()).toString().replaceAll("\\$skiptoken=.+?&?", "")
 //  TODO check if is necessary                          .replaceAll("\\$skip=.+?&?", "")
                             .replaceFirst("(?:\\?|&)$", ""); // Remove potentially trailing "?" or "&" left over from remove actions above.

@@ -1,0 +1,3 @@
+CURRENT
+-------
+- Fixed #23004 - Pagination link displayed although no more results exist if the skip parameter is used.

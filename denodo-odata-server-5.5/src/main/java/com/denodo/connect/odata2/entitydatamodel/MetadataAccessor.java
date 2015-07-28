@@ -35,6 +35,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
+import com.denodo.connect.odata2.datasource.DenodoODataResourceNotFoundException;
+import com.denodo.connect.odata2.util.SQLMetadataUtils;
 import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.edm.EdmMultiplicity;
 import org.apache.olingo.odata2.api.edm.EdmSimpleTypeKind;
@@ -58,9 +60,6 @@ import org.springframework.jdbc.core.SqlParameter;
 import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.jdbc.support.JdbcUtils;
 import org.springframework.stereotype.Repository;
-
-import com.denodo.connect.odata2.datasource.DenodoODataResourceNotFoundException;
-import com.denodo.connect.odata2.util.SQLMetadataUtils;
 
 
 
@@ -96,133 +95,143 @@ public class MetadataAccessor {
 
         final List<Property> entityProperties = new ArrayList<Property>(5);
 
-        // We obtain the connection in the most integrated possible way with the Spring infrastructure
-        final Connection connection = DataSourceUtils.getConnection(this.denodoTemplate.getDataSource());
+
+        Connection connection = null;
+        ResultSet tablesRs = null;
+        ResultSet columnsRs = null;
+
+        try {
+
+            // We obtain the connection in the most integrated possible way with the Spring infrastructure
+            connection = DataSourceUtils.getConnection(this.denodoTemplate.getDataSource());
 
 
-        final DatabaseMetaData metadata = connection.getMetaData();
+            final DatabaseMetaData metadata = connection.getMetaData();
 
 
-        // Check if data base exists
-        final ResultSet tablesRs = metadata.getTables(connection.getCatalog(), null, entityName.getName(), (String []) null);
-        boolean existsTable = false;
-        while(tablesRs.next()){
-            if(tablesRs.getString("TABLE_NAME").equalsIgnoreCase(entityName.getName())){
-                existsTable = true;
-                break;
-            }
-        }
-
-        if(!existsTable){
-            logger.error("Table with name '" + entityName.getName() + "'does not exist");
-            throw new DenodoODataResourceNotFoundException("Table with name '" + entityName.getName()
-                    + "'does not exists");
-        }
-
-
-        final ResultSet columnsRs =
-                metadata.getColumns(connection.getCatalog(), null, entityName.getName(), null);
-
-
-
-        while (columnsRs.next()) {
-
-            /*
-             * As of June 2015, there is no way to specify documentation (metainfo) about specific fields
-             * of a VDP view -- this can only be done at the view level. So we cannot create Documentation
-             * objects for our OData properties. If this changes in the future, this metainfo will probably
-             * come in the "REMARKS" column of this ResultSet.
-             */
-
-            /*
-             * NOTE the metadata for these types is extracting according to what is established on
-             * the Apache Olingo documentation at:
-             * http://olingo.apache.org/javadoc/odata2/org/apache/olingo/odata2/api/edm/EdmSimpleType.html
-             * ---
-             * For all EDM simple types, the facet Nullable is taken into account. For Binary, MaxLength
-             * is also applicable. For String, the facets MaxLength and Unicode are also considered. The
-             * EDM simple types DateTime, DateTimeOffset, and Time can have a Precision facet. Decimal can
-             * have the facets Precision and Scale.
-             * ---
-             * Note also that, in order to better understand the way these properties are extracted from
-             * metadata, it is useful to understand the names of the different metadata fields (and their
-             * correspondence between ODBC 2.0 and 3.0), given OData evolves from Microsoft specifications
-             * like the Entity Framework.
-             * See: https://msdn.microsoft.com/en-us/library/ms711683%28v=vs.85%29.aspx and find "ODBC 2.0 column"
-             */
-
-            final int sqlType = columnsRs.getInt("DATA_TYPE");
-
-            final EdmSimpleTypeKind type = SQLMetadataUtils.sqlTypeToODataType(sqlType);
-
-            Property property;
-
-            if (type == null) {
-                property = new ComplexProperty();
-                ((ComplexProperty) property).setType(new FullQualifiedName(entityName.getNamespace(), columnsRs.getString("TYPE_NAME")));
-            } else {
-                property = new SimpleProperty();
-                ((SimpleProperty) property).setType(type);
+            // Check if data base exists
+            tablesRs = metadata.getTables(connection.getCatalog(), null, entityName.getName(), (String []) null);
+            boolean existsTable = false;
+            while(tablesRs.next()){
+                if(tablesRs.getString("TABLE_NAME").equalsIgnoreCase(entityName.getName())){
+                    existsTable = true;
+                    break;
+                }
             }
 
-            property.setName(columnsRs.getString("COLUMN_NAME"));
-
-            final Facets propertyFacets = new Facets();
-
-            // Nullable flag, normalized by SQLMetadataUtils
-            final Boolean nullable =
-                    SQLMetadataUtils.sqlNullableToODataNullable(columnsRs.getInt("NULLABLE"));
-            if (nullable != null) {
-                propertyFacets.setNullable(nullable);
+            if(!existsTable){
+                logger.error("Table with name '" + entityName.getName() + "'does not exist");
+                throw new DenodoODataResourceNotFoundException("Table with name '" + entityName.getName()
+                        + "'does not exists");
             }
-            // Size of VARCHAR (String) columns and precision of DECIMAL columns
-            if (type == EdmSimpleTypeKind.String) {
+
+
+            columnsRs = metadata.getColumns(connection.getCatalog(), null, entityName.getName(), null);
+
+
+            while (columnsRs.next()) {
+
                 /*
-                 * OData 2.0 does not support Collections/Bags/Lists that
-                 * will allow us to give support to arrays as complex objects.
-                 * Now we consider them as strings and show them using the
-                 * toString method. In order to be able to show this information
-                 * we avoid to set an incorrect MaxLength value.
-                 * The support to Collections/Bags/Lists appears in OData 3.0.
-                 * This should be changed if we introduce OData on a version 3.0 or higher.
+                 * As of June 2015, there is no way to specify documentation (metainfo) about specific fields
+                 * of a VDP view -- this can only be done at the view level. So we cannot create Documentation
+                 * objects for our OData properties. If this changes in the future, this metainfo will probably
+                 * come in the "REMARKS" column of this ResultSet.
                  */
-                if (!SQLMetadataUtils.isArrayType(sqlType)) {
-                    final int maxLength = columnsRs.getInt("COLUMN_SIZE");
-                    if (maxLength != Integer.MAX_VALUE) { // Integer.MAX_VALUE is returned when there is no limit
-                        if (!columnsRs.wasNull()) {
-                            propertyFacets.setMaxLength(Integer.valueOf(maxLength));
+
+                /*
+                 * NOTE the metadata for these types is extracting according to what is established on
+                 * the Apache Olingo documentation at:
+                 * http://olingo.apache.org/javadoc/odata2/org/apache/olingo/odata2/api/edm/EdmSimpleType.html
+                 * ---
+                 * For all EDM simple types, the facet Nullable is taken into account. For Binary, MaxLength
+                 * is also applicable. For String, the facets MaxLength and Unicode are also considered. The
+                 * EDM simple types DateTime, DateTimeOffset, and Time can have a Precision facet. Decimal can
+                 * have the facets Precision and Scale.
+                 * ---
+                 * Note also that, in order to better understand the way these properties are extracted from
+                 * metadata, it is useful to understand the names of the different metadata fields (and their
+                 * correspondence between ODBC 2.0 and 3.0), given OData evolves from Microsoft specifications
+                 * like the Entity Framework.
+                 * See: https://msdn.microsoft.com/en-us/library/ms711683%28v=vs.85%29.aspx and find "ODBC 2.0 column"
+                 */
+
+                final int sqlType = columnsRs.getInt("DATA_TYPE");
+
+                final EdmSimpleTypeKind type = SQLMetadataUtils.sqlTypeToODataType(sqlType);
+
+                Property property;
+
+                if (type == null) {
+                    property = new ComplexProperty();
+                    ((ComplexProperty) property).setType(new FullQualifiedName(entityName.getNamespace(), columnsRs.getString("TYPE_NAME")));
+                } else {
+                    property = new SimpleProperty();
+                    ((SimpleProperty) property).setType(type);
+                }
+
+                property.setName(columnsRs.getString("COLUMN_NAME"));
+
+                final Facets propertyFacets = new Facets();
+
+                // Nullable flag, normalized by SQLMetadataUtils
+                final Boolean nullable =
+                        SQLMetadataUtils.sqlNullableToODataNullable(columnsRs.getInt("NULLABLE"));
+                if (nullable != null) {
+                    propertyFacets.setNullable(nullable);
+                }
+                // Size of VARCHAR (String) columns and precision of DECIMAL columns
+                if (type == EdmSimpleTypeKind.String) {
+                    /*
+                     * OData 2.0 does not support Collections/Bags/Lists that
+                     * will allow us to give support to arrays as complex objects.
+                     * Now we consider them as strings and show them using the
+                     * toString method. In order to be able to show this information
+                     * we avoid to set an incorrect MaxLength value.
+                     * The support to Collections/Bags/Lists appears in OData 3.0.
+                     * This should be changed if we introduce OData on a version 3.0 or higher.
+                     */
+                    if (!SQLMetadataUtils.isArrayType(sqlType)) {
+                        final int maxLength = columnsRs.getInt("COLUMN_SIZE");
+                        if (maxLength != Integer.MAX_VALUE) { // Integer.MAX_VALUE is returned when there is no limit
+                            if (!columnsRs.wasNull()) {
+                                propertyFacets.setMaxLength(Integer.valueOf(maxLength));
+                            }
                         }
                     }
+                } else if (type == EdmSimpleTypeKind.Decimal) {
+                    final int scale = columnsRs.getInt("DECIMAL_DIGITS");
+                    if (!columnsRs.wasNull()) {
+                        propertyFacets.setScale(Integer.valueOf(scale));
+                    }
+                    final int precision = columnsRs.getInt("COLUMN_SIZE");
+                    if (!columnsRs.wasNull()) {
+                        propertyFacets.setPrecision(Integer.valueOf(precision));
+                    }
+                } else if (type == EdmSimpleTypeKind.Binary) {
+                    final int maxLength = columnsRs.getInt("COLUMN_SIZE");
+                    if (!columnsRs.wasNull()) {
+                        propertyFacets.setMaxLength(Integer.valueOf(maxLength));
+                    }
+                } else if (type == EdmSimpleTypeKind.DateTime || type == EdmSimpleTypeKind.DateTimeOffset || type == EdmSimpleTypeKind.Time) {
+                    final int precision = columnsRs.getInt("COLUMN_SIZE");
+                    if (!columnsRs.wasNull()) {
+                        propertyFacets.setPrecision(Integer.valueOf(precision));
+                    }
                 }
-            } else if (type == EdmSimpleTypeKind.Decimal) {
-                final int scale = columnsRs.getInt("DECIMAL_DIGITS");
-                if (!columnsRs.wasNull()) {
-                    propertyFacets.setScale(Integer.valueOf(scale));
-                }
-                final int precision = columnsRs.getInt("COLUMN_SIZE");
-                if (!columnsRs.wasNull()) {
-                    propertyFacets.setPrecision(Integer.valueOf(precision));
-                }
-            } else if (type == EdmSimpleTypeKind.Binary) {
-                final int maxLength = columnsRs.getInt("COLUMN_SIZE");
-                if (!columnsRs.wasNull()) {
-                    propertyFacets.setMaxLength(Integer.valueOf(maxLength));
-                }
-            } else if (type == EdmSimpleTypeKind.DateTime || type == EdmSimpleTypeKind.DateTimeOffset || type == EdmSimpleTypeKind.Time) {
-                final int precision = columnsRs.getInt("COLUMN_SIZE");
-                if (!columnsRs.wasNull()) {
-                    propertyFacets.setPrecision(Integer.valueOf(precision));
-                }
+
+                property.setFacets(propertyFacets);
+
+                entityProperties.add(property);
+
             }
 
-            property.setFacets(propertyFacets);
+            return entityProperties;
 
-            entityProperties.add(property);
-
+        } finally {
+            JdbcUtils.closeResultSet(columnsRs);
+            JdbcUtils.closeResultSet(tablesRs);
+            DataSourceUtils.releaseConnection(connection, this.denodoTemplate.getDataSource());
         }
-
-
-        return entityProperties;
 
     }
 
@@ -234,31 +243,40 @@ public class MetadataAccessor {
         // Many entities will not have primary key information in VDP environments, so we save some objects
         List<PropertyRef> entityPrimaryKeyProperties = null;
 
-        // We obtain the connection in the most integrated possible way with the Spring infrastructure
-        final Connection connection = DataSourceUtils.getConnection(this.denodoTemplate.getDataSource());
+        Connection connection = null;
+        ResultSet columnsRs = null;
 
-        final DatabaseMetaData metadata = connection.getMetaData();
+        try {
 
-        final ResultSet columnsRs =
-                metadata.getPrimaryKeys(connection.getCatalog(), null, entityName.getName());
+            // We obtain the connection in the most integrated possible way with the Spring infrastructure
+            connection = DataSourceUtils.getConnection(this.denodoTemplate.getDataSource());
 
-        while (columnsRs.next()) {
+            final DatabaseMetaData metadata = connection.getMetaData();
+
+            columnsRs = metadata.getPrimaryKeys(connection.getCatalog(), null, entityName.getName());
+
+            while (columnsRs.next()) {
             /*
              * PropertyRef entities are really simple: we only need to obtain the name of the column
              */
-            final PropertyRef primaryKeyProperty = new PropertyRef();
-            primaryKeyProperty.setName(columnsRs.getString("COLUMN_NAME"));
-            if (entityPrimaryKeyProperties == null) {
-                entityPrimaryKeyProperties = new ArrayList<PropertyRef>(2);
+                final PropertyRef primaryKeyProperty = new PropertyRef();
+                primaryKeyProperty.setName(columnsRs.getString("COLUMN_NAME"));
+                if (entityPrimaryKeyProperties == null) {
+                    entityPrimaryKeyProperties = new ArrayList<PropertyRef>(2);
+                }
+                entityPrimaryKeyProperties.add(primaryKeyProperty);
             }
-            entityPrimaryKeyProperties.add(primaryKeyProperty);
-        }
 
-        if (entityPrimaryKeyProperties == null) {
-            return null;
-        }
+            if (entityPrimaryKeyProperties == null) {
+                return null;
+            }
 
-        return (new Key()).setKeys(entityPrimaryKeyProperties);
+            return (new Key()).setKeys(entityPrimaryKeyProperties);
+
+        } finally {
+            JdbcUtils.closeResultSet(columnsRs);
+            DataSourceUtils.releaseConnection(connection, this.denodoTemplate.getDataSource());
+        }
 
     }
 
@@ -628,21 +646,30 @@ public class MetadataAccessor {
         // Many entities will not have primary key information in VDP environments, so we save some objects
         final List<String> entityNames = new ArrayList<String>(10);
 
+        Connection connection = null;
+        ResultSet tablesRs = null;
+
+        try {
+
         // We obtain the connection in the most integrated possible way with the Spring infrastructure
-        final Connection connection = DataSourceUtils.getConnection(this.denodoTemplate.getDataSource());
+        connection = DataSourceUtils.getConnection(this.denodoTemplate.getDataSource());
 
         final DatabaseMetaData metadata = connection.getMetaData();
 
         // Virtual DataPort defines two types of "tables": "TABLE" and "VIEW" for base and derived views,
         // respectively. But we are interested in both here, so we are going to set the last parameter to null
-        final ResultSet tablesRs =
-                metadata.getTables(connection.getCatalog(), null, null, null);
+        tablesRs = metadata.getTables(connection.getCatalog(), null, null, null);
 
         while (tablesRs.next()) {
             entityNames.add(tablesRs.getString(3));
         }
 
         return entityNames;
+
+        } finally  {
+            JdbcUtils.closeResultSet(tablesRs);
+            DataSourceUtils.releaseConnection(connection, this.denodoTemplate.getDataSource());
+        }
 
     }
 
@@ -691,12 +718,15 @@ public class MetadataAccessor {
             final String artifactName, final String type, final Timestamp lastUpdateTimestamp)
             throws SQLException {
 
-        // We obtain the connection in the most integrated possible way with the Spring infrastructure
-        final Connection connection = DataSourceUtils.getConnection(this.denodoTemplate.getDataSource());
 
+        Connection connection = null;
         CallableStatement catalogElementsStatement = null;
         ResultSet catalogElementsRs = null;
+        
         try{
+
+            // We obtain the connection in the most integrated possible way with the Spring infrastructure
+            connection = DataSourceUtils.getConnection(this.denodoTemplate.getDataSource());
 
             catalogElementsStatement = connection.prepareCall("{ CALL catalog_elements(?,?,?,?,?,?,?,?,?) }");
 
@@ -742,6 +772,7 @@ public class MetadataAccessor {
         } finally{
             JdbcUtils.closeResultSet(catalogElementsRs);
             JdbcUtils.closeStatement(catalogElementsStatement);
+            DataSourceUtils.releaseConnection(connection, this.denodoTemplate.getDataSource());
         }
 
     }

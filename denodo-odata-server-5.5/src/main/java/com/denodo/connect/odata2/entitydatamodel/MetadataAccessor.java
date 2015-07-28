@@ -487,16 +487,16 @@ public class MetadataAccessor {
 
                         // As you can see in the Virtual DataPort Administration Guide (section 8.2 ASSOCIATIONS)
                         // the role name of an end point is specified in the other side of the association. We must
-                        // take this into account to build the association.
+                        // take this into account to build the association, that's why LEFT and RIGHT seem interchanged.
                         final String leftViewName = rs.getString("LEFT_VIEW_NAME");
                         final String leftRole = rs.getString("RIGHT_ROLE");
                         final EdmMultiplicity leftMultiplicity =
-                                SQLMetadataUtils.sqlMultiplicityToODataMultiplicity(rs.getString("LEFT_MULTIPLICITY"));
+                                SQLMetadataUtils.sqlMultiplicityToODataMultiplicity(rs.getString("RIGHT_MULTIPLICITY"));
 
                         final String rightViewName = rs.getString("RIGHT_VIEW_NAME");
                         final String rightRole = rs.getString("LEFT_ROLE");
                         final EdmMultiplicity rightMultiplicity =
-                                SQLMetadataUtils.sqlMultiplicityToODataMultiplicity(rs.getString("RIGHT_MULTIPLICITY"));
+                                SQLMetadataUtils.sqlMultiplicityToODataMultiplicity(rs.getString("LEFT_MULTIPLICITY"));
 
                         final String mappings = rs.getString("MAPPINGS");
 

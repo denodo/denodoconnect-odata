@@ -39,7 +39,7 @@
   <!-- and make their values available to the application context so that  -->
   <!-- they can be assigned with "${propertyname}".                        -->
   <!-- ******************************************************************* -->
-  <context:property-placeholder location="classpath:business.properties" />
+  <context:property-placeholder location="classpath:configuration.properties" />
 
 
   <!-- ******************************************************************* -->

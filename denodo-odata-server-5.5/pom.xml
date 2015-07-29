@@ -85,6 +85,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.1</version>
         <configuration>
           <source>1.6</source>
           <target>1.6</target>
@@ -93,23 +94,47 @@
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-eclipse-plugin</artifactId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>2.6</version>
         <configuration>
-          <addGroupIdToProjectName>true</addGroupIdToProjectName>
-          <addVersionToProjectName>true</addVersionToProjectName>
-          <wtpversion>2.0</wtpversion>
-          <downloadSources>true</downloadSources>
-          <downloadJavadocs>true</downloadJavadocs>
+          <encoding>US-ASCII</encoding>
         </configuration>
       </plugin>
 
       <plugin>
-        <groupId>org.apache.tomcat.maven</groupId>
-        <artifactId>tomcat6-maven-plugin</artifactId>
-        <version>2.2</version>
-        <configuration>
-          <path>/${project.artifactId}</path>
-        </configuration>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>2.2.1</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>2.2-beta-5</version>
+        <executions>
+          <execution>
+            <id>make-assembly-dist</id>
+            <phase>package</phase>
+            <goals>
+              <goal>attached</goal>
+            </goals>
+            <configuration>
+              <descriptors>
+                <descriptor>${basedir}/src/main/assembly/dist.xml</descriptor>
+              </descriptors>
+              <appendAssemblyId>true</appendAssemblyId>
+              <finalName>${project.artifactId}-${project.version}</finalName>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
 
     </plugins>

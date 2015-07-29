@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN 2.0//EN" "http://www.springframework.org/dtd/spring-beans-2.0.dtd">
+
+<!--
+    - SQL error codes for Virtual DataPort.
+    -->
+<beans>
+
+    <bean id="VDP" class="org.springframework.jdbc.support.SQLErrorCodes">
+        <property name="databaseProductName">
+            <value>Virtual DataPort</value>
+        </property>
+        <property name="badSqlGrammarCodes">
+            <value>1,19,1100,1199</value>
+        </property>
+        <property name="permissionDeniedCodes">
+            <value>11,12,20000,20100,29999</value>
+        </property>
+        <property name="dataAccessResourceFailureCodes">
+            <value>2,9,30000,39999</value>
+        </property>
+    </bean>
+
+</beans>

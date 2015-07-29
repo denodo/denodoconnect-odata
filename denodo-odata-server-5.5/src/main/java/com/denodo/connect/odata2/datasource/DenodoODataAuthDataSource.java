@@ -8,11 +8,10 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.util.Map;
 import java.util.Properties;
 
-import javax.sql.DataSource;
-
 import org.apache.log4j.Logger;
+import org.springframework.jdbc.datasource.SmartDataSource;
 
-public class DenodoODataAuthDataSource implements DataSource {
+public class DenodoODataAuthDataSource implements SmartDataSource {
 
     private static final Logger logger = Logger.getLogger(DenodoODataAuthDataSource.class);
 
@@ -35,6 +34,7 @@ public class DenodoODataAuthDataSource implements DataSource {
     private String port;
 
     private final ThreadLocal<Map<String,String>> parameters = new ThreadLocal<Map<String,String>>();
+    private ThreadLocal<Connection> threadConnection = new ThreadLocal<Connection>();
 
     private PrintWriter logWriter = new PrintWriter(System.out);
     private int loginTimeout = 0;
@@ -110,16 +110,25 @@ public class DenodoODataAuthDataSource implements DataSource {
 
     @Override
     public Connection getConnection() throws SQLException {
-        // Fill connection properties with user/pass credential
-        final Properties connectionProps = new Properties();
-        if (this.parameters.get() != null) {
-            connectionProps.put("user", this.parameters.get().get(USER_NAME));
-            connectionProps.put("password", this.parameters.get().get(PASSWORD_NAME));
-        }
 
-        Connection connection = null;
         try {
-            connection = DriverManager.getConnection(this.buildConnectionUrl(), connectionProps);
+
+            // Fill connection properties with user/pass credential
+            final Properties connectionProps = new Properties();
+            if (this.parameters.get() != null) {
+                connectionProps.put("user", this.parameters.get().get(USER_NAME));
+                connectionProps.put("password", this.parameters.get().get(PASSWORD_NAME));
+            }
+
+            Connection connection = this.threadConnection.get();
+            if (connection == null || connection.isClosed()) {
+
+                connection = DriverManager.getConnection(this.buildConnectionUrl(), connectionProps);
+                this.threadConnection.set(connection);
+            }
+            
+            return connection;
+            
         } catch (final SQLException e) {
             if (e.getMessage().contains(CONNECTION_REFUSED_ERROR)) { // Check connection refused
                 logger.error(e);
@@ -140,8 +149,6 @@ public class DenodoODataAuthDataSource implements DataSource {
             logger.error(e);
             throw e;
         }
-
-        return connection;
     }
 
     @Override
@@ -157,5 +164,18 @@ public class DenodoODataAuthDataSource implements DataSource {
     @Override
     public String toString() {
         return "AuthDataSource[" + ((this.parameters.get().isEmpty()) ? " " : this.buildConnectionUrl()) + "]";
+    }
+
+    @Override
+    public boolean shouldClose(Connection con) {
+        return false;
+    }
+    
+    public void close() throws SQLException {
+        
+        Connection connection = this.threadConnection.get();
+        if (connection != null && !connection.isClosed()) {
+            connection.close();
+        }
     }
 }

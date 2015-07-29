@@ -35,6 +35,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
+import com.denodo.connect.odata2.datasource.DenodoODataResourceNotFoundException;
+import com.denodo.connect.odata2.util.SQLMetadataUtils;
 import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.edm.EdmMultiplicity;
 import org.apache.olingo.odata2.api.edm.EdmSimpleTypeKind;
@@ -58,9 +60,6 @@ import org.springframework.jdbc.core.SqlParameter;
 import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.jdbc.support.JdbcUtils;
 import org.springframework.stereotype.Repository;
-
-import com.denodo.connect.odata2.datasource.DenodoODataResourceNotFoundException;
-import com.denodo.connect.odata2.util.SQLMetadataUtils;
 
 
 
@@ -96,16 +95,22 @@ public class MetadataAccessor {
 
         final List<Property> entityProperties = new ArrayList<Property>(5);
 
-        // We obtain the connection in the most integrated possible way with the Spring infrastructure
-        final Connection connection = DataSourceUtils.getConnection(this.denodoTemplate.getDataSource());
 
-        try{
+        Connection connection = null;
+        ResultSet tablesRs = null;
+        ResultSet columnsRs = null;
+
+        try {
+
+            // We obtain the connection in the most integrated possible way with the Spring infrastructure
+            connection = DataSourceUtils.getConnection(this.denodoTemplate.getDataSource());
+
 
             final DatabaseMetaData metadata = connection.getMetaData();
 
 
             // Check if data base exists
-            final ResultSet tablesRs = metadata.getTables(connection.getCatalog(), null, entityName.getName(), (String []) null);
+            tablesRs = metadata.getTables(connection.getCatalog(), null, entityName.getName(), (String []) null);
             boolean existsTable = false;
             while(tablesRs.next()){
                 if(tablesRs.getString("TABLE_NAME").equalsIgnoreCase(entityName.getName())){
@@ -121,9 +126,7 @@ public class MetadataAccessor {
             }
 
 
-            final ResultSet columnsRs =
-                    metadata.getColumns(connection.getCatalog(), null, entityName.getName(), null);
-
+            columnsRs = metadata.getColumns(connection.getCatalog(), null, entityName.getName(), null);
 
 
             while (columnsRs.next()) {
@@ -222,13 +225,13 @@ public class MetadataAccessor {
 
             }
 
-        }finally{
-            if (connection != null) {
-                connection.close();
-            }
-        }
+            return entityProperties;
 
-        return entityProperties;
+        } finally {
+            JdbcUtils.closeResultSet(columnsRs);
+            JdbcUtils.closeResultSet(tablesRs);
+            DataSourceUtils.releaseConnection(connection, this.denodoTemplate.getDataSource());
+        }
 
     }
 
@@ -240,20 +243,22 @@ public class MetadataAccessor {
         // Many entities will not have primary key information in VDP environments, so we save some objects
         List<PropertyRef> entityPrimaryKeyProperties = null;
 
-        // We obtain the connection in the most integrated possible way with the Spring infrastructure
-        final Connection connection = DataSourceUtils.getConnection(this.denodoTemplate.getDataSource());
+        Connection connection = null;
+        ResultSet columnsRs = null;
 
-        try{
+        try {
+
+            // We obtain the connection in the most integrated possible way with the Spring infrastructure
+            connection = DataSourceUtils.getConnection(this.denodoTemplate.getDataSource());
 
             final DatabaseMetaData metadata = connection.getMetaData();
 
-            final ResultSet columnsRs =
-                    metadata.getPrimaryKeys(connection.getCatalog(), null, entityName.getName());
+            columnsRs = metadata.getPrimaryKeys(connection.getCatalog(), null, entityName.getName());
 
             while (columnsRs.next()) {
-                /*
-                 * PropertyRef entities are really simple: we only need to obtain the name of the column
-                 */
+            /*
+             * PropertyRef entities are really simple: we only need to obtain the name of the column
+             */
                 final PropertyRef primaryKeyProperty = new PropertyRef();
                 primaryKeyProperty.setName(columnsRs.getString("COLUMN_NAME"));
                 if (entityPrimaryKeyProperties == null) {
@@ -262,17 +267,16 @@ public class MetadataAccessor {
                 entityPrimaryKeyProperties.add(primaryKeyProperty);
             }
 
-        }finally{
-            if (connection != null) {
-                connection.close();
+            if (entityPrimaryKeyProperties == null) {
+                return null;
             }
-        }
 
-        if (entityPrimaryKeyProperties == null) {
-            return null;
-        }
+            return (new Key()).setKeys(entityPrimaryKeyProperties);
 
-        return (new Key()).setKeys(entityPrimaryKeyProperties);
+        } finally {
+            JdbcUtils.closeResultSet(columnsRs);
+            DataSourceUtils.releaseConnection(connection, this.denodoTemplate.getDataSource());
+        }
 
     }
 
@@ -642,29 +646,30 @@ public class MetadataAccessor {
         // Many entities will not have primary key information in VDP environments, so we save some objects
         final List<String> entityNames = new ArrayList<String>(10);
 
+        Connection connection = null;
+        ResultSet tablesRs = null;
+
+        try {
+
         // We obtain the connection in the most integrated possible way with the Spring infrastructure
-        final Connection connection = DataSourceUtils.getConnection(this.denodoTemplate.getDataSource());
+        connection = DataSourceUtils.getConnection(this.denodoTemplate.getDataSource());
 
-        try{
+        final DatabaseMetaData metadata = connection.getMetaData();
 
-            final DatabaseMetaData metadata = connection.getMetaData();
+        // Virtual DataPort defines two types of "tables": "TABLE" and "VIEW" for base and derived views,
+        // respectively. But we are interested in both here, so we are going to set the last parameter to null
+        tablesRs = metadata.getTables(connection.getCatalog(), null, null, null);
 
-            // Virtual DataPort defines two types of "tables": "TABLE" and "VIEW" for base and derived views,
-            // respectively. But we are interested in both here, so we are going to set the last parameter to null
-            final ResultSet tablesRs =
-                    metadata.getTables(connection.getCatalog(), null, null, null);
-
-            while (tablesRs.next()) {
-                entityNames.add(tablesRs.getString(3));
-            }
-
-        }finally{
-            if (connection != null) {
-                connection.close();
-            }
+        while (tablesRs.next()) {
+            entityNames.add(tablesRs.getString(3));
         }
 
         return entityNames;
+
+        } finally  {
+            JdbcUtils.closeResultSet(tablesRs);
+            DataSourceUtils.releaseConnection(connection, this.denodoTemplate.getDataSource());
+        }
 
     }
 
@@ -713,12 +718,15 @@ public class MetadataAccessor {
             final String artifactName, final String type, final Timestamp lastUpdateTimestamp)
             throws SQLException {
 
-        // We obtain the connection in the most integrated possible way with the Spring infrastructure
-        final Connection connection = DataSourceUtils.getConnection(this.denodoTemplate.getDataSource());
 
+        Connection connection = null;
         CallableStatement catalogElementsStatement = null;
         ResultSet catalogElementsRs = null;
+        
         try{
+
+            // We obtain the connection in the most integrated possible way with the Spring infrastructure
+            connection = DataSourceUtils.getConnection(this.denodoTemplate.getDataSource());
 
             catalogElementsStatement = connection.prepareCall("{ CALL catalog_elements(?,?,?,?,?,?,?,?,?) }");
 
@@ -761,7 +769,7 @@ public class MetadataAccessor {
 
             return lastUpdateByViewName;
 
-        }finally{
+        } finally{
             JdbcUtils.closeResultSet(catalogElementsRs);
             JdbcUtils.closeStatement(catalogElementsStatement);
             DataSourceUtils.releaseConnection(connection, this.denodoTemplate.getDataSource());

@@ -13,7 +13,7 @@ URLs are of the form http://localhost:8080/denodo-odata2-server-5.5/denodo-odata
 
 For providing VDP credentials Basic Authentication is used.
 
-Also an HTTP client like Postman (https://www.getpostman.com/) is recommended for testing this application.
+An HTTP client like Postman (https://www.getpostman.com/) is recommended for testing this application.
 
 For more info, see the User Manual at the /doc folder.
 

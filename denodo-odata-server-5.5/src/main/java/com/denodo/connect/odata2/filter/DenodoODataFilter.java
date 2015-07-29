@@ -3,6 +3,7 @@ package com.denodo.connect.odata2.filter;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -147,8 +148,12 @@ public class DenodoODataFilter implements Filter {
         Connection dataSourceConnection = null;
 
         try {
-            // Try to get a connection
             dataSourceConnection = DataSourceUtils.getConnection(this.authDataSource);
+            
+            chain.doFilter(wrappedRequest, wrappedResponse);
+
+            logger.trace("AuthenticationFilter.doFilter(...) finishes");
+            
         } catch (final DenodoODataConnectException e) {
             /*
              * The management of this exception is omitted to
@@ -171,17 +176,18 @@ public class DenodoODataFilter implements Filter {
             return;
         } catch (final CannotGetJdbcConnectionException e) {
             logger.error("Couldn't get the connection " + e + " for dataSource");
-            throw e;
+            throw e;           
         } finally {
-            // Clean the session
             if (dataSourceConnection != null) {
                 DataSourceUtils.releaseConnection(dataSourceConnection, this.authDataSource);
+                try {
+                    this.authDataSource.close();
+                } catch (SQLException e) {
+                    logger.error("Error releasing resources ", e);
+                }
             }
         }
-        // Delegate
-        chain.doFilter(wrappedRequest, wrappedResponse);
 
-        logger.trace("AuthenticationFilter.doFilter(...) finishes");
     }
 
     @Override

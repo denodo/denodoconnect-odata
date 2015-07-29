@@ -22,8 +22,8 @@ URLs are of the form:
 
 Note that the value for <WEBAPP_CONTEXT> will depend on the way the .war is
 deployed into the application server. Apache Tomcat will create by default a
-context called "denodo-odata2-server-5.5" for a .war file called
-"denodo-odata2-server-5.5.war".
+context called "denodo-odata2-service-5.5" for a .war file called
+"denodo-odata2-service-5.5.war".
 
 For providing VDP credentials, HTTP Basic Auth is used. Credentials are passed
 through to the underlying VDP server for authentication.

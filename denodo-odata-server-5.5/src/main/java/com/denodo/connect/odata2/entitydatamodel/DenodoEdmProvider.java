@@ -21,10 +21,10 @@
  */
 package com.denodo.connect.odata2.entitydatamodel;
 
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.edm.EdmException;
@@ -43,6 +43,7 @@ import org.apache.olingo.odata2.api.edm.provider.Key;
 import org.apache.olingo.odata2.api.edm.provider.NavigationProperty;
 import org.apache.olingo.odata2.api.edm.provider.Property;
 import org.apache.olingo.odata2.api.edm.provider.Schema;
+import org.apache.olingo.odata2.api.exception.ODataApplicationException;
 import org.apache.olingo.odata2.api.exception.ODataException;
 import org.apache.olingo.odata2.api.exception.ODataForbiddenException;
 import org.apache.olingo.odata2.api.exception.ODataInternalServerErrorException;
@@ -55,6 +56,7 @@ import com.denodo.connect.odata2.datasource.DenodoODataAuthorizationException;
 import com.denodo.connect.odata2.datasource.DenodoODataConnectException;
 import com.denodo.connect.odata2.datasource.DenodoODataResourceNotFoundException;
 import com.denodo.connect.odata2.exceptions.ODataUnauthorizedException;
+
 
 @Component
 public class DenodoEdmProvider extends EdmProvider {
@@ -149,9 +151,9 @@ public class DenodoEdmProvider extends EdmProvider {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
         } catch (final DenodoODataResourceNotFoundException e) {
             throw new ODataNotFoundException(ODataNotFoundException.ENTITY, e);
-        } catch (final SQLException e) {
+        } catch (final Exception e) {
             logger.error("An exception was raised while obtaining entity type " + entityName, e);
-            throw new EdmException(EdmException.COMMON, e);
+            throw new ODataApplicationException(e.getLocalizedMessage(), Locale.getDefault(), e);
         }
 
         return null;
@@ -289,9 +291,9 @@ public class DenodoEdmProvider extends EdmProvider {
             throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-        } catch (final SQLException e) {
+        } catch (final Exception e) {
             logger.error("An exception was raised while obtaining schemas", e);
-            throw new EdmException(EdmException.COMMON, e);
+            throw new ODataApplicationException(e.getLocalizedMessage(), Locale.getDefault(), e);
         }
 
     }
@@ -312,9 +314,9 @@ public class DenodoEdmProvider extends EdmProvider {
             throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-        } catch (final SQLException e) {
+        } catch (final Exception e) {
             logger.error("An exception was raised while obtaining association " + associationName, e);
-            throw new EdmException(EdmException.COMMON, e);
+            throw new ODataApplicationException(e.getLocalizedMessage(), Locale.getDefault(), e);
         }
 
         throw new EdmException(EdmException.COMMON);
@@ -387,9 +389,9 @@ public class DenodoEdmProvider extends EdmProvider {
             throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-        } catch (final SQLException e) {
+        } catch (final Exception e) {
             logger.error("An exception was raised while obtaining association " + associationName, e);
-            throw new EdmException(EdmException.COMMON, e);
+            throw new ODataApplicationException(e.getLocalizedMessage(), Locale.getDefault(), e);
         }
 
     }

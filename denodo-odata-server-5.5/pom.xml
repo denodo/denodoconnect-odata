@@ -117,48 +117,6 @@
   </build>
 
 
-  <profiles>
-    <profile>
-      <id>denodo-ac</id>
-      <build>
-        <resources>
-          <resource>
-            <directory>src/main/conf/denodo-ac</directory>
-          </resource>
-        </resources>
-      </build>
-    </profile>
-    <profile>
-      <id>denodo-lo</id>
-      <build>
-        <resources>
-          <resource>
-            <directory>src/main/conf/denodo-lo</directory>
-          </resource>
-        </resources>
-      </build>
-    </profile>
-    <profile>
-      <id>denodo-ma</id>
-      <build>
-        <resources>
-          <resource>
-            <directory>src/main/conf/denodo-ma</directory>
-          </resource>
-        </resources>
-      </build>
-    </profile>
-    <profile>
-      <id>denodo-pa</id>
-      <build>
-        <resources>
-          <resource>
-            <directory>src/main/conf/denodo-pa</directory>
-          </resource>
-        </resources>
-      </build>
-    </profile>
-  </profiles>
 
   <dependencies>
 

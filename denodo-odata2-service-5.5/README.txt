@@ -2,7 +2,7 @@
 DENODO ODATA SERVICE
 =============================================================================
 
-Denodo OData Server allows users to connect to the Denodo Platform and query
+Denodo OData Service allows users to connect to the Denodo Platform and query
 its databases using an OData 2.0 interface.
 
 The project is distributed as a binary war file (Java Web application ARchive)

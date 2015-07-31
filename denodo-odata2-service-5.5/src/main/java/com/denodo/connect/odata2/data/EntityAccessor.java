@@ -116,7 +116,7 @@ public class EntityAccessor {
         String tableTarget = edmEntityTypeTarget != null ? edmEntityTypeTarget.getName() : null;
         
         String sqlStatement = getSQLStatement(edmEntityType.getName(), keys, filterExpressionAdapted, selectedItems, navigationSegments,
-                tableTarget, propertyPath, Boolean.FALSE);
+                propertyPath, Boolean.FALSE);
         sqlStatement = addOrderByExpression(sqlStatement, orderByExpression);
         sqlStatement = addSkipTopOption(sqlStatement, skip, top);
         logger.debug("Executing query: " + sqlStatement);
@@ -169,14 +169,7 @@ public class EntityAccessor {
         return entitySetData;
     }
 
-    private String getFilterExpression(final String filterExpression) {
-        
-        String filterExpressionAdapted = getSubstringofOption(filterExpression);
-        filterExpressionAdapted = getStartsWithOption(filterExpressionAdapted);
-        return getIndexOfOption(filterExpressionAdapted);
-    }
-
-    private static String getSelectSection(final String viewName, final String tableTarget, final List<String> selectedProperties, 
+    private static String getSelectSection(final String viewName, final List<String> selectedProperties, 
             final List<EdmProperty> propertyPath, final Boolean count, final LinkedHashMap<String, Object> keys, 
             final List<NavigationSegment> navigationSegments) throws EdmException {
         StringBuilder sb = new StringBuilder();
@@ -215,12 +208,12 @@ public class EntityAccessor {
     }
 
     private static String getSQLStatement(final String viewName, final LinkedHashMap<String, Object> keys, final String filterExpression,
-            final List<String> selectedProperties, final List<NavigationSegment> navigationSegments, String tableTarget,
+            final List<String> selectedProperties, final List<NavigationSegment> navigationSegments,
             final List<EdmProperty> propertyPath, final Boolean count) throws ODataException {
 
         StringBuilder sb = new StringBuilder();
 
-        sb.append(getSelectSection(viewName, tableTarget, selectedProperties, propertyPath, count, keys, navigationSegments));
+        sb.append(getSelectSection(viewName, selectedProperties, propertyPath, count, keys, navigationSegments));
 
         boolean whereClause = false;
         // If there is navigation, the keys are implicit in the query (e.g. SELECT_NAVIGATIONAL * FROM film/1;)
@@ -309,8 +302,18 @@ public class EntityAccessor {
     
         return sb.toString();
     }
+    
+    private String getFilterExpression(final String filterExpression) {
+        
+        String filterExpressionAdapted = getSubstringofOption(filterExpression);
+        filterExpressionAdapted = getStartsWithOption(filterExpressionAdapted);
+        filterExpressionAdapted = getEndsWithOption(filterExpressionAdapted);
+        filterExpressionAdapted = getLengthOption(filterExpressionAdapted);
+        return getIndexOfOption(filterExpressionAdapted);
+    }
 
     private static String getSubstringofOption(final String filterExpression) {
+        
         if (filterExpression != null) {
             final Pattern pattern = Pattern.compile("(.*)(substringof)\\((')(\\w+)('),(.+)\\)( eq true| eq false)?(.*)");
 
@@ -364,6 +367,33 @@ public class EntityAccessor {
         }
         return filterExpression;
     }
+    
+    private static String getEndsWithOption(final String filterExpression) {
+        if (filterExpression != null) {
+            final Pattern pattern = Pattern.compile("(.*)(endswith)\\((.+),(')(\\w+)(')\\)( eq true| eq false)?(.*)");
+
+            final Matcher matcher = pattern.matcher(filterExpression);
+            if (!matcher.find()) {
+                return filterExpression;
+            }
+
+            StringBuilder newFilterExpression = new StringBuilder();
+            matcher.reset();
+            while (matcher.find()) {
+                newFilterExpression.append(matcher.group(1));
+
+                final String substring = matcher.group(5);
+                final String columnName = matcher.group(3);
+                final String condition = matcher.group(7);
+
+                newFilterExpression.append(columnName).append(getCondition(condition)).append("'%").append(substring).append("'");
+                newFilterExpression.append(matcher.group(8));
+            }
+
+            return newFilterExpression.toString();
+        }
+        return filterExpression;
+    }
 
     private static String getIndexOfOption(final String filterExpression) {
         if (filterExpression != null) {
@@ -378,6 +408,26 @@ public class EntityAccessor {
             matcher.reset();
             while (matcher.find()) {
                 newFilterExpression.append(matcher.group(1)).append("INSTR").append(matcher.group(3));
+            }
+
+            return newFilterExpression.toString();
+        }
+        return filterExpression;
+    }
+    
+    private static String getLengthOption(final String filterExpression) {
+        if (filterExpression != null) {
+            final Pattern pattern = Pattern.compile("(.*)(length)(.*)");
+
+            final Matcher matcher = pattern.matcher(filterExpression);
+            if (!matcher.find()) {
+                return filterExpression;
+            }
+
+            StringBuilder newFilterExpression = new StringBuilder();
+            matcher.reset();
+            while (matcher.find()) {
+                newFilterExpression.append(matcher.group(1)).append("LEN").append(matcher.group(3));
             }
 
             return newFilterExpression.toString();
@@ -418,7 +468,7 @@ public class EntityAccessor {
             String filterExpressionAdapted = getFilterExpression(filterExpression);
             
             String sqlStatement = getSQLStatement(entityName, keys, filterExpressionAdapted, null, navigationSegments,
-                    tableTarget, null, Boolean.TRUE);
+                    null, Boolean.TRUE);
             logger.debug("Executing query: " + sqlStatement);
 
             return this.denodoTemplate.queryForObject(sqlStatement,Integer.class);

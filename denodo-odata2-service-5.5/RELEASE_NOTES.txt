@@ -1,7 +1,7 @@
 CURRENT
 --------
-
 - Fixed #23087 - Combining an OData function at $filter with $inlinecount results in exception.
+- Added #23080 - Add the string functions endswith and lenght.
 
 20150730.BETA1
 --------------

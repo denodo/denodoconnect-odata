@@ -1,3 +1,8 @@
+CURRENT
+--------
+
+- Fixed #23087 - Combining an OData function at $filter with $inlinecount results in exception.
+
 20150730.BETA1
 --------------
 - First beta version of the Denodo OData Service.

@@ -112,9 +112,7 @@ public class EntityAccessor {
         List<Map<String, Object>> entitySetData = new ArrayList<Map<String, Object>>();
 
 
-        String filterExpressionAdapted = getSubstringofOption(filterExpression);
-        filterExpressionAdapted = getStartsWithOption(filterExpressionAdapted);
-        filterExpressionAdapted = getIndexOfOption(filterExpressionAdapted);
+        String filterExpressionAdapted = getFilterExpression(filterExpression);
         String tableTarget = edmEntityTypeTarget != null ? edmEntityTypeTarget.getName() : null;
         
         String sqlStatement = getSQLStatement(edmEntityType.getName(), keys, filterExpressionAdapted, selectedItems, navigationSegments,
@@ -123,7 +121,7 @@ public class EntityAccessor {
         sqlStatement = addSkipTopOption(sqlStatement, skip, top);
         logger.debug("Executing query: " + sqlStatement);
 
-        entitySetData=(List<Map<String, Object>>)this.denodoTemplate.query(sqlStatement, 
+        entitySetData=this.denodoTemplate.query(sqlStatement, 
                     new RowMapper<Map<String, Object>>(){
 
             @Override
@@ -169,6 +167,13 @@ public class EntityAccessor {
 
 
         return entitySetData;
+    }
+
+    private String getFilterExpression(final String filterExpression) {
+        
+        String filterExpressionAdapted = getSubstringofOption(filterExpression);
+        filterExpressionAdapted = getStartsWithOption(filterExpressionAdapted);
+        return getIndexOfOption(filterExpressionAdapted);
     }
 
     private static String getSelectSection(final String viewName, final String tableTarget, final List<String> selectedProperties, 
@@ -409,7 +414,10 @@ public class EntityAccessor {
             final String tableTarget) throws ODataException{
 
         try {
-            String sqlStatement = getSQLStatement(entityName, keys, filterExpression, null, navigationSegments,
+            
+            String filterExpressionAdapted = getFilterExpression(filterExpression);
+            
+            String sqlStatement = getSQLStatement(entityName, keys, filterExpressionAdapted, null, navigationSegments,
                     tableTarget, null, Boolean.TRUE);
             logger.debug("Executing query: " + sqlStatement);
 

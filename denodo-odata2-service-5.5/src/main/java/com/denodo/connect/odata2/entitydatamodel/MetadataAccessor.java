@@ -35,8 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
-import com.denodo.connect.odata2.datasource.DenodoODataResourceNotFoundException;
-import com.denodo.connect.odata2.util.SQLMetadataUtils;
 import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.edm.EdmMultiplicity;
 import org.apache.olingo.odata2.api.edm.EdmSimpleTypeKind;
@@ -61,6 +59,9 @@ import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.jdbc.support.JdbcUtils;
 import org.springframework.stereotype.Repository;
 
+import com.denodo.connect.odata2.datasource.DenodoODataResourceNotFoundException;
+import com.denodo.connect.odata2.util.SQLMetadataUtils;
+
 
 
 
@@ -72,11 +73,11 @@ public class MetadataAccessor {
 
 
     private static final String ASSOCIATIONS_LIST_ALL_QUERY_FORMAT = "LIST ASSOCIATIONS;";
-    private static final String ASSOCIATIONS_LIST_QUERY_FORMAT = "LIST ASSOCIATIONS %s;";
-    private static final String ASSOCIATION_DESC_QUERY_FORMAT = "DESC ASSOCIATION %s;";
+    private static final String ASSOCIATIONS_LIST_QUERY_FORMAT = "LIST ASSOCIATIONS `%s`;";
+    private static final String ASSOCIATION_DESC_QUERY_FORMAT = "DESC ASSOCIATION `%s`;";
 
     private static final String REGISTER_TYPES_LIST_ALL_QUERY_FORMAT = "LIST TYPES REGISTER;";
-    private static final String COMPLEX_TYPE_DESC_QUERY_FORMAT = "DESC TYPE %s;";
+    private static final String COMPLEX_TYPE_DESC_QUERY_FORMAT = "DESC TYPE `%s`;";
 
     @Autowired
     private JdbcTemplate denodoTemplate;

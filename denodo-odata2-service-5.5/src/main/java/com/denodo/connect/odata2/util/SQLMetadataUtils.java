@@ -154,7 +154,21 @@ public final class SQLMetadataUtils {
     }
 
 
+    
+    
+    /*
+     * OData is case-sensitive. Use french quotes in order to get element names (columns, views...)
+     */
+    public static String getStringSurroundedByFrenchQuotes(final String s) {
+        StringBuilder sb = new StringBuilder();
+        
+        sb.append("`").append(s).append("`");
+        
+        return sb.toString();
+    }
 
+    
+    
 
     private SQLMetadataUtils() {
         super();

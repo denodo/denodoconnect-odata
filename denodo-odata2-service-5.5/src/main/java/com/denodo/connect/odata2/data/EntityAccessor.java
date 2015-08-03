@@ -52,6 +52,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
+import com.denodo.connect.odata2.util.SQLMetadataUtils;
+
 
 @Repository
 public class EntityAccessor {
@@ -199,7 +201,7 @@ public class EntityAccessor {
             sb.append("* ");
         }
         sb.append("FROM ");
-        sb.append(viewName);
+        sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(viewName));
 
         // If there is navigation, the keys are implicit in the query (e.g. SELECT_NAVIGATIONAL * FROM film/1;)
         sb.append(getSelectNavigation(keys, navigationSegments));
@@ -227,7 +229,7 @@ public class EntityAccessor {
                     sb.append(" AND ");
                 }
 
-                sb.append(entry.getKey());
+                sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(entry.getKey()));
                 sb.append("=");
                 if (entry.getValue() instanceof String) {
                     sb.append("'");
@@ -328,10 +330,9 @@ public class EntityAccessor {
                 newFilterExpression.append(matcher.group(1));
 
                 final String substring = matcher.group(4);
-                //final String propertyName = getPropertyAsRegisterIfNecessary(matcher.group(6));
                 final String propertyName = matcher.group(6);
                 final String condition = matcher.group(7);
-
+                
                 newFilterExpression.append(propertyName).append(getCondition(condition)).append("'%").append(substring).append("%'");
                 newFilterExpression.append(matcher.group(8));
             }
@@ -358,7 +359,7 @@ public class EntityAccessor {
                 final String substring = matcher.group(5);
                 final String columnName = matcher.group(3);
                 final String condition = matcher.group(7);
-
+                
                 newFilterExpression.append(columnName).append(getCondition(condition)).append("'").append(substring).append("%'");
                 newFilterExpression.append(matcher.group(8));
             }
@@ -397,7 +398,7 @@ public class EntityAccessor {
 
     private static String getIndexOfOption(final String filterExpression) {
         if (filterExpression != null) {
-            final Pattern pattern = Pattern.compile("(.*)(indexof)(.*)");
+            final Pattern pattern = Pattern.compile("(.*)(indexof)\\((.+),(.+)\\)(.*)");
 
             final Matcher matcher = pattern.matcher(filterExpression);
             if (!matcher.find()) {
@@ -407,7 +408,9 @@ public class EntityAccessor {
             StringBuilder newFilterExpression = new StringBuilder();
             matcher.reset();
             while (matcher.find()) {
-                newFilterExpression.append(matcher.group(1)).append("INSTR").append(matcher.group(3));
+                                
+                newFilterExpression.append(matcher.group(1)).append("INSTR").append("(").append(matcher.group(3))
+                    .append(",").append(matcher.group(4)).append(")").append(matcher.group(5));
             }
 
             return newFilterExpression.toString();
@@ -449,7 +452,7 @@ public class EntityAccessor {
 
         if (selectedItems != null) {
             for (String item : selectedItems) {
-                sb.append(item).append(",");
+                sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(item)).append(",");
             }
 
             if (sb.length() > 0) {
@@ -527,13 +530,13 @@ public class EntityAccessor {
     private static String getPropertyPathExpression(final List<EdmProperty> propertyPath) throws EdmException {
         StringBuilder sb = new StringBuilder();
         if (propertyPath.size() == 1) {
-            sb.append(propertyPath.get(0).getName()).append(" ");
+            sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(propertyPath.get(0).getName())).append(" ");
         } else {
             // It is a register
             boolean first = true; 
             for (int i=0; i<propertyPath.size(); i++) {
                 EdmProperty propertyElement = propertyPath.get(i);
-                sb.append(propertyElement.getName());
+                sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(propertyElement.getName()));
                 if (first) {
                     sb.insert(0, "(");
                     sb.insert(sb.length(), ")");
@@ -576,7 +579,7 @@ public class EntityAccessor {
                 if (navigationSegments != null && !navigationSegments.isEmpty()) {
                     for (NavigationSegment ns : navigationSegments) {
                         sb.append("/");
-                        sb.append(ns.getNavigationProperty().getToRole());
+                        sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(ns.getNavigationProperty().getToRole()));
                         sb.append("/");
                         for (KeyPredicate key : ns.getKeyPredicates()) {
                             EdmProperty prop = key.getProperty();
@@ -601,4 +604,6 @@ public class EntityAccessor {
         }
         return sb.toString();
     }
+    
+
 }

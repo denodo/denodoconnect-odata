@@ -46,6 +46,10 @@ import org.apache.olingo.odata2.api.exception.ODataNotImplementedException;
 import org.apache.olingo.odata2.api.processor.ODataContext;
 import org.apache.olingo.odata2.api.processor.ODataResponse;
 import org.apache.olingo.odata2.api.processor.ODataSingleProcessor;
+import org.apache.olingo.odata2.api.processor.part.EntityComplexPropertyProcessor;
+import org.apache.olingo.odata2.api.processor.part.EntitySetProcessor;
+import org.apache.olingo.odata2.api.processor.part.EntitySimplePropertyProcessor;
+import org.apache.olingo.odata2.api.processor.part.EntitySimplePropertyValueProcessor;
 import org.apache.olingo.odata2.api.uri.ExpandSelectTreeNode;
 import org.apache.olingo.odata2.api.uri.KeyPredicate;
 import org.apache.olingo.odata2.api.uri.NavigationSegment;
@@ -60,6 +64,7 @@ import org.apache.olingo.odata2.api.uri.expression.MethodExpression;
 import org.apache.olingo.odata2.api.uri.expression.OrderByExpression;
 import org.apache.olingo.odata2.api.uri.expression.OrderExpression;
 import org.apache.olingo.odata2.api.uri.expression.PropertyExpression;
+import org.apache.olingo.odata2.api.uri.expression.UnaryExpression;
 import org.apache.olingo.odata2.api.uri.info.GetComplexPropertyUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntityLinkUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetCountUriInfo;
@@ -75,6 +80,7 @@ import com.denodo.connect.odata2.datasource.DenodoODataAuthenticationException;
 import com.denodo.connect.odata2.datasource.DenodoODataAuthorizationException;
 import com.denodo.connect.odata2.datasource.DenodoODataConnectException;
 import com.denodo.connect.odata2.exceptions.ODataUnauthorizedException;
+import com.denodo.connect.odata2.util.SQLMetadataUtils;
 
 @Component
 public class DenodoDataSingleProcessor extends ODataSingleProcessor {
@@ -666,6 +672,13 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         if (filterExpression != null) {
             if (filterExpression.getExpression() instanceof BinaryExpression) {
                 filterExpressionString = processBinaryExpression((BinaryExpression) filterExpression.getExpression());
+            } else if (filterExpression.getExpression() instanceof UnaryExpression &&
+                    ((UnaryExpression)filterExpression.getExpression()).getOperand() instanceof BinaryExpression) {
+                StringBuilder sb = new StringBuilder();
+                sb.append(((UnaryExpression)filterExpression.getExpression()).getOperator().toString());
+                sb.append(" ");
+                sb.append(processBinaryExpression((BinaryExpression)((UnaryExpression)filterExpression.getExpression()).getOperand()));
+                filterExpressionString = sb.toString();
             } else {
                 filterExpressionString = filterExpression.getExpressionString();
             }
@@ -715,7 +728,11 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
                 sb.append(")");
             } else {
-                sb.append(operand.getUriLiteral());
+                if (operand instanceof PropertyExpression) {
+                    sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(operand.getUriLiteral()));
+                } else {
+                    sb.append(operand.getUriLiteral());
+                }
             }
         }
 
@@ -742,7 +759,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             if (i == 0) {
                 sb.append("(");
             }
-            sb.append(propertyPathAsArray[i]);
+            sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(propertyPathAsArray[i]));
             if (i == 0) {
                 sb.append(")");
             }

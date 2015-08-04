@@ -61,7 +61,7 @@ public class EntityAccessor {
     @Autowired
     JdbcTemplate denodoTemplate;
     private static final Logger logger = Logger.getLogger(EntityAccessor.class);
-
+    
     public List<Map<String, Object>> getEntitySet(final EdmEntityType edmEntityType, final String orderByExpressionString, final Integer top,
             final Integer skip, final String filterExpression, final List<String> selectedItems) throws SQLException, ODataException {
         return getEntityData(edmEntityType, null, orderByExpressionString, top, skip, filterExpression, selectedItems, null, null, null);
@@ -115,7 +115,6 @@ public class EntityAccessor {
 
 
         String filterExpressionAdapted = getFilterExpression(filterExpression);
-        String tableTarget = edmEntityTypeTarget != null ? edmEntityTypeTarget.getName() : null;
         
         String sqlStatement = getSQLStatement(edmEntityType.getName(), keys, filterExpressionAdapted, selectedItems, navigationSegments,
                 propertyPath, Boolean.FALSE);
@@ -305,7 +304,7 @@ public class EntityAccessor {
         return sb.toString();
     }
     
-    private String getFilterExpression(final String filterExpression) {
+    private static String getFilterExpression(final String filterExpression) {
         
         String filterExpressionAdapted = getSubstringofOption(filterExpression);
         filterExpressionAdapted = getStartsWithOption(filterExpressionAdapted);
@@ -317,7 +316,7 @@ public class EntityAccessor {
     private static String getSubstringofOption(final String filterExpression) {
         
         if (filterExpression != null) {
-            final Pattern pattern = Pattern.compile("(.*)(substringof)\\((')(\\w+)('),(.+)\\)( eq true| eq false)?(.*)");
+            final Pattern pattern = Pattern.compile("substringof\\((')(\\w+)('),(.+?)\\)( eq true| eq false)?");
 
             final Matcher matcher = pattern.matcher(filterExpression);
             if (!matcher.find()) {
@@ -326,17 +325,21 @@ public class EntityAccessor {
 
             StringBuilder newFilterExpression = new StringBuilder();
             matcher.reset();
+            int index = 0;
             while (matcher.find()) {
-                newFilterExpression.append(matcher.group(1));
+                newFilterExpression.append(filterExpression.substring(index, matcher.start()));
 
-                final String substring = matcher.group(4);
-                final String propertyName = matcher.group(6);
-                final String condition = matcher.group(7);
+                final String substring = matcher.group(2);
+                final String propertyName = matcher.group(4);
+                final String condition = matcher.group(5);
                 
                 newFilterExpression.append(propertyName).append(getCondition(condition)).append("'%").append(substring).append("%'");
-                newFilterExpression.append(matcher.group(8));
+                
+                index = matcher.end();
             }
 
+            newFilterExpression.append(filterExpression.substring(index, filterExpression.length()));
+            
             return newFilterExpression.toString();
         }
         return filterExpression;
@@ -344,7 +347,7 @@ public class EntityAccessor {
 
     private static String getStartsWithOption(final String filterExpression) {
         if (filterExpression != null) {
-            final Pattern pattern = Pattern.compile("(.*)(startswith)\\((.+),(')(\\w+)(')\\)( eq true| eq false)?(.*)");
+            final Pattern pattern = Pattern.compile("startswith\\((.+?),(')(\\w+)(')\\)( eq true| eq false)?");
 
             final Matcher matcher = pattern.matcher(filterExpression);
             if (!matcher.find()) {
@@ -353,16 +356,20 @@ public class EntityAccessor {
 
             StringBuilder newFilterExpression = new StringBuilder();
             matcher.reset();
+            int index = 0;
             while (matcher.find()) {
-                newFilterExpression.append(matcher.group(1));
+                newFilterExpression.append(filterExpression.substring(index, matcher.start()));
 
-                final String substring = matcher.group(5);
-                final String columnName = matcher.group(3);
-                final String condition = matcher.group(7);
+                final String substring = matcher.group(3);
+                final String columnName = matcher.group(1);
+                final String condition = matcher.group(5);
                 
                 newFilterExpression.append(columnName).append(getCondition(condition)).append("'").append(substring).append("%'");
-                newFilterExpression.append(matcher.group(8));
+                
+                index = matcher.end();
             }
+            
+            newFilterExpression.append(filterExpression.substring(index, filterExpression.length()));
 
             return newFilterExpression.toString();
         }
@@ -371,7 +378,7 @@ public class EntityAccessor {
     
     private static String getEndsWithOption(final String filterExpression) {
         if (filterExpression != null) {
-            final Pattern pattern = Pattern.compile("(.*)(endswith)\\((.+),(')(\\w+)(')\\)( eq true| eq false)?(.*)");
+            final Pattern pattern = Pattern.compile("endswith\\((.+?),(')(\\w+)(')\\)( eq true| eq false)?");
 
             final Matcher matcher = pattern.matcher(filterExpression);
             if (!matcher.find()) {
@@ -380,16 +387,20 @@ public class EntityAccessor {
 
             StringBuilder newFilterExpression = new StringBuilder();
             matcher.reset();
+            int index = 0;
             while (matcher.find()) {
-                newFilterExpression.append(matcher.group(1));
+                newFilterExpression.append(filterExpression.substring(index, matcher.start()));
 
-                final String substring = matcher.group(5);
-                final String columnName = matcher.group(3);
-                final String condition = matcher.group(7);
+                final String substring = matcher.group(3);
+                final String columnName = matcher.group(1);
+                final String condition = matcher.group(5);
 
                 newFilterExpression.append(columnName).append(getCondition(condition)).append("'%").append(substring).append("'");
-                newFilterExpression.append(matcher.group(8));
+                
+                index = matcher.end();
             }
+            
+            newFilterExpression.append(filterExpression.substring(index, filterExpression.length()));
 
             return newFilterExpression.toString();
         }
@@ -398,7 +409,7 @@ public class EntityAccessor {
 
     private static String getIndexOfOption(final String filterExpression) {
         if (filterExpression != null) {
-            final Pattern pattern = Pattern.compile("(.*)(indexof)\\((.+),(.+)\\)(.*)");
+            final Pattern pattern = Pattern.compile("indexof(\\((.+?),'\\w+'\\))");
 
             final Matcher matcher = pattern.matcher(filterExpression);
             if (!matcher.find()) {
@@ -407,12 +418,17 @@ public class EntityAccessor {
 
             StringBuilder newFilterExpression = new StringBuilder();
             matcher.reset();
+            int index = 0;
             while (matcher.find()) {
-                                
-                newFilterExpression.append(matcher.group(1)).append("INSTR").append("(").append(matcher.group(3))
-                    .append(",").append(matcher.group(4)).append(")").append(matcher.group(5));
+                newFilterExpression.append(filterExpression.substring(index, matcher.start()));
+                
+                newFilterExpression.append("INSTR").append(matcher.group(1));
+                
+                index = matcher.end();
             }
 
+            newFilterExpression.append(filterExpression.substring(index, filterExpression.length()));
+            
             return newFilterExpression.toString();
         }
         return filterExpression;
@@ -420,7 +436,8 @@ public class EntityAccessor {
     
     private static String getLengthOption(final String filterExpression) {
         if (filterExpression != null) {
-            final Pattern pattern = Pattern.compile("(.*)(length)(.*)");
+            final Pattern pattern = Pattern.compile("length(\\(.+?\\))");
+            
 
             final Matcher matcher = pattern.matcher(filterExpression);
             if (!matcher.find()) {
@@ -429,9 +446,16 @@ public class EntityAccessor {
 
             StringBuilder newFilterExpression = new StringBuilder();
             matcher.reset();
+            int index = 0;
             while (matcher.find()) {
-                newFilterExpression.append(matcher.group(1)).append("LEN").append(matcher.group(3));
+                newFilterExpression.append(filterExpression.substring(index, matcher.start()));
+                
+                newFilterExpression.append("LEN").append(matcher.group(1));
+                
+                index = matcher.end();
             }
+            
+            newFilterExpression.append(filterExpression.substring(index, filterExpression.length()));
 
             return newFilterExpression.toString();
         }

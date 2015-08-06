@@ -310,13 +310,14 @@ public class EntityAccessor {
         filterExpressionAdapted = getStartsWithOption(filterExpressionAdapted);
         filterExpressionAdapted = getEndsWithOption(filterExpressionAdapted);
         filterExpressionAdapted = getLengthOption(filterExpressionAdapted);
+        filterExpressionAdapted = getSubstringOption(filterExpressionAdapted);
         return getIndexOfOption(filterExpressionAdapted);
     }
 
     private static String getSubstringofOption(final String filterExpression) {
         
         if (filterExpression != null) {
-            final Pattern pattern = Pattern.compile("substringof\\((')(\\w+)('),(.+?)\\)( eq true| eq false)?");
+            final Pattern pattern = Pattern.compile("substringof\\((')(\\w+)('),(.+?`)\\) (eq true|eq false)?");
 
             final Matcher matcher = pattern.matcher(filterExpression);
             if (!matcher.find()) {
@@ -347,7 +348,7 @@ public class EntityAccessor {
 
     private static String getStartsWithOption(final String filterExpression) {
         if (filterExpression != null) {
-            final Pattern pattern = Pattern.compile("startswith\\((.+?),(')(\\w+)(')\\)( eq true| eq false)?");
+            final Pattern pattern = Pattern.compile("startswith\\((.+?),(')(\\w+)(')\\) (eq true|eq false)?");
 
             final Matcher matcher = pattern.matcher(filterExpression);
             if (!matcher.find()) {
@@ -378,7 +379,7 @@ public class EntityAccessor {
     
     private static String getEndsWithOption(final String filterExpression) {
         if (filterExpression != null) {
-            final Pattern pattern = Pattern.compile("endswith\\((.+?),(')(\\w+)(')\\)( eq true| eq false)?");
+            final Pattern pattern = Pattern.compile("endswith\\((.+?),(')(\\w+)(')\\) (eq true|eq false)?");
 
             final Matcher matcher = pattern.matcher(filterExpression);
             if (!matcher.find()) {
@@ -461,10 +462,53 @@ public class EntityAccessor {
         }
         return filterExpression;
     }
+    
+    private static String getSubstringOption(final String filterExpression) {
+        if (filterExpression != null) {
+            //final Pattern pattern = Pattern.compile("substring\\((.+?),\\s*(\\d+)\\s*(,\\s*(\\d+)\\s*)?\\)(\\s+eq\\s+'\\w+')?");
+            final Pattern pattern = Pattern.compile("substring\\((.+?),(\\d+)(,(\\d+))?\\) (eq '\\w+')?");
+
+            final Matcher matcher = pattern.matcher(filterExpression);
+            if (!matcher.find()) {
+                return filterExpression;
+            }
+
+            StringBuilder newFilterExpression = new StringBuilder();
+            matcher.reset();
+            int index = 0;
+            while (matcher.find()) {
+                newFilterExpression.append(filterExpression.substring(index, matcher.start()));
+
+                // In OData the first character is 0 while in the SUBSTR function of VQL, is 1 
+                int from = Integer.valueOf(matcher.group(2)).intValue() + 1;
+                // This parameter is optional
+                Integer length = matcher.group(4) != null ? Integer.valueOf(matcher.group(4)) : null;
+                
+                // The group number of the condition depends on the existence of length
+                String condition = matcher.group(5) != null ? matcher.group(5) : null;
+                
+                newFilterExpression.append("SUBSTR").append("(").append(matcher.group(1)).append(",")
+                    .append(from);
+                
+                if (length != null) {
+                    newFilterExpression.append(",").append(length);
+                }
+                
+                newFilterExpression.append(")").append(condition != null ? condition : "");
+                
+                index = matcher.end();
+            }
+            
+            newFilterExpression.append(filterExpression.substring(index, filterExpression.length()));
+
+            return newFilterExpression.toString();
+        }
+        return filterExpression;
+    }
 
     private static String getCondition(final String condition) {
 
-        final String falseCondition = " eq false";
+        final String falseCondition = "eq false";
         if (falseCondition.equals(condition)) {
             return " NOT LIKE ";
         }

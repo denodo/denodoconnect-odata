@@ -313,11 +313,11 @@ public class EntityAccessor {
         filterExpressionAdapted = getSubstringOption(filterExpressionAdapted);
         return getIndexOfOption(filterExpressionAdapted);
     }
-
+    
     private static String getSubstringofOption(final String filterExpression) {
         
         if (filterExpression != null) {
-            final Pattern pattern = Pattern.compile("substringof\\((')(\\w+)('),(.+?`)\\) (eq true|eq false)?");
+            final Pattern pattern = Pattern.compile("substringof\\(("+ getStringParameterPattern() +"),(.+?)\\) (eq true|eq false)?");
 
             final Matcher matcher = pattern.matcher(filterExpression);
             if (!matcher.find()) {
@@ -330,11 +330,12 @@ public class EntityAccessor {
             while (matcher.find()) {
                 newFilterExpression.append(filterExpression.substring(index, matcher.start()));
 
-                final String substring = matcher.group(2);
-                final String propertyName = matcher.group(4);
-                final String condition = matcher.group(5);
+                final String substring = matcher.group(1);
+                final String propertyName = matcher.group(2);
+                final String condition = matcher.group(3);
                 
-                newFilterExpression.append(propertyName).append(getCondition(condition)).append("'%").append(substring).append("%'");
+                // We use CONCAT because "substring" can be a function that returns a string
+                newFilterExpression.append(propertyName).append(getCondition(condition)).append("CONCAT('%',").append(substring).append(",'%')");
                 
                 index = matcher.end();
             }
@@ -348,7 +349,7 @@ public class EntityAccessor {
 
     private static String getStartsWithOption(final String filterExpression) {
         if (filterExpression != null) {
-            final Pattern pattern = Pattern.compile("startswith\\((.+?),(')(\\w+)(')\\) (eq true|eq false)?");
+            final Pattern pattern = Pattern.compile("startswith\\((.+?),(" + getStringParameterPattern() + ")\\)\\s*(eq true|eq false)?");
 
             final Matcher matcher = pattern.matcher(filterExpression);
             if (!matcher.find()) {
@@ -361,11 +362,12 @@ public class EntityAccessor {
             while (matcher.find()) {
                 newFilterExpression.append(filterExpression.substring(index, matcher.start()));
 
-                final String substring = matcher.group(3);
+                final String substring = matcher.group(2);
                 final String columnName = matcher.group(1);
-                final String condition = matcher.group(5);
+                final String condition = matcher.group(3);
                 
-                newFilterExpression.append(columnName).append(getCondition(condition)).append("'").append(substring).append("%'");
+                // We use CONCAT because "substring" can be a function that returns a string
+                newFilterExpression.append(columnName).append(getCondition(condition)).append("CONCAT(").append(substring).append(",'%')");
                 
                 index = matcher.end();
             }
@@ -379,7 +381,7 @@ public class EntityAccessor {
     
     private static String getEndsWithOption(final String filterExpression) {
         if (filterExpression != null) {
-            final Pattern pattern = Pattern.compile("endswith\\((.+?),(')(\\w+)(')\\) (eq true|eq false)?");
+            final Pattern pattern = Pattern.compile("endswith\\((.+?),(" + getStringParameterPattern() + ")\\)\\s*(eq true|eq false)?");
 
             final Matcher matcher = pattern.matcher(filterExpression);
             if (!matcher.find()) {
@@ -392,11 +394,12 @@ public class EntityAccessor {
             while (matcher.find()) {
                 newFilterExpression.append(filterExpression.substring(index, matcher.start()));
 
-                final String substring = matcher.group(3);
+                final String substring = matcher.group(2);
                 final String columnName = matcher.group(1);
-                final String condition = matcher.group(5);
+                final String condition = matcher.group(3);
 
-                newFilterExpression.append(columnName).append(getCondition(condition)).append("'%").append(substring).append("'");
+                // We use CONCAT because "substring" can be a function that returns a string
+                newFilterExpression.append(columnName).append(getCondition(condition)).append("CONCAT('%',").append(substring).append(")");
                 
                 index = matcher.end();
             }
@@ -410,7 +413,7 @@ public class EntityAccessor {
 
     private static String getIndexOfOption(final String filterExpression) {
         if (filterExpression != null) {
-            final Pattern pattern = Pattern.compile("indexof(\\((.+?),'\\w+'\\))");
+            final Pattern pattern = Pattern.compile("indexof(\\((.+?),(" + getStringParameterPattern() + ")\\))");
 
             final Matcher matcher = pattern.matcher(filterExpression);
             if (!matcher.find()) {
@@ -465,8 +468,7 @@ public class EntityAccessor {
     
     private static String getSubstringOption(final String filterExpression) {
         if (filterExpression != null) {
-            //final Pattern pattern = Pattern.compile("substring\\((.+?),\\s*(\\d+)\\s*(,\\s*(\\d+)\\s*)?\\)(\\s+eq\\s+'\\w+')?");
-            final Pattern pattern = Pattern.compile("substring\\((.+?),(\\d+)(,(\\d+))?\\) (eq '\\w+')?");
+            final Pattern pattern = Pattern.compile("substring\\((.+?),(\\d+)(,(\\d+))?\\)\\s*(eq )?");
 
             final Matcher matcher = pattern.matcher(filterExpression);
             if (!matcher.find()) {
@@ -494,7 +496,7 @@ public class EntityAccessor {
                     newFilterExpression.append(",").append(length);
                 }
                 
-                newFilterExpression.append(")").append(condition != null ? condition : "");
+                newFilterExpression.append(") ").append(condition != null ? condition : "");
                 
                 index = matcher.end();
             }
@@ -673,5 +675,11 @@ public class EntityAccessor {
         return sb.toString();
     }
     
-
+    // String parameters may be surrounded by '' or may be functions that return strings
+    private static String getStringParameterPattern() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("substring\\(.+\\)");
+        sb.append("|.+?");
+        return sb.toString();
+    }
 }

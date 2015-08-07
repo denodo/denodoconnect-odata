@@ -672,12 +672,16 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         if (filterExpression != null) {
             if (filterExpression.getExpression() instanceof BinaryExpression) {
                 filterExpressionString = processBinaryExpression((BinaryExpression) filterExpression.getExpression());
-            } else if (filterExpression.getExpression() instanceof UnaryExpression &&
-                    ((UnaryExpression)filterExpression.getExpression()).getOperand() instanceof BinaryExpression) {
+            } else if (filterExpression.getExpression() instanceof UnaryExpression) {
                 StringBuilder sb = new StringBuilder();
                 sb.append(((UnaryExpression)filterExpression.getExpression()).getOperator().toString());
-                sb.append(" ");
-                sb.append(processBinaryExpression((BinaryExpression)((UnaryExpression)filterExpression.getExpression()).getOperand()));
+                sb.append(" (");
+                if (((UnaryExpression)filterExpression.getExpression()).getOperand() instanceof BinaryExpression) {
+                    sb.append(processBinaryExpression((BinaryExpression)((UnaryExpression)filterExpression.getExpression()).getOperand()));
+                } else {
+                    sb.append(processExpressionToComplexRepresentation(((UnaryExpression)filterExpression.getExpression()).getOperand()));
+                }
+                sb.append(")");
                 filterExpressionString = sb.toString();
             } else {
                 filterExpressionString = filterExpression.getExpressionString();
@@ -730,6 +734,11 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             } else {
                 if (operand instanceof PropertyExpression) {
                     sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(operand.getUriLiteral()));
+                } else if (operand instanceof UnaryExpression) {
+                    sb.append(((UnaryExpression)operand).getOperator().toString());
+                    sb.append(" (");
+                    sb.append(processExpressionToComplexRepresentation(((UnaryExpression)operand).getOperand()));
+                    sb.append(")");
                 } else {
                     sb.append(operand.getUriLiteral());
                 }

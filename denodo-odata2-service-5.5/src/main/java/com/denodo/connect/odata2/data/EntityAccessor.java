@@ -311,6 +311,8 @@ public class EntityAccessor {
         filterExpressionAdapted = getEndsWithOption(filterExpressionAdapted);
         filterExpressionAdapted = getLengthOption(filterExpressionAdapted);
         filterExpressionAdapted = getSubstringOption(filterExpressionAdapted);
+        filterExpressionAdapted = getTolowerOption(filterExpressionAdapted);
+        filterExpressionAdapted = getToupperOption(filterExpressionAdapted);
         return getIndexOfOption(filterExpressionAdapted);
     }
     
@@ -507,6 +509,62 @@ public class EntityAccessor {
         }
         return filterExpression;
     }
+    
+    private static String getTolowerOption(final String filterExpression) {
+        if (filterExpression != null) {
+            final Pattern pattern = Pattern.compile("tolower(\\(.+?\\))");
+            
+
+            final Matcher matcher = pattern.matcher(filterExpression);
+            if (!matcher.find()) {
+                return filterExpression;
+            }
+
+            StringBuilder newFilterExpression = new StringBuilder();
+            matcher.reset();
+            int index = 0;
+            while (matcher.find()) {
+                newFilterExpression.append(filterExpression.substring(index, matcher.start()));
+                
+                newFilterExpression.append("LOWER").append(matcher.group(1));
+                
+                index = matcher.end();
+            }
+            
+            newFilterExpression.append(filterExpression.substring(index, filterExpression.length()));
+
+            return newFilterExpression.toString();
+        }
+        return filterExpression;
+    }
+    
+    private static String getToupperOption(final String filterExpression) {
+        if (filterExpression != null) {
+            final Pattern pattern = Pattern.compile("toupper(\\(.+?\\))");
+            
+
+            final Matcher matcher = pattern.matcher(filterExpression);
+            if (!matcher.find()) {
+                return filterExpression;
+            }
+
+            StringBuilder newFilterExpression = new StringBuilder();
+            matcher.reset();
+            int index = 0;
+            while (matcher.find()) {
+                newFilterExpression.append(filterExpression.substring(index, matcher.start()));
+                
+                newFilterExpression.append("UPPER").append(matcher.group(1));
+                
+                index = matcher.end();
+            }
+            
+            newFilterExpression.append(filterExpression.substring(index, filterExpression.length()));
+
+            return newFilterExpression.toString();
+        }
+        return filterExpression;
+    }
 
     private static String getCondition(final String condition) {
 
@@ -679,6 +737,8 @@ public class EntityAccessor {
     private static String getStringParameterPattern() {
         StringBuilder sb = new StringBuilder();
         sb.append("substring\\(.+\\)");
+        sb.append("|tolower\\(.+\\)");
+        sb.append("|toupper\\(.+\\)");
         sb.append("|.+?");
         return sb.toString();
     }

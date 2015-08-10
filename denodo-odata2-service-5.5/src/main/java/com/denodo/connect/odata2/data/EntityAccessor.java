@@ -313,6 +313,8 @@ public class EntityAccessor {
         filterExpressionAdapted = getSubstringOption(filterExpressionAdapted);
         filterExpressionAdapted = getTolowerOption(filterExpressionAdapted);
         filterExpressionAdapted = getToupperOption(filterExpressionAdapted);
+        filterExpressionAdapted = getTrimOption(filterExpressionAdapted);
+        filterExpressionAdapted = getConcatOption(filterExpressionAdapted);
         return getIndexOfOption(filterExpressionAdapted);
     }
     
@@ -565,6 +567,61 @@ public class EntityAccessor {
         }
         return filterExpression;
     }
+    
+    private static String getTrimOption(final String filterExpression) {
+        if (filterExpression != null) {
+            final Pattern pattern = Pattern.compile("trim(\\(.+?\\))");
+            
+
+            final Matcher matcher = pattern.matcher(filterExpression);
+            if (!matcher.find()) {
+                return filterExpression;
+            }
+
+            StringBuilder newFilterExpression = new StringBuilder();
+            matcher.reset();
+            int index = 0;
+            while (matcher.find()) {
+                newFilterExpression.append(filterExpression.substring(index, matcher.start()));
+                
+                newFilterExpression.append("TRIM").append(matcher.group(1));
+                
+                index = matcher.end();
+            }
+            
+            newFilterExpression.append(filterExpression.substring(index, filterExpression.length()));
+
+            return newFilterExpression.toString();
+        }
+        return filterExpression;
+    }
+    
+    private static String getConcatOption(final String filterExpression) {
+        if (filterExpression != null) {
+            final Pattern pattern = Pattern.compile("concat(\\((.+?),(" + getStringParameterPattern() + ")\\))");
+
+            final Matcher matcher = pattern.matcher(filterExpression);
+            if (!matcher.find()) {
+                return filterExpression;
+            }
+
+            StringBuilder newFilterExpression = new StringBuilder();
+            matcher.reset();
+            int index = 0;
+            while (matcher.find()) {
+                newFilterExpression.append(filterExpression.substring(index, matcher.start()));
+                
+                newFilterExpression.append("CONCAT").append(matcher.group(1));
+                
+                index = matcher.end();
+            }
+
+            newFilterExpression.append(filterExpression.substring(index, filterExpression.length()));
+            
+            return newFilterExpression.toString();
+        }
+        return filterExpression;
+    }
 
     private static String getCondition(final String condition) {
 
@@ -739,6 +796,8 @@ public class EntityAccessor {
         sb.append("substring\\(.+\\)");
         sb.append("|tolower\\(.+\\)");
         sb.append("|toupper\\(.+\\)");
+        sb.append("|trim\\(.+\\)");
+        sb.append("|concat\\(.+\\)");
         sb.append("|.+?");
         return sb.toString();
     }

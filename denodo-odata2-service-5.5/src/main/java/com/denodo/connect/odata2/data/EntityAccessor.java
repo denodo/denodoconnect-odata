@@ -315,6 +315,7 @@ public class EntityAccessor {
         filterExpressionAdapted = getToupperOption(filterExpressionAdapted);
         filterExpressionAdapted = getTrimOption(filterExpressionAdapted);
         filterExpressionAdapted = getConcatOption(filterExpressionAdapted);
+        filterExpressionAdapted = getDateOption(filterExpressionAdapted);
         return getIndexOfOption(filterExpressionAdapted);
     }
     
@@ -623,6 +624,35 @@ public class EntityAccessor {
         return filterExpression;
     }
 
+    private static String getDateOption(final String filterExpression) {
+        // Filter by year/day/month does not work for DateTimeOffset
+        if (filterExpression != null) {
+            final Pattern pattern = Pattern.compile("(day|hour|minute|month|second|year)\\((.+?)\\)");
+            
+
+            final Matcher matcher = pattern.matcher(filterExpression);
+            if (!matcher.find()) {
+                return filterExpression;
+            }
+
+            StringBuilder newFilterExpression = new StringBuilder();
+            matcher.reset();
+            int index = 0;
+            while (matcher.find()) {
+                newFilterExpression.append(filterExpression.substring(index, matcher.start()));
+                
+                newFilterExpression.append("EXTRACT(").append(matcher.group(1)).append(" FROM ").append(matcher.group(2)).append(")");
+                
+                index = matcher.end();
+            }
+            
+            newFilterExpression.append(filterExpression.substring(index, filterExpression.length()));
+
+            return newFilterExpression.toString();
+        }
+        return filterExpression;
+    }
+    
     private static String getCondition(final String condition) {
 
         final String falseCondition = "eq false";

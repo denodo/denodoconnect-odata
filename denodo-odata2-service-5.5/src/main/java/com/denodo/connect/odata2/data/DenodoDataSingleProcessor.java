@@ -150,7 +150,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 data =  this.entityAccessor.getEntitySet(entitySetTarget.getEntityType(), orderByExpressionString, topPagination, skipPagination, filterExpressionString,
                             selectedItemsAsString);
                 if(inlineCount!=null && inlineCount.equals(InlineCount.ALLPAGES)){
-                    count=this.entityAccessor.getCountEntitySet(entitySetStart.getName(), null,filterExpressionString, null, entitySetTarget.getName());
+                    count=this.entityAccessor.getCountEntitySet(entitySetStart, null,filterExpressionString, null);
                  }
                
 
@@ -163,7 +163,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                             navigationSegments, entitySetTarget.getEntityType(), orderByExpressionString, topPagination, skipPagination, filterExpressionString,
                             selectedItemsAsString);
                 if(inlineCount!=null && inlineCount.equals(InlineCount.ALLPAGES)){
-                    count=this.entityAccessor.getCountEntitySet(entitySetStart.getName(), keys,filterExpressionString, navigationSegments, entitySetTarget.getName());
+                    count=this.entityAccessor.getCountEntitySet(entitySetStart, keys,filterExpressionString, navigationSegments);
                  }
             }
             if (data != null ) {
@@ -513,7 +513,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         if (uriInfo.getNavigationSegments().size() == 0) {
             entitySet = uriInfo.getStartEntitySet();
             try {
-                final Integer count = this.entityAccessor.getCountEntitySet(entitySet.getName(), uriInfo);
+                final Integer count = this.entityAccessor.getCountEntitySet(entitySet, uriInfo);
                 if (count != null ) {
                     return EntityProvider.writeText(count.toString());
                 }
@@ -534,10 +534,9 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
             final List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
 
-            final EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
             final EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
 
-            final Integer count = this.entityAccessor.getCountEntitySet(entitySetStart.getName(), keys, null, navigationSegments, entitySetTarget.getName());
+            final Integer count = this.entityAccessor.getCountEntitySet(entitySetStart, keys, null, navigationSegments);
             if (count != null ) {
                 return EntityProvider.writeText(count.toString());
             }

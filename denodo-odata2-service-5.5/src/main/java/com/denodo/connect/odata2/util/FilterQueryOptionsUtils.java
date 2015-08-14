@@ -30,7 +30,7 @@ public final class FilterQueryOptionsUtils {
     private static String getSubstringofOption(final String filterExpression) {
         
         if (filterExpression != null) {
-            final Pattern pattern = Pattern.compile("substringof\\(("+ getStringParameterPattern() +"),(.+?)\\) (eq true|eq false)?");
+            final Pattern pattern = Pattern.compile("substringof\\(("+ getStringParameterPattern() +"),(.+?)\\)(?!\\.)\\s*(eq true|eq false)?");
 
             final Matcher matcher = pattern.matcher(filterExpression);
             if (!matcher.find()) {
@@ -48,7 +48,9 @@ public final class FilterQueryOptionsUtils {
                 final String condition = matcher.group(3);
                 
                 // We use CONCAT because "substring" can be a function that returns a string
+                newFilterExpression.append("(CASE WHEN ");
                 newFilterExpression.append(propertyName).append(getCondition(condition)).append("CONCAT('%',").append(substring).append(",'%')");
+                newFilterExpression.append("THEN true ELSE false END) ");
                 
                 index = matcher.end();
             }
@@ -80,7 +82,9 @@ public final class FilterQueryOptionsUtils {
                 final String condition = matcher.group(3);
                 
                 // We use CONCAT because "substring" can be a function that returns a string
+                newFilterExpression.append("(CASE WHEN ");
                 newFilterExpression.append(columnName).append(getCondition(condition)).append("CONCAT(").append(substring).append(",'%')");
+                newFilterExpression.append("THEN true ELSE false END) ");
                 
                 index = matcher.end();
             }
@@ -112,7 +116,9 @@ public final class FilterQueryOptionsUtils {
                 final String condition = matcher.group(3);
 
                 // We use CONCAT because "substring" can be a function that returns a string
+                newFilterExpression.append("(CASE WHEN ");
                 newFilterExpression.append(columnName).append(getCondition(condition)).append("CONCAT('%',").append(substring).append(")");
+                newFilterExpression.append("THEN true ELSE false END) ");
                 
                 index = matcher.end();
             }

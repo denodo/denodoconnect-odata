@@ -40,6 +40,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.SecurityContext;
 
+import com.denodo.connect.odata2.datasource.DenodoODataAuthDataSource;
+import com.denodo.connect.odata2.datasource.DenodoODataAuthenticationException;
+import com.denodo.connect.odata2.datasource.DenodoODataAuthorizationException;
+import com.denodo.connect.odata2.datasource.DenodoODataConnectException;
+import com.denodo.connect.odata2.datasource.DenodoODataResourceNotFoundException;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
@@ -47,12 +52,6 @@ import org.springframework.jdbc.CannotGetJdbcConnectionException;
 import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
-
-import com.denodo.connect.odata2.datasource.DenodoODataAuthDataSource;
-import com.denodo.connect.odata2.datasource.DenodoODataAuthenticationException;
-import com.denodo.connect.odata2.datasource.DenodoODataAuthorizationException;
-import com.denodo.connect.odata2.datasource.DenodoODataConnectException;
-import com.denodo.connect.odata2.datasource.DenodoODataResourceNotFoundException;
 
 
 public class DenodoODataFilter implements Filter {
@@ -180,9 +179,9 @@ public class DenodoODataFilter implements Filter {
              * The management of this exception is omitted to
              * allow Olingo to generate adequate json/xml response
              */
-            logger.error("Connection refused");
+            logger.error("Connection refused", e);
         } catch (final DenodoODataAuthenticationException e) {
-            logger.error("Invalid user/pass");
+            logger.debug("Invalid user/pass, prompting user to log in again");
             showLogin(response);
             return;
         } catch (final DenodoODataAuthorizationException e) {
@@ -190,13 +189,13 @@ public class DenodoODataFilter implements Filter {
              * The management of this exception is omitted to
              * allow Olingo to generate adequate json/xml response
              */
-              logger.error("Insufficient privileges");
+            logger.debug("Insufficient privileges for accessing the required resource");
         } catch (final DenodoODataResourceNotFoundException e) {
-            logger.error("Database not found");
+            logger.debug("Database " + dataBaseName + " not found, sending error back to user");
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
             return;
         } catch (final CannotGetJdbcConnectionException e) {
-            logger.error("Couldn't get the connection " + e + " for dataSource");
+            logger.error("Exception thrown trying to get a connection to the datasource", e);
             throw e;           
         } finally {
             if (dataSourceConnection != null) {

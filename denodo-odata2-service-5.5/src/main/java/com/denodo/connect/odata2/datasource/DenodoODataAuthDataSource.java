@@ -151,21 +151,23 @@ public class DenodoODataAuthDataSource implements SmartDataSource {
             return connection;
             
         } catch (final SQLException e) {
-            if (e.getMessage().contains(CONNECTION_REFUSED_ERROR)) { // Check connection refused
-                logger.error(e);
-                throw new DenodoODataConnectException(e);
-            }
-            if (e.getMessage().contains(AUTHENTICATION_ERROR)) { // Check invalid credentials
-                logger.error(e);
-                throw new DenodoODataAuthenticationException(e);
-            }
-            if (e.getMessage().contains(AUTHORIZATION_ERROR)) { // Check insufficient privileges
-                logger.error(e);
-                throw new DenodoODataAuthorizationException(e);
-            }
-            if (e.getMessage().matches(DATABASE_NOT_FOUND_ERROR)) { // Check data base name exists
-                logger.error(e);
-                throw new DenodoODataResourceNotFoundException(e);
+            if (e.getMessage() != null) {
+                if (e.getMessage().contains(CONNECTION_REFUSED_ERROR)) { // Check connection refused
+                    logger.error(e);
+                    throw new DenodoODataConnectException(e);
+                }
+                if (e.getMessage().contains(AUTHENTICATION_ERROR)) { // Check invalid credentials
+                    logger.error(e);
+                    throw new DenodoODataAuthenticationException(e);
+                }
+                if (e.getMessage().contains(AUTHORIZATION_ERROR)) { // Check insufficient privileges
+                    logger.error(e);
+                    throw new DenodoODataAuthorizationException(e);
+                }
+                if (e.getMessage().matches(DATABASE_NOT_FOUND_ERROR)) { // Check data base name exists
+                    logger.error(e);
+                    throw new DenodoODataResourceNotFoundException(e);
+                }
             }
             logger.error(e);
             throw e;

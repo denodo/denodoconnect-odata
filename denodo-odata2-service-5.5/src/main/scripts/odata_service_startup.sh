@@ -8,7 +8,7 @@
 # -----------------------------------
 DENODO_HOME="/opt/denodo"
 
-DENODO_JRE_HOME="/opt/denodo/jre"
+DENODO_JRE_HOME="$DENODO_HOME/jre"
 DENODO_JAVA_HOME="$DENODO_JAVA_HOME"
 
 if [ "$DENODO_JAVA_HOME" != "" ]
@@ -37,7 +37,7 @@ then
     fi
 fi
 
-DENODO_LAUNCHER_CLASSPATH="/opt/denodo/lib/denodo-launcher-util.jar"
+DENODO_LAUNCHER_CLASSPATH="$DENODO_HOME/lib/denodo-launcher-util.jar"
 if [ "$DENODO_EXTERNAL_CLASSPATH" != "" ]
 then
     DENODO_LAUNCHER_CLASSPATH=$DENODO_LAUNCHER_CLASSPATH:$DENODO_EXTERNAL_CLASSPATH
@@ -45,7 +45,7 @@ fi
 
 if [ "$DENODO_CONF" == "" ]
 then
-    DENODO_CONF="/opt/denodo/conf/launcher"
+    DENODO_CONF="$DENODO_HOME/conf/launcher"
 fi
 
 

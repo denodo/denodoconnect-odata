@@ -2,6 +2,17 @@ CURRENT
 --------
 - Fixed #23087 - Combining an OData function at $filter with $inlinecount results in exception.
 - Added #23080 - Add the string functions endswith and lenght.
+- Fixed #23078 - Error handling queries involving case-sensitive elements.
+- Added #23081 - Add the string functions substring(string p0, int pos) and string substring(string p0, int pos, int length).
+- Added #23082 - Add string functions tolower(string p0) and toupper(string p0).
+- Added #23084 - Add String functions trim(string p0) and concat(string p0, string p1).
+- Added #23085 - Add Date Functions (hour, minute, second).
+- Added #23086 - Add Math Functions.
+- Fixed #23110 - Complex properties in string functions using logical negation.
+- Fixed #23116 - Error handling several string functions in the filter section.
+- Fixed #23145 - Error using logical negation.
+- Fixed #23149 - Allow functions as parameters to other functions.
+- Fixed #23191 - The string functions substringof, endswith and startswith must return boolean values.
 
 20150730.BETA1
 --------------

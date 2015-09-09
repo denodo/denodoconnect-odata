@@ -258,6 +258,14 @@
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
       <version>${version.slf4j}</version>
+      <exclusions>
+        <exclusion>
+          <!-- log4j should be provided by VDP or the (non-basic) VDP JDBC driver, so we should -->
+          <!-- exclude it here in order to avoid version clashes.                               -->
+          <groupId>log4j</groupId>
+          <artifactId>log4j</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>

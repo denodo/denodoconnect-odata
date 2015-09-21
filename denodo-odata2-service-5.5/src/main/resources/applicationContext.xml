@@ -51,6 +51,10 @@
   <util:properties id="odataconfig">
     <prop key="serveraddress">${odataserver.address}</prop>
   </util:properties>
+  
+  <util:properties id="authconfig">
+    <prop key="allowadminuser">${enable.adminUser}</prop>
+  </util:properties>
 
 
   <!-- ******************************************************************* -->

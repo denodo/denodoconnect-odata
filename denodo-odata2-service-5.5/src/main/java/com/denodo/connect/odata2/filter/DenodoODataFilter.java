@@ -40,11 +40,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.SecurityContext;
 
-import com.denodo.connect.odata2.datasource.DenodoODataAuthDataSource;
-import com.denodo.connect.odata2.datasource.DenodoODataAuthenticationException;
-import com.denodo.connect.odata2.datasource.DenodoODataAuthorizationException;
-import com.denodo.connect.odata2.datasource.DenodoODataConnectException;
-import com.denodo.connect.odata2.datasource.DenodoODataResourceNotFoundException;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
@@ -52,6 +47,12 @@ import org.springframework.jdbc.CannotGetJdbcConnectionException;
 import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
+
+import com.denodo.connect.odata2.datasource.DenodoODataAuthDataSource;
+import com.denodo.connect.odata2.datasource.DenodoODataAuthenticationException;
+import com.denodo.connect.odata2.datasource.DenodoODataAuthorizationException;
+import com.denodo.connect.odata2.datasource.DenodoODataConnectException;
+import com.denodo.connect.odata2.datasource.DenodoODataResourceNotFoundException;
 
 
 public class DenodoODataFilter implements Filter {
@@ -74,7 +75,8 @@ public class DenodoODataFilter implements Filter {
     private ServletContext servletContext = null;
     private String serverAddress = null;
     private DenodoODataAuthDataSource authDataSource = null;
-
+    private boolean allowAdminUser;
+    
     public DenodoODataFilter() {
         super();
     }
@@ -111,6 +113,12 @@ public class DenodoODataFilter implements Filter {
                         this.serverAddress = this.serverAddress + "/";
                     }
 
+                    final Properties authconfig = (Properties) appCtx.getBean("authconfig");
+                    String allowAdminUserAsString = authconfig.getProperty("allowadminuser");
+                    if (allowAdminUserAsString == null || allowAdminUserAsString.trim().length() == 0) {
+                        throw new ServletException("Denodo OData service user not properly configured: check the 'enable.adminUser' property at the configuration file");
+                    }
+                    this.allowAdminUser = Boolean.parseBoolean(allowAdminUserAsString);
                 }
             }
         }
@@ -128,22 +136,34 @@ public class DenodoODataFilter implements Filter {
 
         this.ensureInitialized();
 
+        final String adminUser = "admin";
+        
         final HttpServletRequest request = (HttpServletRequest) req;
         final HttpServletResponse response = (HttpServletResponse) res;
 
         // Check request header contains BASIC AUTH segment
         final String authorizationHeader = request.getHeader(AUTH_KEYWORD);
         if (authorizationHeader == null || !StringUtils.startsWithIgnoreCase(authorizationHeader, BASIC_AUTH_KEYWORD)) {
-            logger.trace("HTTP request does not contain AUTH segment");
-            showLogin(response);
+            String reason = "HTTP request does not contain AUTH segment";
+            logger.trace(reason);
+            showLogin(response, reason);
             return;
         }
 
         // Retrieve credentials
         final String[] credentials = retrieveCredentials(authorizationHeader);
         if (credentials == null) {
-            logger.trace("Invalid credentials");
-            showLogin(response);
+            String reason = "Invalid credentials";
+            logger.trace(reason);
+            showLogin(response, reason);
+            return;
+        }
+        
+        // 
+        if (!this.allowAdminUser && adminUser.equals(credentials[0])) {
+            String reason = "Invalid user. The access to the service is not allowed with the 'admin' user.";
+            logger.trace(reason);
+            showLogin(response, reason);
             return;
         }
 
@@ -181,8 +201,9 @@ public class DenodoODataFilter implements Filter {
              */
             logger.error("Connection refused", e);
         } catch (final DenodoODataAuthenticationException e) {
-            logger.debug("Invalid user/pass, prompting user to log in again");
-            showLogin(response);
+            String reason = "Invalid user/pass, prompting user to log in again";
+            logger.debug(reason);
+            showLogin(response, reason);
             return;
         } catch (final DenodoODataAuthorizationException e) {
             /*
@@ -217,11 +238,11 @@ public class DenodoODataFilter implements Filter {
 
 
 
-    private static void showLogin(final HttpServletResponse response) throws IOException {
+    private static void showLogin(final HttpServletResponse response, final String msg) throws IOException {
         // Set AUTH challenge in request
         response.setHeader(AUTHORIZATION_CHALLENGE_ATTRIBUTE, AUTHORIZATION_CHALLENGE_BASIC);
         response.setCharacterEncoding(CHARACTER_ENCODING);
-        response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, msg);
     }
 
 

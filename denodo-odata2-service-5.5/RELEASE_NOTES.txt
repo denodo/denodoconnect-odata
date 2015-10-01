@@ -1,3 +1,7 @@
+Current
+-------
+- Added #23063 - Evaluate using JNDI configuration as a default instead of properties
+
 20150909
 --------
 - Fixed #23087 - Combining an OData function at $filter with $inlinecount results in exception.

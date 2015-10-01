@@ -21,25 +21,16 @@
  */
 package com.denodo.connect.odata2.exceptions;
 
-import org.apache.olingo.odata2.api.commons.HttpStatusCodes;
-import org.apache.olingo.odata2.api.exception.MessageReference;
-import org.apache.olingo.odata2.api.exception.ODataHttpException;
+import java.util.Locale;
 
-public class ODataUnauthorizedException extends ODataHttpException {
+import org.apache.olingo.odata2.api.commons.HttpStatusCodes;
+import org.apache.olingo.odata2.api.exception.ODataApplicationException;
+
+public class ODataUnauthorizedException extends ODataApplicationException {
 
     private static final long serialVersionUID = 1L;
-
-    // We use the COMMON message reference from the parent class in order to not having to mess with the Olingo
-    // resource bundles
-    public static final MessageReference COMMON = createMessageReference(ODataHttpException.class, "COMMON");
-
-
-    public ODataUnauthorizedException(final MessageReference messageReference) {
-        super(messageReference, HttpStatusCodes.UNAUTHORIZED);
+    
+    public ODataUnauthorizedException(final Throwable cause) {
+        super(cause.getLocalizedMessage(), Locale.getDefault(), HttpStatusCodes.UNAUTHORIZED, cause);
     }
-
-    public ODataUnauthorizedException(final MessageReference messageReference, final Throwable cause) {
-        super(messageReference, cause, HttpStatusCodes.UNAUTHORIZED);
-    }
-
 }

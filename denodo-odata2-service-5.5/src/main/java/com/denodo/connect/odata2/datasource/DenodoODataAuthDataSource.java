@@ -23,22 +23,25 @@ package com.denodo.connect.odata2.datasource;
 
 import java.io.PrintWriter;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.sql.Statement;
 import java.util.Map;
 import java.util.Properties;
 
-import org.apache.log4j.Logger;
-import org.springframework.jdbc.datasource.SmartDataSource;
+import javax.sql.DataSource;
 
-public class DenodoODataAuthDataSource implements SmartDataSource {
+import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+
+public class DenodoODataAuthDataSource implements DataSource {
 
     private static final Logger logger = Logger.getLogger(DenodoODataAuthDataSource.class);
 
-    // TODO Dependences of VDP
-    public static final String DRIVER_CLASS_NAME_VALUE = "com.denodo.vdp.jdbc.Driver";
-    public static final String SUBPROTOCOL_VALUE = "vdb";
+    @Autowired
+    @Qualifier("vdpDataSource")
+    private DataSource dataSource;
 
     public final static String USER_NAME = "user";
     public final static String PASSWORD_NAME = "password";
@@ -50,43 +53,13 @@ public class DenodoODataAuthDataSource implements SmartDataSource {
     private static final String CONNECTION_REFUSED_ERROR = "Connection refused";
     private static final String DATABASE_NOT_FOUND_ERROR = ".*Database .* not found";
 
-
-    private String host;
-    private String port;
-
     private final ThreadLocal<Map<String,String>> parameters = new ThreadLocal<Map<String,String>>();
-    private ThreadLocal<Connection> threadConnection = new ThreadLocal<Connection>();
 
     private PrintWriter logWriter = new PrintWriter(System.out);
     private int loginTimeout = 0;
 
-    static{
-        try{
-            Class.forName(DRIVER_CLASS_NAME_VALUE);
-        } catch (final Exception e) {
-            logger.error("Cannot load driver " + DRIVER_CLASS_NAME_VALUE + " due to " + e);
-            throw new ExceptionInInitializerError(e);
-        }
-    }
-
     public DenodoODataAuthDataSource(){
         super();
-    }
-
-    public String getHost() {
-        return this.host;
-    }
-
-    public void setHost(final String host) {
-        this.host = host;
-    }
-
-    public String getPort() {
-        return this.port;
-    }
-
-    public void setPort(final String port) {
-        this.port = port;
     }
 
     public void setParameters(final Map<String,String> parameters){
@@ -114,7 +87,7 @@ public class DenodoODataAuthDataSource implements SmartDataSource {
     }
 
 
-    public java.util.logging.Logger getParentLogger() throws SQLFeatureNotSupportedException {
+    public static java.util.logging.Logger getParentLogger() throws SQLFeatureNotSupportedException {
         throw new SQLFeatureNotSupportedException("CommonDataSource#getParentLogger() not supported");
     }
 
@@ -134,19 +107,16 @@ public class DenodoODataAuthDataSource implements SmartDataSource {
 
         try {
 
-            // Fill connection properties with user/pass credential
-            final Properties connectionProps = new Properties();
-            if (this.parameters.get() != null) {
-                connectionProps.put("user", this.parameters.get().get(USER_NAME));
-                connectionProps.put("password", this.parameters.get().get(PASSWORD_NAME));
-            }
+            DenodoODataConnectionWrapper connection = new DenodoODataConnectionWrapper(this.dataSource.getConnection());
 
-            Connection connection = this.threadConnection.get();
-            if (connection == null || connection.isClosed()) {
-
-                connection = DriverManager.getConnection(this.buildConnectionUrl(), connectionProps);
-                this.threadConnection.set(connection);
-            }
+            // The CONNECT command allows indicating a user name, a password and a database to initiate a 
+            // new session in the server with a new profile. 
+            StringBuilder command = new StringBuilder("CONNECT USER ").append(this.parameters.get().get(USER_NAME))
+                    .append(" PASSWORD ").append("'").append(this.parameters.get().get(PASSWORD_NAME)).append("'")
+                    .append(" DATABASE ").append(this.parameters.get().get(DATA_BASE_NAME));
+                
+            Statement  stmt = connection.createStatement();
+            stmt.execute(command.toString());
             
             return connection;
             
@@ -178,27 +148,5 @@ public class DenodoODataAuthDataSource implements SmartDataSource {
     public Connection getConnection(final String username, final String password) throws SQLException {
         throw new UnsupportedOperationException("Not supported by AuthDataSource");
     }
-
-    private String buildConnectionUrl() {
-        return "jdbc:" + SUBPROTOCOL_VALUE + "://" + this.getHost() + ":" + this.getPort() + "/"
-                + this.parameters.get().get(DATA_BASE_NAME);
-    }
-
-    @Override
-    public String toString() {
-        return "AuthDataSource[" + ((this.parameters.get().isEmpty()) ? " " : this.buildConnectionUrl()) + "]";
-    }
-
-    @Override
-    public boolean shouldClose(Connection con) {
-        return false;
-    }
     
-    public void close() throws SQLException {
-        
-        Connection connection = this.threadConnection.get();
-        if (connection != null && !connection.isClosed()) {
-            connection.close();
-        }
-    }
 }

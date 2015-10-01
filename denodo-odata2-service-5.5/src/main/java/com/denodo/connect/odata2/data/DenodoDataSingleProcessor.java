@@ -204,7 +204,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         } catch (final DenodoODataConnectException e) {
             throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
         } catch (final DenodoODataAuthenticationException e) {
-            throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
+            throw new ODataUnauthorizedException(e);
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
         } catch (final SQLException e) {
@@ -241,7 +241,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             } catch (final DenodoODataConnectException e) {
                 throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
             } catch (final DenodoODataAuthenticationException e) {
-                throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
+                throw new ODataUnauthorizedException(e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
             } catch (final SQLException e) {
@@ -264,7 +264,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             } catch (final DenodoODataConnectException e) {
                 throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
             } catch (final DenodoODataAuthenticationException e) {
-                throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
+                throw new ODataUnauthorizedException(e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
             } catch (final SQLException e) {
@@ -324,7 +324,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             } catch (final DenodoODataConnectException e) {
                 throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
             } catch (final DenodoODataAuthenticationException e) {
-                throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
+                throw new ODataUnauthorizedException(e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
             } catch (final SQLException e) {
@@ -355,7 +355,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             } catch (final DenodoODataConnectException e) {
                 throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
             } catch (final DenodoODataAuthenticationException e) {
-                throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
+                throw new ODataUnauthorizedException(e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
             } catch (final SQLException e) {
@@ -391,7 +391,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             } catch (final DenodoODataConnectException e) {
                 throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
             } catch (final DenodoODataAuthenticationException e) {
-                throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
+                throw new ODataUnauthorizedException(e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
             } catch (final SQLException e) {
@@ -422,7 +422,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             } catch (final DenodoODataConnectException e) {
                 throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
             } catch (final DenodoODataAuthenticationException e) {
-                throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
+                throw new ODataUnauthorizedException(e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
             } catch (final SQLException e) {
@@ -458,7 +458,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             } catch (final DenodoODataConnectException e) {
                 throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
             } catch (final DenodoODataAuthenticationException e) {
-                throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
+                throw new ODataUnauthorizedException(e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
             } catch (final SQLException e) {
@@ -487,7 +487,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             } catch (final DenodoODataConnectException e) {
                 throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
             } catch (final DenodoODataAuthenticationException e) {
-                throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
+                throw new ODataUnauthorizedException(e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
             } catch (final SQLException e) {
@@ -520,7 +520,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             } catch (final DenodoODataConnectException e) {
                 throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
             } catch (final DenodoODataAuthenticationException e) {
-                throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
+                throw new ODataUnauthorizedException(e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
             } catch (final SQLException e) {
@@ -587,7 +587,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         } catch (final DenodoODataConnectException e) {
             throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
         } catch (final DenodoODataAuthenticationException e) {
-            throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
+            throw new ODataUnauthorizedException(e);
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
         } catch (final SQLException e) {
@@ -629,7 +629,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         } catch (final DenodoODataConnectException e) {
             throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
         } catch (final DenodoODataAuthenticationException e) {
-            throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
+            throw new ODataUnauthorizedException(e);
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
         } catch (final SQLException e) {

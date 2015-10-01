@@ -146,7 +146,7 @@ public class DenodoEdmProvider extends EdmProvider {
         } catch (final DenodoODataConnectException e) {
             throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
         } catch (final DenodoODataAuthenticationException e) {
-            throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
+            throw new ODataUnauthorizedException(e);
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
         } catch (final DenodoODataResourceNotFoundException e) {
@@ -288,7 +288,7 @@ public class DenodoEdmProvider extends EdmProvider {
         } catch (final DenodoODataConnectException e) {
             throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
         } catch (final DenodoODataAuthenticationException e) {
-            throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
+            throw new ODataUnauthorizedException(e);
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
         } catch (final Exception e) {
@@ -311,7 +311,7 @@ public class DenodoEdmProvider extends EdmProvider {
         } catch (final DenodoODataConnectException e) {
             throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
         } catch (final DenodoODataAuthenticationException e) {
-            throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
+            throw new ODataUnauthorizedException(e);
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
         } catch (final Exception e) {
@@ -386,7 +386,7 @@ public class DenodoEdmProvider extends EdmProvider {
         } catch (final DenodoODataConnectException e) {
             throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
         } catch (final DenodoODataAuthenticationException e) {
-            throw new ODataUnauthorizedException(ODataUnauthorizedException.COMMON, e);
+            throw new ODataUnauthorizedException(e);
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
         } catch (final Exception e) {

@@ -92,9 +92,11 @@
   <!-- connections when they are not needed.                               -->
   <!-- ******************************************************************* -->
   <bean id="dataSource"
-        class="com.denodo.connect.odata2.datasource.DenodoODataAuthDataSource"
-        p:host="${vdp.host}" p:port="${vdp.port}" />
+        class="com.denodo.connect.odata2.datasource.DenodoODataAuthDataSource"/>
 
+  <bean id="vdpDataSource" class="org.springframework.jndi.JndiObjectFactoryBean">
+        <property name="jndiName" value="java:comp/env/jdbc/VDPdatabase"/>
+  </bean>
 
   <!-- ******************************************************************* -->
   <!-- SPRING JDBC TEMPLATE                                                -->

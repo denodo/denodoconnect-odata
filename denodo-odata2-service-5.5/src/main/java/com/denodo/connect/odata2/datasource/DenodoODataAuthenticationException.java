@@ -29,4 +29,8 @@ public class DenodoODataAuthenticationException extends RuntimeException {
         super(cause);
     }
 
+    @Override
+    public String getMessage() {
+        return "The username or password is incorrect";
+    }
 }

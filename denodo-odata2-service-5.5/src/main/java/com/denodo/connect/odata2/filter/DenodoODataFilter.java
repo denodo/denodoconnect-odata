@@ -159,7 +159,7 @@ public class DenodoODataFilter implements Filter {
             return;
         }
         
-        // 
+        // Disable access to the service using 'admin' user if this option is established in the configuration
         if (!this.allowAdminUser && adminUser.equals(credentials[0])) {
             String reason = "Invalid user. The access to the service is not allowed with the 'admin' user.";
             logger.trace(reason);
@@ -185,49 +185,7 @@ public class DenodoODataFilter implements Filter {
         final DenodoODataRequestWrapper wrappedRequest = new DenodoODataRequestWrapper(request, dataBaseName);
         final DenodoODataResponseWrapper wrappedResponse = new DenodoODataResponseWrapper(response, request, dataBaseName);
 
-        Connection dataSourceConnection = null;
-
-        try {
-            dataSourceConnection = DataSourceUtils.getConnection(this.authDataSource);
-            
-            chain.doFilter(wrappedRequest, wrappedResponse);
-
-            logger.trace("AuthenticationFilter.doFilter(...) finishes");
-            
-        } catch (final DenodoODataConnectException e) {
-            /*
-             * The management of this exception is omitted to
-             * allow Olingo to generate adequate json/xml response
-             */
-            logger.error("Connection refused", e);
-        } catch (final DenodoODataAuthenticationException e) {
-            String reason = "Invalid user/pass, prompting user to log in again";
-            logger.debug(reason);
-            showLogin(response, reason);
-            return;
-        } catch (final DenodoODataAuthorizationException e) {
-            /*
-             * The management of this exception is omitted to
-             * allow Olingo to generate adequate json/xml response
-             */
-            logger.debug("Insufficient privileges for accessing the required resource");
-        } catch (final DenodoODataResourceNotFoundException e) {
-            logger.debug("Database " + dataBaseName + " not found, sending error back to user");
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
-            return;
-        } catch (final CannotGetJdbcConnectionException e) {
-            logger.error("Exception thrown trying to get a connection to the datasource", e);
-            throw e;           
-        } finally {
-            if (dataSourceConnection != null) {
-                DataSourceUtils.releaseConnection(dataSourceConnection, this.authDataSource);
-                try {
-                    this.authDataSource.close();
-                } catch (SQLException e) {
-                    logger.error("Error releasing resources ", e);
-                }
-            }
-        }
+        chain.doFilter(wrappedRequest, wrappedResponse);
 
     }
 

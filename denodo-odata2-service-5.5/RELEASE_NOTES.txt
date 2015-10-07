@@ -1,5 +1,5 @@
-Current
--------
+20151007
+--------
 - Added #23062 - Allow disabling admin access from configuration
 - Added #23063 - Evaluate using JNDI configuration as a default instead of properties
 

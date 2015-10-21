@@ -1,3 +1,7 @@
+20151021
+=======
+Added RELEASE_NOTES in the distribution
+
 20150325
 ========
 -Improved logging

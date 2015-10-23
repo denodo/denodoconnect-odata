@@ -89,6 +89,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
     private final static String INPUT_PARAMETER_PROXY_USER = "Proxy User";
     private final static String INPUT_PARAMETER_PROXY_PASSWORD = "Proxy Password";
     private final static String INPUT_PARAMETER_NTLM_DOMAIN = "NTLM Domain";
+    private final static String INPUT_PARAMETER_TIMEOUT = "Timeout";
 
     public final static String PAGINATION_FETCH = "fetch_size";
     public final static String PAGINATION_OFFSET = "offset_size";
@@ -100,6 +101,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
     public final static String NTLM_USER = "ntlm.user";
     public final static String NTLM_PASS = "ntlm.pass";
     public final static String NTLM_DOMAIN = "ntlm.domain";
+    public final static String TIMEOUT= "http.timeout";
 
     private static final Logger logger = Logger.getLogger(ODataWrapper.class);
 
@@ -142,7 +144,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
             new CustomWrapperInputParameter(INPUT_PARAMETER_PROXY_PASSWORD, "Proxy Password", false,
                     CustomWrapperInputParameterTypeFactory.passwordType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_NTLM_DOMAIN, "Domain used for NTLM authentication", false,
-                    CustomWrapperInputParameterTypeFactory.stringType())
+                    CustomWrapperInputParameterTypeFactory.stringType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_TIMEOUT, "Timeout for the service(milliseconds)", false,
+                    CustomWrapperInputParameterTypeFactory.integerType())
     };
 
     @Override
@@ -654,6 +658,10 @@ public class ODataWrapper extends AbstractCustomWrapper {
             props.remove(HTTP_PROXY_HOST);
             props.remove(HTTP_PROXY_PORT);
         }
+        if (getInputParameterValue(INPUT_PARAMETER_TIMEOUT) != null) {
+            props.setProperty(TIMEOUT, getInputParameterValue(INPUT_PARAMETER_TIMEOUT).getValue().toString());
+        }
+        
         System.setProperties(props);
         if (getInputParameterValue(INPUT_PARAMETER_VERSION) != null) {
             if (getInputParameterValue(INPUT_PARAMETER_VERSION).getValue().equals(INPUT_PARAMETER_VERSION_2)) {

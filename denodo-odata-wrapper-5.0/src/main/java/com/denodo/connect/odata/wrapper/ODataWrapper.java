@@ -355,15 +355,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 }
                 request.properties(prop);
             } else {
-                final Map<String, Object> values = new HashMap<String, Object>();
-                logger.info("The field " + field.getName() + " has subfields");
-                for (final CustomWrapperFieldExpression subfield : field.getSubFields()) {
-                    values.put(subfield.getName(), subfield.getStringRepresentation());
-                    logger.info("subfield: " + subfield.getStringRepresentation());
-                }
-
-                final OEntityKey entity = OEntityKey.create(values);
-                request.properties(entity.asComplexProperties());
+                logger.error("Insertion of complex types is not supported ");
+                throw new CustomWrapperException("Insertion of complex types is not supported");
             }
         }
         final OEntity returnInfo = request.execute();
@@ -428,15 +421,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
                         request.properties(prop);
                     } else {
-                        final Map<String, Object> values = new HashMap<String, Object>();
-                        logger.info("The field " + field.getName() + " has subfields");
-                        for (final CustomWrapperFieldExpression subfield : field.getSubFields()) {
-                            values.put(subfield.getName(), subfield.getStringRepresentation());
-                            logger.info("subfield: " + subfield.getStringRepresentation());
-                        }
-
-                        final OEntityKey entity = OEntityKey.create(values);
-                        request.properties(entity.asComplexProperties());
+                        
+                        logger.error("Update of complex types is not supported ");
+                        throw new CustomWrapperException("Update of complex types is not supported");
                     }
                 }
                 request.execute();

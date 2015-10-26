@@ -1,7 +1,8 @@
-20151022
+20151026
 =======
 Add timeout to HttpClient in OdataCxfClient
 Added RELEASE_NOTES in the distribution
+Thrown an exception explaining that the operation (insertion/update of complex fields) is not supported.
 
 20150325
 ========

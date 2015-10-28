@@ -254,13 +254,13 @@
     <dependency>
       <groupId>org.odata4j</groupId>
       <artifactId>odata4j-core</artifactId>
-      <version>0.8.0-denodo-20150408</version>
+      <version>0.8.0-denodo-20151022</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.odata4j</groupId>
       <artifactId>odata4j-cxf</artifactId>
-      <version>0.8.0-denodo-20150408</version>
+      <version>0.8.0-denodo-20151022</version>
     </dependency>
 
   </dependencies>

@@ -1,3 +1,7 @@
+Current
+-------
+- Fixed #24041 - Lack of Spring version synchronization
+
 20151007
 --------
 - Added #23062 - Allow disabling admin access from configuration

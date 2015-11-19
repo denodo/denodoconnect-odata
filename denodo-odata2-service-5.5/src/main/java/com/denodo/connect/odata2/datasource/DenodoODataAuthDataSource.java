@@ -46,6 +46,7 @@ public class DenodoODataAuthDataSource implements DataSource {
     public final static String USER_NAME = "user";
     public final static String PASSWORD_NAME = "password";
     public final static String DATA_BASE_NAME = "databaseName";
+    public final static String DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION = "developmentModeDangerousBypassAuthentication";
 
     // ERRORS
     private static final String AUTHENTICATION_ERROR = "The username or password is incorrect";
@@ -109,12 +110,32 @@ public class DenodoODataAuthDataSource implements DataSource {
 
             DenodoODataConnectionWrapper connection = new DenodoODataConnectionWrapper(this.dataSource.getConnection());
 
+            StringBuilder command;
+            
             // The CONNECT command allows indicating a user name, a password and a database to initiate a 
-            // new session in the server with a new profile. 
-            StringBuilder command = new StringBuilder("CONNECT USER ").append(this.parameters.get().get(USER_NAME))
+            // new session in the server with a new profile.
+            
+            if (Boolean.valueOf(this.parameters.get().get(DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION)).booleanValue()) {
+                /*
+                 * ONLY FOR DEVELOPMENT
+                 * 
+                 * DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION 
+                 * ONLY should be true in development mode, 
+                 * NEVER IN PRODUCTION ENVIRONMENTS. It is useful in order 
+                 * to use the service with components that do not allow 
+                 * authentication and in this situation the web.xml file
+                 * must be modified to add the property and then
+                 * the service will use the credentials included in the 
+                 * data source configuration (JNDI resource).
+                 */
+                command = new StringBuilder("CONNECT ")
+                        .append(" DATABASE ").append(this.parameters.get().get(DATA_BASE_NAME));
+            } else {
+                command = new StringBuilder("CONNECT USER ").append(this.parameters.get().get(USER_NAME))
                     .append(" PASSWORD ").append("'").append(this.parameters.get().get(PASSWORD_NAME)).append("'")
                     .append(" DATABASE ").append(this.parameters.get().get(DATA_BASE_NAME));
-                
+            }
+            
             Statement  stmt = connection.createStatement();
             stmt.execute(command.toString());
             

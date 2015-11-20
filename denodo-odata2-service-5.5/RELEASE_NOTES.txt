@@ -1,5 +1,5 @@
-Current
--------
+20151120
+--------
 - Fixed #24041 - Lack of Spring version synchronization
 - Added #24326 - Disable authentication for development environments
 

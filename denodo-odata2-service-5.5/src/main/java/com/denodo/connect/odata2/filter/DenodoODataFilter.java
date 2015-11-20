@@ -69,16 +69,6 @@ public class DenodoODataFilter implements Filter {
     private DenodoODataAuthDataSource authDataSource = null;
     private boolean allowAdminUser;
     
-    /*
-     * Property that ONLY should be true in development mode, 
-     * NEVER IN PRODUCTION ENVIRONMENTS. It is useful in order 
-     * to use the service with components that do not allow 
-     * authentication and in this situation the web.xml file
-     * must be modified to add the property and then
-     * the service will use the credentials included in the 
-     * data source configuration (JNDI resource).
-     */
-    private String developmentModeDangerousBypassAuthentication;
     
     public DenodoODataFilter() {
         super();
@@ -89,7 +79,6 @@ public class DenodoODataFilter implements Filter {
     @Override
     public void init(final FilterConfig filterConfig) throws ServletException {
         this.servletContext = filterConfig.getServletContext();
-        this.developmentModeDangerousBypassAuthentication = this.servletContext.getInitParameter("developmentModeDangerousBypassAuthentication");
     }
 
 
@@ -148,7 +137,18 @@ public class DenodoODataFilter implements Filter {
         String login = null;
         String password = null;
         
-        if (!Boolean.valueOf(this.developmentModeDangerousBypassAuthentication).booleanValue()) {
+        /*
+         * Property that ONLY should be true in development mode, 
+         * NEVER IN PRODUCTION ENVIRONMENTS. It is useful in order 
+         * to use the service with components that do not allow 
+         * authentication and in this situation the web.xml file
+         * must be modified to add the property and then
+         * the service will use the credentials included in the 
+         * data source configuration (JNDI resource).
+         */
+        final String developmentModeDangerousBypassAuthentication = this.servletContext.getInitParameter("developmentModeDangerousBypassAuthentication");
+        
+        if (!Boolean.valueOf(developmentModeDangerousBypassAuthentication).booleanValue()) {
             // Check request header contains BASIC AUTH segment
             final String authorizationHeader = request.getHeader(AUTH_KEYWORD);
             if (authorizationHeader == null || !StringUtils.startsWithIgnoreCase(authorizationHeader, BASIC_AUTH_KEYWORD)) {
@@ -191,7 +191,7 @@ public class DenodoODataFilter implements Filter {
 
         
         // Set connection parameters
-        this.authDataSource.setParameters(fillParametersMap(userAuthInfo));
+        this.authDataSource.setParameters(fillParametersMap(userAuthInfo, developmentModeDangerousBypassAuthentication));
 
         logger.trace("Acquired data source: " + this.authDataSource);
 
@@ -251,7 +251,8 @@ public class DenodoODataFilter implements Filter {
      * @param userAuthenticationInfo required user/pass to access a data base.
      * @return
      */
-    private Map<String,String> fillParametersMap(final UserAuthenticationInfo userAuthenticationInfo){
+    private static Map<String,String> fillParametersMap(final UserAuthenticationInfo userAuthenticationInfo,
+            final String developmentModeDangerousBypassAuthentication){
         final Map<String,String> parameters = new HashMap<String,String>();
         parameters.put(DenodoODataAuthDataSource.DATA_BASE_NAME, userAuthenticationInfo.getDatabaseName());
         parameters.put(DenodoODataAuthDataSource.USER_NAME, userAuthenticationInfo.getLogin());
@@ -266,7 +267,7 @@ public class DenodoODataFilter implements Filter {
          * the service will use the credentials included in the 
          * data source configuration (JNDI resource).
          */
-        parameters.put(DenodoODataAuthDataSource.DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION, this.developmentModeDangerousBypassAuthentication);
+        parameters.put(DenodoODataAuthDataSource.DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION, developmentModeDangerousBypassAuthentication);
 
         return parameters;
     }

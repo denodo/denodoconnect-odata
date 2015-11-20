@@ -73,6 +73,11 @@
     <param-value>classpath:applicationContext.xml</param-value>
   </context-param>
 
+  <!-- <context-param>
+    <param-name>developmentModeDangerousBypassAuthentication</param-name>
+    <param-value>true</param-value>
+  </context-param>  --> 
+
 
   <!-- ******************* -->
   <!-- Listeners           -->

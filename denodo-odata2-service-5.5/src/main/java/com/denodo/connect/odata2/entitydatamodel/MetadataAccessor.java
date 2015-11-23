@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.edm.EdmMultiplicity;
 import org.apache.olingo.odata2.api.edm.EdmSimpleTypeKind;
@@ -790,11 +791,22 @@ public class MetadataAccessor {
 
                     @Override
                     public String mapRow(final ResultSet rs, final int rowNum) throws SQLException {
+                        String registerName = rs.getString(1);
+                        if ("relation_link".equals(registerName)) {
+                            /*
+                             *  This is an internal type of VDP. It is necessary in VDP but
+                             *  it is  not useful data for the user
+                             */
+                            return StringUtils.EMPTY;
+                        }
                         return rs.getString(1);
                     }}
 
                 );
 
+        // Remove empty strings. They are unnecessary.
+        registerNames.removeAll(Collections.singleton(StringUtils.EMPTY));
+        
         /*
          * A second step should be to obtain the list of names of all arrays and add them to the returned list.
          * OData 2.0 does not support Collections/Bags/Lists that will allow us to give support for arrays
@@ -814,15 +826,26 @@ public class MetadataAccessor {
     public List<Property> getComplexType(final FullQualifiedName edmFQName) {
 
         final String descComplexTypeQuery = String.format(COMPLEX_TYPE_DESC_QUERY_FORMAT, edmFQName.getName());
+        
 
         final List<Property> complexTypes =
                 this.denodoTemplate.query(descComplexTypeQuery, new RowMapper<Property>() {
                     @Override
                     public Property mapRow(final ResultSet rs, final int rowNum) throws SQLException {
-                        final EdmSimpleTypeKind type = SQLMetadataUtils.sqlTypeToODataType(rs.getInt("TYPECODE"));
-
+                        int typeCode = rs.getInt("TYPECODE");
+                        
+                        /*
+                         *  We establish string type as default value.
+                         */
+                        EdmSimpleTypeKind type = EdmSimpleTypeKind.String;
+                        
                         Property property;
-
+                        
+                        if (typeCode != 0) {
+                            // When typeCode is zero it means that we do not have information about the type
+                            type = SQLMetadataUtils.sqlTypeToODataType(typeCode);
+                        }  
+                        
                         if (type == null) {
                             property = new ComplexProperty();
                             ((ComplexProperty) property).setType(new FullQualifiedName(edmFQName.getNamespace(), rs.getString("TYPE")));
@@ -830,6 +853,7 @@ public class MetadataAccessor {
                             property = new SimpleProperty();
                             ((SimpleProperty) property).setType(type);
                         }
+                        
 
                         property.setName(rs.getString("FIELD"));
 
@@ -838,6 +862,7 @@ public class MetadataAccessor {
                 );
         return complexTypes;
     }
+    
 
 }
 

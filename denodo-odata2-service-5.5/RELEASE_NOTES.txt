@@ -1,3 +1,7 @@
+Current
+-------
+- Fixed #24372 - Delete internal VDP type ("relation_link") and avoid Edm.Null types
+
 20151120
 --------
 - Fixed #24041 - Lack of Spring version synchronization

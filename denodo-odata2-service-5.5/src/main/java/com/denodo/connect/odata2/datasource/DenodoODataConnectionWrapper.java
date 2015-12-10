@@ -10,6 +10,7 @@ import java.sql.NClob;
 import java.sql.PreparedStatement;
 import java.sql.SQLClientInfoException;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
 import java.sql.SQLXML;
 import java.sql.Savepoint;
@@ -17,6 +18,7 @@ import java.sql.Statement;
 import java.sql.Struct;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.Executor;
 
 /**
  * 
@@ -285,4 +287,23 @@ public class DenodoODataConnectionWrapper implements Connection {
         this.connection.setTypeMap(map);
     }
 
+    public int getNetworkTimeout() throws SQLException {
+        throw new SQLFeatureNotSupportedException("Connection#getNetworkTimeout() not supported");
+    }
+    
+    public void setNetworkTimeout(Executor executor, int milliseconds) throws SQLException {
+        throw new SQLFeatureNotSupportedException("Connection#setNetworkTimeout() not supported");
+    }
+    
+    public void abort(Executor executor) throws SQLException {
+        throw new SQLFeatureNotSupportedException("Connection#abort() not supported");
+    }
+    
+    public String getSchema() throws SQLException {
+        throw new SQLFeatureNotSupportedException("Connection#getSchema() not supported");
+    }
+    
+    public void setSchema(String schema) throws SQLException {
+        throw new SQLFeatureNotSupportedException("Connection#setSchema() not supported");
+    }
 }

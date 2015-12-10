@@ -27,7 +27,6 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Statement;
 import java.util.Map;
-import java.util.Properties;
 
 import javax.sql.DataSource;
 
@@ -87,8 +86,7 @@ public class DenodoODataAuthDataSource implements DataSource {
         return this.loginTimeout;
     }
 
-
-    public static java.util.logging.Logger getParentLogger() throws SQLFeatureNotSupportedException {
+    public java.util.logging.Logger getParentLogger() throws SQLFeatureNotSupportedException {
         throw new SQLFeatureNotSupportedException("CommonDataSource#getParentLogger() not supported");
     }
 

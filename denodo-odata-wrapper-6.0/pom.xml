@@ -27,7 +27,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.denodo.connect.odata</groupId>
   <artifactId>denodo-odata-wrapper-6.0</artifactId>
-  <version>20160120</version>
+  <version>20160121</version>
   <packaging>jar</packaging>
   <name>denodo-odata-wrapper-6.0</name>
 
@@ -82,8 +82,8 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>2.3.2</version>
         <configuration>
-          <source>1.6</source>
-          <target>1.6</target>
+          <source>1.7</source>
+          <target>1.7</target>
           <encoding>US-ASCII</encoding>
         </configuration>
       </plugin>

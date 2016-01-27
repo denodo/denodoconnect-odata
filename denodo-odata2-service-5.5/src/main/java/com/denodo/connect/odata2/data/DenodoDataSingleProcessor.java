@@ -24,11 +24,15 @@ package com.denodo.connect.odata2.data;
 import java.net.URI;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
+import org.apache.olingo.odata2.api.ODataCallback;
 import org.apache.olingo.odata2.api.commons.InlineCount;
 import org.apache.olingo.odata2.api.edm.EdmEntitySet;
 import org.apache.olingo.odata2.api.edm.EdmException;
@@ -38,6 +42,7 @@ import org.apache.olingo.odata2.api.edm.EdmSimpleType;
 import org.apache.olingo.odata2.api.ep.EntityProvider;
 import org.apache.olingo.odata2.api.ep.EntityProviderWriteProperties;
 import org.apache.olingo.odata2.api.ep.EntityProviderWriteProperties.ODataEntityProviderPropertiesBuilder;
+import org.apache.olingo.odata2.api.exception.ODataApplicationException;
 import org.apache.olingo.odata2.api.exception.ODataException;
 import org.apache.olingo.odata2.api.exception.ODataForbiddenException;
 import org.apache.olingo.odata2.api.exception.ODataInternalServerErrorException;
@@ -52,6 +57,7 @@ import org.apache.olingo.odata2.api.processor.part.EntitySimplePropertyProcessor
 import org.apache.olingo.odata2.api.processor.part.EntitySimplePropertyValueProcessor;
 import org.apache.olingo.odata2.api.uri.ExpandSelectTreeNode;
 import org.apache.olingo.odata2.api.uri.KeyPredicate;
+import org.apache.olingo.odata2.api.uri.NavigationPropertySegment;
 import org.apache.olingo.odata2.api.uri.NavigationSegment;
 import org.apache.olingo.odata2.api.uri.SelectItem;
 import org.apache.olingo.odata2.api.uri.UriInfo;
@@ -74,6 +80,7 @@ import org.apache.olingo.odata2.api.uri.info.GetEntityUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetSimplePropertyUriInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.UncategorizedSQLException;
 import org.springframework.stereotype.Component;
 
 import com.denodo.connect.odata2.datasource.DenodoODataAuthenticationException;
@@ -151,9 +158,8 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                             selectedItemsAsString);
                 if(inlineCount!=null && inlineCount.equals(InlineCount.ALLPAGES)){
                     count=this.entityAccessor.getCountEntitySet(entitySetStart, null,filterExpressionString, null);
-                 }
-               
-
+                }
+                
             } else if (uriInfo.getNavigationSegments().size() == 1) {
                 // navigation first level
                 final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
@@ -164,17 +170,63 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                             selectedItemsAsString);
                 if(inlineCount!=null && inlineCount.equals(InlineCount.ALLPAGES)){
                     count=this.entityAccessor.getCountEntitySet(entitySetStart, keys,filterExpressionString, navigationSegments);
-                 }
+                }
+                
             }
+            
+
             if (data != null ) {
                 final URI serviceRoot = this.getContext().getPathInfo().getServiceRoot();
                 final ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
 
+                // Expand option
+                List<ArrayList<NavigationPropertySegment>> navigationPropertiesToExpand = uriInfo.getExpand();
+                Map<String, ODataCallback> callbacks = new HashMap<String, ODataCallback>();
+                
+                try {
+                    EdmEntitySet entitySetNavigate;
+                    Map<String, Map<Map<String,Object>,List<Map<String, Object>>>> expandData = new HashMap<String, Map<Map<String,Object>,List<Map<String,Object>>>>();
+                    List<Map<String, Object>> keysAsList = null;
+                    
+                    // Each element of the navigationPropertiesToExpand list is a navigation property but they are arrays
+                    // and if you have a multilevel expand each level is an element of the array
+                    for (ArrayList<NavigationPropertySegment> npsarray : navigationPropertiesToExpand) {
+                        entitySetNavigate = entitySetTarget;
+                        
+                        // We should use the keys that we know that are necessary. We expand the first element  
+                        keysAsList = null;
+                        
+                        // When npsarray.size() != 1 it means that we have a multilevel expand
+                        for (NavigationPropertySegment nvsegment : npsarray) {
+                            Map<Map<String,Object>, List<Map<String, Object>>> dataAsMap = this.entityAccessor.getEntitySetExpandData(entitySetNavigate.getEntityType(), 
+                                    nvsegment.getTargetEntitySet().getEntityType(), nvsegment.getNavigationProperty(), keysAsList, 
+                                    npsarray.size() == 1 ? filterExpressionString : null);
+                            StringBuilder sb = new StringBuilder(entitySetNavigate.getName()).append("-").append(nvsegment.getNavigationProperty().getName());
+                            expandData.put(sb.toString(), dataAsMap);
+                            
+                            // Use the keys of the previous expanded element in order to get a multilevel expand operation
+                            keysAsList = new ArrayList<Map<String, Object>>(dataAsMap.keySet());
+                            
+                            entitySetNavigate = nvsegment.getTargetEntitySet();
+                        }
+                    }
+                    
+                    for (ArrayList<NavigationPropertySegment> npsarray : navigationPropertiesToExpand) {
+                        callbacks.put(npsarray.get(0).getNavigationProperty().getName(), new WriterCallBack(serviceRoot, expandData));
+                    }
+                } catch (UncategorizedSQLException e) {
+                    // Exception that will throw VDP with versions before 6.0. These versions don't have support for EXPAND
+                    if (!(e.getCause() instanceof SQLException && e.getMessage().contains("Syntax error: Exception parsing query near '*'"))) {
+                        throw new ODataApplicationException(e.getLocalizedMessage(), Locale.getDefault(), e);
+                    }
+                }
+                
                 // Transform the list of selected properties into an
                 // expand/select tree
                 final ExpandSelectTreeNode expandSelectTreeNode = UriParser.createExpandSelectTree(uriInfo.getSelect(), uriInfo.getExpand());
-                propertiesBuilder.expandSelectTree(expandSelectTreeNode);
-
+                
+                propertiesBuilder.expandSelectTree(expandSelectTreeNode).callbacks(callbacks);       
+                
                 String nextLink = null;
                 final ODataContext context = this.getContext();
                 // Limit the number of returned entities and provide a "next" link
@@ -220,7 +272,9 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
         EdmEntitySet entitySetToWrite = null;
         Map<String, Object> data = null;
-
+        
+        final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+        
         if (uriInfo.getNavigationSegments().size() == 0) {
             final EdmEntitySet entitySet = uriInfo.getStartEntitySet();
 
@@ -232,8 +286,6 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             } catch (final EdmException e ){
                 logger.debug("The entitySet "+entitySet.getName()+" has not keys");
             }
-
-            final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
 
             try {
                 final List <String> selectedItemsAsString = getSelectedItems(uriInfo, keyProperties);
@@ -250,7 +302,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             }
 
         } else if (uriInfo.getNavigationSegments().size() >= 1) {
-            final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+            
             final List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
             final EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
             final EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
@@ -258,7 +310,6 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             entitySetToWrite = entitySetTarget;
 
             try {
-
                 data = this.entityAccessor.getEntityByAssociation(entitySetStart.getEntityType(), keys, navigationSegments,
                         entitySetTarget.getEntityType());
             } catch (final DenodoODataConnectException e) {
@@ -273,15 +324,56 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             }
 
         }
+        
 
         if (data != null) {
             final URI serviceRoot = this.getContext().getPathInfo().getServiceRoot();
             final ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
 
+            // Expand option
+            List<ArrayList<NavigationPropertySegment>> navigationPropertiesToExpand = uriInfo.getExpand();
+            Map<String, ODataCallback> callbacks = new HashMap<String, ODataCallback>();
+            
+            try {
+                EdmEntitySet entitySetNavigate;
+                Map<String, Map<Map<String,Object>,List<Map<String, Object>>>> expandData = new HashMap<String, Map<Map<String,Object>,List<Map<String,Object>>>>();
+                
+                // Each element of the navigationPropertiesToExpand list is a navigation property but they are arrays
+                // and if you have a multilevel expand each level is an element of the array
+                for (ArrayList<NavigationPropertySegment> npsarray : navigationPropertiesToExpand) {
+                    entitySetNavigate = entitySetToWrite;
+                    Map<String, Object> keysToExpand = new HashMap<String, Object>(keys);
+                    
+                    //We should use the keys that we know that are necessary
+                    List<Map<String, Object>> keysAsList =  Arrays.asList(keysToExpand);
+                    
+                    for (NavigationPropertySegment nvsegment : npsarray) {
+                        Map<Map<String,Object>, List<Map<String, Object>>> dataAsMap = this.entityAccessor.getEntityExpandData(entitySetNavigate.getEntityType(), 
+                                nvsegment.getTargetEntitySet().getEntityType(), nvsegment.getNavigationProperty(), keysAsList);
+                        StringBuilder sb = new StringBuilder(entitySetNavigate.getName()).append("-").append(nvsegment.getNavigationProperty().getName());
+                        expandData.put(sb.toString(), dataAsMap);
+    
+                        // Use the keys of the previous expanded element in order to get a multilevel expand operation
+                        keysAsList = new ArrayList<Map<String, Object>>(dataAsMap.keySet());
+                        
+                        entitySetNavigate = nvsegment.getTargetEntitySet();
+                    }
+                }
+                
+                for (ArrayList<NavigationPropertySegment> npsarray : navigationPropertiesToExpand) {
+                    callbacks.put(npsarray.get(0).getNavigationProperty().getName(), new WriterCallBack(serviceRoot, expandData));
+                }
+            } catch (UncategorizedSQLException e) {
+                // Exception that will throw VDP with versions before 6.0. These versions don't have support for EXPAND
+                if (!(e.getCause() instanceof SQLException && e.getMessage().contains("Syntax error: Exception parsing query near '*'"))) {
+                    throw new ODataApplicationException(e.getLocalizedMessage(), Locale.getDefault(), e);
+                }
+            }
+            
             // Transform the list of selected properties into an
             // expand/select tree
             final ExpandSelectTreeNode expandSelectTreeNode = UriParser.createExpandSelectTree(uriInfo.getSelect(), uriInfo.getExpand());
-            propertiesBuilder.expandSelectTree(expandSelectTreeNode);
+            propertiesBuilder.expandSelectTree(expandSelectTreeNode).callbacks(callbacks);
 
             return EntityProvider.writeEntry(contentType, entitySetToWrite, data, propertiesBuilder.build());
         }
@@ -299,6 +391,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         }
         return keys;
     }
+    
 
     /**
      * @see EntitySimplePropertyValueProcessor
@@ -641,7 +734,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
     }
 
 
-    private static String getOrderByExpresion( final UriInfo uriInfo){
+    private static String getOrderByExpresion( final UriInfo uriInfo) throws EdmException{
 
         // Orderby System Query Option ($orderby)
         final OrderByExpression orderByExpression = uriInfo.getOrderBy();
@@ -650,7 +743,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             final StringBuilder sb = new StringBuilder();
             final List<OrderExpression> orders = orderByExpression.getOrders();
             for (final OrderExpression order : orders) {
-                sb.append(processExpressionToComplexRepresentation(order.getExpression()));
+                sb.append(processExpressionToComplexRepresentation(order.getExpression(), uriInfo.getTargetEntitySet().getName()));
                 sb.append(" ");
                 sb.append(order.getSortOrder().toString());
                 sb.append(",");
@@ -663,22 +756,22 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         return orderByExpressionString;
     }
 
-    private static String getFilterExpresion(final UriInfo uriInfo){
+    private static String getFilterExpresion(final UriInfo uriInfo) throws EdmException{
 
         // Filter System Query Option ($filter)
         final FilterExpression filterExpression = uriInfo.getFilter();
         String filterExpressionString = null;
         if (filterExpression != null) {
             if (filterExpression.getExpression() instanceof BinaryExpression) {
-                filterExpressionString = processBinaryExpression((BinaryExpression) filterExpression.getExpression());
+                filterExpressionString = processBinaryExpression((BinaryExpression) filterExpression.getExpression(), uriInfo.getStartEntitySet().getName());
             } else if (filterExpression.getExpression() instanceof UnaryExpression) {
                 StringBuilder sb = new StringBuilder();
                 sb.append(((UnaryExpression)filterExpression.getExpression()).getOperator().toString());
                 sb.append(" (");
                 if (((UnaryExpression)filterExpression.getExpression()).getOperand() instanceof BinaryExpression) {
-                    sb.append(processBinaryExpression((BinaryExpression)((UnaryExpression)filterExpression.getExpression()).getOperand()));
+                    sb.append(processBinaryExpression((BinaryExpression)((UnaryExpression)filterExpression.getExpression()).getOperand(), uriInfo.getStartEntitySet().getName()));
                 } else {
-                    sb.append(processExpressionToComplexRepresentation(((UnaryExpression)filterExpression.getExpression()).getOperand()));
+                    sb.append(processExpressionToComplexRepresentation(((UnaryExpression)filterExpression.getExpression()).getOperand(), uriInfo.getStartEntitySet().getName()));
                 }
                 sb.append(")");
                 filterExpressionString = sb.toString();
@@ -689,11 +782,11 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         return filterExpressionString;
     }
 
-    private static String processBinaryExpression(final BinaryExpression binaryExpression) {
+    private static String processBinaryExpression(final BinaryExpression binaryExpression, final String view) {
 
         final StringBuilder sb = new StringBuilder();
 
-        sb.append(processExpressionToComplexRepresentation(binaryExpression.getLeftOperand()));
+        sb.append(processExpressionToComplexRepresentation(binaryExpression.getLeftOperand(), view));
 
         sb.append(" ");
 
@@ -701,12 +794,12 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
         sb.append(" ");
 
-        sb.append(processExpressionToComplexRepresentation(binaryExpression.getRightOperand()));
+        sb.append(processExpressionToComplexRepresentation(binaryExpression.getRightOperand(), view));
 
         return sb.toString();
     }
 
-    private static String processExpressionToComplexRepresentation(final CommonExpression operand) {
+    private static String processExpressionToComplexRepresentation(final CommonExpression operand, final String view) {
 
         final StringBuilder sb = new StringBuilder();
 
@@ -714,7 +807,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             // It is a property of a complex type
             sb.append(getPropertyPath(operand));
         } else if (operand instanceof BinaryExpression) {
-            sb.append(processBinaryExpression((BinaryExpression) operand));
+            sb.append(processBinaryExpression((BinaryExpression) operand, view));
         } else {
             if (operand instanceof MethodExpression) {
                 // Leave the string: method(param1, param2, param3,...)
@@ -722,7 +815,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 final List<CommonExpression> params = ((MethodExpression) operand).getParameters();
                 sb.append("(");
                 for (final CommonExpression p : params) {
-                    sb.append(processExpressionToComplexRepresentation(p));
+                    sb.append(processExpressionToComplexRepresentation(p, view));
                     sb.append(",");
                 }
 
@@ -732,11 +825,12 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 sb.append(")");
             } else {
                 if (operand instanceof PropertyExpression) {
+                    sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(view)).append(".");
                     sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(operand.getUriLiteral()));
                 } else if (operand instanceof UnaryExpression) {
                     sb.append(((UnaryExpression)operand).getOperator().toString());
                     sb.append(" (");
-                    sb.append(processExpressionToComplexRepresentation(((UnaryExpression)operand).getOperand()));
+                    sb.append(processExpressionToComplexRepresentation(((UnaryExpression)operand).getOperand(), view));
                     sb.append(")");
                 } else {
                     sb.append(operand.getUriLiteral());

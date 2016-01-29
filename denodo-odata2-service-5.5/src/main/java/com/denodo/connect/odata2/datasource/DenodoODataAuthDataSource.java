@@ -33,6 +33,7 @@ import javax.sql.DataSource;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.support.JdbcUtils;
 
 public class DenodoODataAuthDataSource implements DataSource {
 
@@ -103,8 +104,10 @@ public class DenodoODataAuthDataSource implements DataSource {
 
     @Override
     public Connection getConnection() throws SQLException {
-
-        try {
+    	
+        Statement  stmt = null;
+        
+    	try {
 
             DenodoODataConnectionWrapper connection = new DenodoODataConnectionWrapper(this.dataSource.getConnection());
 
@@ -134,7 +137,7 @@ public class DenodoODataAuthDataSource implements DataSource {
                     .append(" DATABASE ").append(this.parameters.get().get(DATA_BASE_NAME));
             }
             
-            Statement  stmt = connection.createStatement();
+            stmt = connection.createStatement();
             stmt.execute(command.toString());
             
             return connection;
@@ -160,6 +163,10 @@ public class DenodoODataAuthDataSource implements DataSource {
             }
             logger.error(e);
             throw e;
+        } finally {
+        	if (stmt != null) {
+        		JdbcUtils.closeStatement(stmt);
+        	}
         }
     }
 

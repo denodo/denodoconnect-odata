@@ -1,3 +1,4 @@
-Current
--------
+20160129
+--------
 - First version of the Denodo OData Service for Denodo 6.0.
+- Added #23067 - Expand System Query Option

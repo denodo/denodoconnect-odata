@@ -59,6 +59,13 @@ public class WriterCallBack implements OnWriteEntryContent, OnWriteFeedContent {
     }
 
 
+    /*
+     * To support $expand for a feed of entries (entity set) the interface org.apache.olingo.odata2.api.ep.callback.OnWriteFeedContent must be 
+     * implemented. These provides the method WriteFeedCallbackResult retrieveFeedResult(WriteFeedCallbackContext context) throws ODataApplicationException;
+     * which is called during processing from the EntityProvider to receive the necessary data which than is inlined in the response.
+     *
+     */
+    
     @Override
     public WriteFeedCallbackResult retrieveFeedResult(WriteFeedCallbackContext context) throws ODataApplicationException {
         
@@ -104,6 +111,13 @@ public class WriterCallBack implements OnWriteEntryContent, OnWriteFeedContent {
         return result;
     }
 
+    
+    /*
+     * To support $expand for a single entry the interface org.apache.olingo.odata2.api.ep.callback.OnWriteEntryContent must be implemented. 
+     * This provides the method WriteEntryCallbackResult retrieveEntryResult(WriteEntryCallbackContext context) throws ODataApplicationException; 
+     * which is called during processing from the EntityProvider to receive the necessary data which than is inlined in the response.
+     * 
+     */
     @Override
     public WriteEntryCallbackResult retrieveEntryResult(WriteEntryCallbackContext context) throws ODataApplicationException {
         

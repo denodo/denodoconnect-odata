@@ -28,7 +28,7 @@
   <groupId>com.denodo.connect.odata2</groupId>
   <artifactId>denodo-odata2-service-5.5</artifactId>
   <name>${project.artifactId}</name>
-  <version>20151125</version>
+  <version>20160129</version>
 
   <packaging>war</packaging>
 

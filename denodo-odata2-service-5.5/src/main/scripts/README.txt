@@ -8,7 +8,7 @@ Steps for configuring Denodo Odata Service inside Denodo internal web container:
 (3) Copy the denodo-odata2-service-5.5.xml file into the following location:
      <DENODOHOME>/resources/apache-tomcat/conf/DenodoPlatform-5.0/localhost
      
-(4) Create launch scripts for the DenodoMonitorReports.  You can use the attached templates. 
+(4) Create launch scripts for the Denodo Odata Service.  You can use the attached templates. 
      Make sure to modify the DENODO_HOME variable in the script templates to point to your Denodo installation.
 
 (5) Copy the launch scripts into <DENODOHOME>/bin

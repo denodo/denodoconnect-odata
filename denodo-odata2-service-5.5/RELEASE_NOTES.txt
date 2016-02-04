@@ -1,3 +1,7 @@
+Current
+-------
+- Fixed #25532 - Documentation error
+
 20160129
 --------
 - Added #23067 - Expand System Query Option

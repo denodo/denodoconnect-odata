@@ -52,6 +52,11 @@ public class DenodoODataConnectionWrapper implements Connection {
 
     @Override
     public void close() throws SQLException {
+        // do nothing because we are caching authenticated connections, close is done in closeConnection method,
+        // invoked when the request has finished
+    }
+    
+    public void closeConnection() throws SQLException {
         if (this.connection != null && !this.connection.isClosed()) {
             //CLOSE: allows the previous session to be reestablished after having established a new session with the CONNECT command
             Statement  stmt = this.connection.createStatement();

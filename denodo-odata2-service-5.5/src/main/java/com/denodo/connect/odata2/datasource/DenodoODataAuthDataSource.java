@@ -55,6 +55,8 @@ public class DenodoODataAuthDataSource implements DataSource {
     private static final String DATABASE_NOT_FOUND_ERROR = ".*Database .* not found";
 
     private final ThreadLocal<Map<String,String>> parameters = new ThreadLocal<Map<String,String>>();
+    
+    private final ThreadLocal<DenodoODataConnectionWrapper> authenticatedConnection = new ThreadLocal<DenodoODataConnectionWrapper>();
 
     private PrintWriter logWriter = new PrintWriter(System.out);
     private int loginTimeout = 0;
@@ -65,6 +67,22 @@ public class DenodoODataAuthDataSource implements DataSource {
 
     public void setParameters(final Map<String,String> parameters){
         this.parameters.set(parameters);
+    }
+    
+    public void clearAuthentication() {
+        
+        try {
+            // Call closeConnection only when the request has finished because we are caching authenticated connections.
+            this.authenticatedConnection.get().closeConnection();
+        
+        } catch (SQLException ex) {
+            logger.debug("Could not close JDBC Connection", ex);
+        } catch (Throwable ex) {
+            // JDBC driver: It might throw RuntimeException or Error.
+            logger.debug("Unexpected exception on closing JDBC Connection", ex);
+        } finally {
+            this.authenticatedConnection.remove();
+        }
     }
 
     @Override
@@ -109,37 +127,42 @@ public class DenodoODataAuthDataSource implements DataSource {
         
     	try {
 
-            DenodoODataConnectionWrapper connection = new DenodoODataConnectionWrapper(this.dataSource.getConnection());
+            DenodoODataConnectionWrapper connection = this.authenticatedConnection.get();
+            if (connection == null) {
+                connection = new DenodoODataConnectionWrapper(this.dataSource.getConnection());
 
-            StringBuilder command;
-            
-            // The CONNECT command allows indicating a user name, a password and a database to initiate a 
-            // new session in the server with a new profile.
-            
-            if (Boolean.valueOf(this.parameters.get().get(DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION)).booleanValue()) {
-                /*
-                 * ONLY FOR DEVELOPMENT
-                 * 
-                 * DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION 
-                 * ONLY should be true in development mode, 
-                 * NEVER IN PRODUCTION ENVIRONMENTS. It is useful in order 
-                 * to use the service with components that do not allow 
-                 * authentication and in this situation the web.xml file
-                 * must be modified to add the property and then
-                 * the service will use the credentials included in the 
-                 * data source configuration (JNDI resource).
-                 */
-                command = new StringBuilder("CONNECT ")
-                        .append(" DATABASE ").append(this.parameters.get().get(DATA_BASE_NAME));
-            } else {
-                command = new StringBuilder("CONNECT USER ").append(this.parameters.get().get(USER_NAME))
-                    .append(" PASSWORD ").append("'").append(this.parameters.get().get(PASSWORD_NAME)).append("'")
-                    .append(" DATABASE ").append(this.parameters.get().get(DATA_BASE_NAME));
+                StringBuilder command;
+
+                // The CONNECT command allows indicating a user name, a password
+                // and a database to initiate a
+                // new session in the server with a new profile.
+
+                if (Boolean.valueOf(this.parameters.get().get(DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION)).booleanValue()) {
+                    /*
+                     * ONLY FOR DEVELOPMENT
+                     * 
+                     * DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION ONLY
+                     * should be true in development mode, NEVER IN PRODUCTION
+                     * ENVIRONMENTS. It is useful in order to use the service
+                     * with components that do not allow authentication and in
+                     * this situation the web.xml file must be modified to add
+                     * the property and then the service will use the
+                     * credentials included in the data source configuration
+                     * (JNDI resource).
+                     */
+                    command = new StringBuilder("CONNECT ").append(" DATABASE ").append(this.parameters.get().get(DATA_BASE_NAME));
+                } else {
+
+                    command = new StringBuilder("CONNECT USER ").append(this.parameters.get().get(USER_NAME)).append(" PASSWORD ")
+                            .append("'").append(this.parameters.get().get(PASSWORD_NAME)).append("'").append(" DATABASE ")
+                            .append(this.parameters.get().get(DATA_BASE_NAME));
+                }
+
+                stmt = connection.createStatement();
+                stmt.execute(command.toString());
+                
+                this.authenticatedConnection.set(connection);
             }
-            
-            stmt = connection.createStatement();
-            stmt.execute(command.toString());
-            
             return connection;
             
         } catch (final SQLException e) {

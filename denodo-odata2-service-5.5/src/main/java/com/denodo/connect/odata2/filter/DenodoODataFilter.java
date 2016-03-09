@@ -125,82 +125,91 @@ public class DenodoODataFilter implements Filter {
     public void doFilter(final ServletRequest req, final ServletResponse res, final FilterChain chain)
             throws IOException, ServletException {
 
-        logger.trace("AuthenticationFilter.doFilter(...) starts");
+        try {
+            logger.trace("AuthenticationFilter.doFilter(...) starts");
 
-        this.ensureInitialized();
+            this.ensureInitialized();
 
-        final String adminUser = "admin";
-        
-        final HttpServletRequest request = (HttpServletRequest) req;
-        final HttpServletResponse response = (HttpServletResponse) res;
-        
-        String login = null;
-        String password = null;
-        
-        /*
-         * Property that ONLY should be true in development mode, 
-         * NEVER IN PRODUCTION ENVIRONMENTS. It is useful in order 
-         * to use the service with components that do not allow 
-         * authentication and in this situation the web.xml file
-         * must be modified to add the property and then
-         * the service will use the credentials included in the 
-         * data source configuration (JNDI resource).
-         */
-        final String developmentModeDangerousBypassAuthentication = this.servletContext.getInitParameter("developmentModeDangerousBypassAuthentication");
-        
-        if (!Boolean.valueOf(developmentModeDangerousBypassAuthentication).booleanValue()) {
-            // Check request header contains BASIC AUTH segment
-            final String authorizationHeader = request.getHeader(AUTH_KEYWORD);
-            if (authorizationHeader == null || !StringUtils.startsWithIgnoreCase(authorizationHeader, BASIC_AUTH_KEYWORD)) {
-                String reason = "HTTP request does not contain AUTH segment";
-                logger.trace(reason);
-                showLogin(response, reason);
+            final String adminUser = "admin";
+
+            final HttpServletRequest request = (HttpServletRequest) req;
+            final HttpServletResponse response = (HttpServletResponse) res;
+
+            String login = null;
+            String password = null;
+
+            /*
+             * Property that ONLY should be true in development mode, 
+             * NEVER IN PRODUCTION ENVIRONMENTS. It is useful in order 
+             * to use the service with components that do not allow 
+             * authentication and in this situation the web.xml file
+             * must be modified to add the property and then
+             * the service will use the credentials included in the 
+             * data source configuration (JNDI resource).
+             */
+            final String developmentModeDangerousBypassAuthentication = this.servletContext.getInitParameter("developmentModeDangerousBypassAuthentication");
+
+            if (!Boolean.valueOf(developmentModeDangerousBypassAuthentication).booleanValue()) {
+                // Check request header contains BASIC AUTH segment
+                final String authorizationHeader = request.getHeader(AUTH_KEYWORD);
+                if (authorizationHeader == null || !StringUtils.startsWithIgnoreCase(authorizationHeader, BASIC_AUTH_KEYWORD)) {
+                    String reason = "HTTP request does not contain AUTH segment";
+                    logger.trace(reason);
+                    showLogin(response, reason);
+                    return;
+                }
+
+                // Retrieve credentials
+                String[] credentials = retrieveCredentials(authorizationHeader);
+                if (credentials == null) {
+                    String reason = "Invalid credentials";
+                    logger.trace(reason);
+                    showLogin(response, reason);
+                    return;
+                }
+
+                // Disable access to the service using 'admin' user if this option is established in the configuration
+                if (!this.allowAdminUser && adminUser.equals(credentials[0])) {
+                    String reason = "Invalid user. The access to the service is not allowed with the 'admin' user.";
+                    logger.trace(reason);
+                    showLogin(response, reason);
+                    return;
+                }
+
+                login = credentials[0];
+                password = credentials[1];
+            }
+
+
+            final String dataBaseName = retrieveDataBaseNameFromUrl(request.getRequestURL().toString(), this.serverAddress);
+
+            if (StringUtils.isEmpty(dataBaseName)){  // TODO This will never really happen - we will get a collection name (or a $metadata) as a database name! (maybe check that?)
+                response.sendError(HttpServletResponse.SC_NOT_FOUND);
                 return;
             }
-    
-            // Retrieve credentials
-            String[] credentials = retrieveCredentials(authorizationHeader);
-            if (credentials == null) {
-                String reason = "Invalid credentials";
-                logger.trace(reason);
-                showLogin(response, reason);
-                return;
-            }
-            
-            // Disable access to the service using 'admin' user if this option is established in the configuration
-            if (!this.allowAdminUser && adminUser.equals(credentials[0])) {
-                String reason = "Invalid user. The access to the service is not allowed with the 'admin' user.";
-                logger.trace(reason);
-                showLogin(response, reason);
-                return;
-            }
-            
-            login = credentials[0];
-            password = credentials[1];
+
+            final UserAuthenticationInfo userAuthInfo = new UserAuthenticationInfo(login, password, dataBaseName);
+
+
+            // Set connection parameters
+            this.authDataSource.setParameters(fillParametersMap(userAuthInfo, developmentModeDangerousBypassAuthentication));
+
+            logger.trace("Acquired data source: " + this.authDataSource);
+
+
+            final DenodoODataRequestWrapper wrappedRequest = new DenodoODataRequestWrapper(request, dataBaseName);
+            final DenodoODataResponseWrapper wrappedResponse = new DenodoODataResponseWrapper(response, request, dataBaseName);
+
+            chain.doFilter(wrappedRequest, wrappedResponse);
+
+        } finally {
+            clearRequestAuthentication();
         }
-        
+    }
 
-        final String dataBaseName = retrieveDataBaseNameFromUrl(request.getRequestURL().toString(), this.serverAddress);
-
-        if (StringUtils.isEmpty(dataBaseName)){  // TODO This will never really happen - we will get a collection name (or a $metadata) as a database name! (maybe check that?)
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
-            return;
-        }
-
-        final UserAuthenticationInfo userAuthInfo = new UserAuthenticationInfo(login, password, dataBaseName);
-
-        
-        // Set connection parameters
-        this.authDataSource.setParameters(fillParametersMap(userAuthInfo, developmentModeDangerousBypassAuthentication));
-
-        logger.trace("Acquired data source: " + this.authDataSource);
-
-
-        final DenodoODataRequestWrapper wrappedRequest = new DenodoODataRequestWrapper(request, dataBaseName);
-        final DenodoODataResponseWrapper wrappedResponse = new DenodoODataResponseWrapper(response, request, dataBaseName);
-
-        chain.doFilter(wrappedRequest, wrappedResponse);
-
+    // clear per-request caching of authentication
+    private void clearRequestAuthentication() {
+        this.authDataSource.clearAuthentication();
     }
 
     @Override

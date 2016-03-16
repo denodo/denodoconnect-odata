@@ -589,10 +589,11 @@ public class EntityAccessor {
     private Map<Map<String,Object>,List<Map<String, Object>>> getEntityExpandData(final String sqlStatement, final EdmEntityType edmEntityType, 
             final String navigationPropertyName, final EdmEntityType edmEntityTypeTarget) throws EdmException {
         List<Map<String, Object>> entitySetData = new ArrayList<Map<String,Object>>();
-  
-        final Map<String, List<String>> columnNameByType = new HashMap<String, List<String>>();
+
         
         final List<String> keys = edmEntityType.getKeyPropertyNames();
+        
+        final List<String> expandColumnNames = edmEntityTypeTarget.getPropertyNames();
         
         entitySetData=this.denodoTemplate.query(sqlStatement, 
                 new RowMapper<Map<String, Object>>(){
@@ -615,7 +616,6 @@ public class EntityAccessor {
                     Object value = resultSet.getObject(i);
                                   
                     if (value instanceof Array) {
-                        List<String> expandColumnNames = getExpandColumnNames(((Array) value).getBaseTypeName(), columnNameByType);
                         List<Object> objList = new ArrayList<Object>(Arrays.asList((Object[])((Array) value).getArray()));
                         List<Map<String,Object>> rows = new ArrayList<Map<String,Object>>(); 
                         
@@ -677,31 +677,7 @@ public class EntityAccessor {
         
         return getExpandDataByKey(edmEntityType, entitySetData, navigationPropertyName);
     }
-    
-    
-    /*
-     * Gets the column names for a type that we are expanding
-     */
-    List<String> getExpandColumnNames(final String type, final Map<String, List<String>> columnNameByType) {
-        List<String> expandNameColumns = columnNameByType.get(type);
-        if (expandNameColumns != null) {
-            return expandNameColumns;
-        }
-        
-        expandNameColumns =
-                this.denodoTemplate.query("DESC TYPE " + SQLMetadataUtils.getStringSurroundedByFrenchQuotes(type), 
-                        new RowMapper<String>() {
-                    @Override
-                    public String mapRow(final ResultSet rs, final int rowNum) throws SQLException {
-                        return rs.getString("FIELD");
-                    }
-                });
-        
-        columnNameByType.put(type, expandNameColumns);
-        
-        return expandNameColumns;
-    }
-    
+       
     
     @SuppressWarnings("unchecked")
     private static Map<Map<String,Object>,List<Map<String, Object>>> getExpandDataByKey(final EdmEntityType edmEntityType, 

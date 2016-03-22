@@ -51,10 +51,6 @@ import org.apache.olingo.odata2.api.exception.ODataNotImplementedException;
 import org.apache.olingo.odata2.api.processor.ODataContext;
 import org.apache.olingo.odata2.api.processor.ODataResponse;
 import org.apache.olingo.odata2.api.processor.ODataSingleProcessor;
-import org.apache.olingo.odata2.api.processor.part.EntityComplexPropertyProcessor;
-import org.apache.olingo.odata2.api.processor.part.EntitySetProcessor;
-import org.apache.olingo.odata2.api.processor.part.EntitySimplePropertyProcessor;
-import org.apache.olingo.odata2.api.processor.part.EntitySimplePropertyValueProcessor;
 import org.apache.olingo.odata2.api.uri.ExpandSelectTreeNode;
 import org.apache.olingo.odata2.api.uri.KeyPredicate;
 import org.apache.olingo.odata2.api.uri.NavigationPropertySegment;
@@ -236,12 +232,8 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 // and $skip.
              // TODO: Percent-encode "next" link.
                 if((top!=null && top>=data.size()) ||data.size()>=this.pageSize ){
-
-                    nextLink = (context.getPathInfo().getRequestUri()).toString().replaceAll("\\$skiptoken=.+?&?", "")
-//  TODO check if is necessary                          .replaceAll("\\$skip=.+?&?", "")
-                            .replaceFirst("(?:\\?|&)$", ""); // Remove potentially trailing "?" or "&" left over from remove actions above.
-                    nextLink += (nextLink.contains("?") ? "&" : "?")
-                            + "$skiptoken="+skiptoken;
+                    nextLink = (context.getPathInfo().getRequestUri()).toString().replaceAll("[&?]\\$skiptoken.*?(?=&|\\?|$)", "");
+                    nextLink += (nextLink.contains("?") ? "&" : "?") + "$skiptoken="+skiptoken;
                     propertiesBuilder.nextLink(nextLink);
                 }
                 

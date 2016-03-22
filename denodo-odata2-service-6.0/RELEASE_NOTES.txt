@@ -1,3 +1,7 @@
+Current
+-------
+- Fixed #26151 - Avoid queries inside a rowMap method (e.g. DESC COMMANDS)
+
 20160311
 --------
 - Fixed #25532 - Documentation error

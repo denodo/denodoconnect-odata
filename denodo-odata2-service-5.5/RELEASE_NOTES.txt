@@ -1,7 +1,8 @@
-Current
--------
+20160331
+--------
 - Fixed #26151 - Avoid queries inside a rowMap method (e.g. DESC COMMANDS)
 - Fixed #26246 - Minor issue with next links.
+- Fixed #26625 - Change the DENODO_HOME of the startup/shutdown .sh scripts to ..
 
 20160311
 --------

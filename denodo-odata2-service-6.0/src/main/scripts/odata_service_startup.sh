@@ -6,7 +6,7 @@
 # -----------------------------------
 #  DENODO_HOME variable must be set!
 # -----------------------------------
-DENODO_HOME="/opt/denodo"
+DENODO_HOME=..
 
 DENODO_JRE_HOME="$DENODO_HOME/jre"
 DENODO_JAVA_HOME="$DENODO_JAVA_HOME"

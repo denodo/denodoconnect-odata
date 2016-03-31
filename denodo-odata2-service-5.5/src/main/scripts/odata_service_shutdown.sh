@@ -6,7 +6,7 @@
 # -----------------------------------
 #  DENODO_HOME variable must be set!
 # -----------------------------------
-DENODO_HOME="/opt/denodo"
+DENODO_HOME=..
 
 export DENODO_CONF="$DENODO_HOME/conf/vdp"
 

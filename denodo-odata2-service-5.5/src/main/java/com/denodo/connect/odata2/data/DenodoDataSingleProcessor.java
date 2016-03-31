@@ -799,7 +799,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             // It is a property of a complex type
             sb.append(getPropertyPath(operand));
         } else if (operand instanceof BinaryExpression) {
-            sb.append(processBinaryExpression((BinaryExpression) operand, view));
+            sb.append('(').append(processBinaryExpression((BinaryExpression) operand, view)).append(')');
         } else {
             if (operand instanceof MethodExpression) {
                 // Leave the string: method(param1, param2, param3,...)

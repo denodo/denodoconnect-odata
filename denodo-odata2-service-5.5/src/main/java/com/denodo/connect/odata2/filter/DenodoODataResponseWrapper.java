@@ -48,12 +48,17 @@ public final class DenodoODataResponseWrapper extends HttpServletResponseWrapper
     private final String dataBaseName;
     private DenodoODataOutputStream outputStream = null;
     private int httpResponseStatus = HttpServletResponse.SC_OK;
+    private String serviceRoot;
+    private String serviceName;
 
 
-    public DenodoODataResponseWrapper(final HttpServletResponse response, final HttpServletRequest request, final String dataBaseName) {
+    public DenodoODataResponseWrapper(final HttpServletResponse response, final HttpServletRequest request, final String dataBaseName,
+            final String serviceRoot, final String serviceName) {
         super(response);
         this.request = request;
         this.dataBaseName = dataBaseName;
+        this.serviceRoot = serviceRoot;
+        this.serviceName = serviceName;
     }
 
 
@@ -75,7 +80,8 @@ public final class DenodoODataResponseWrapper extends HttpServletResponseWrapper
     public ServletOutputStream getOutputStream() throws IOException {
         synchronized (this) {
             if (this.outputStream == null) {
-                this.outputStream = new DenodoODataOutputStream(super.getOutputStream(), this.request, this.dataBaseName, this.getCharacterEncoding());
+                this.outputStream = new DenodoODataOutputStream(super.getOutputStream(), this.request, this.dataBaseName, 
+                        this.serviceRoot, this.serviceName, this.getCharacterEncoding());
             }
             return this.outputStream;
         }

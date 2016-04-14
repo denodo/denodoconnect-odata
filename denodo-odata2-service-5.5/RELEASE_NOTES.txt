@@ -1,3 +1,8 @@
+20160414
+--------
+#26914 - OData service through a gateway
+
+
 20160331
 --------
 - Fixed #26151 - Avoid queries inside a rowMap method (e.g. DESC COMMANDS)

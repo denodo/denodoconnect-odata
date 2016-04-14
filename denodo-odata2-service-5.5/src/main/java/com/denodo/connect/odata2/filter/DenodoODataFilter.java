@@ -65,6 +65,7 @@ public class DenodoODataFilter implements Filter {
 
 
     private ServletContext servletContext = null;
+    private String serviceRoot = null;
     private String serverAddress = null;
     private DenodoODataAuthDataSource authDataSource = null;
     private boolean allowAdminUser;
@@ -97,14 +98,18 @@ public class DenodoODataFilter implements Filter {
                     }
 
                     final Properties odataconfig = (Properties) appCtx.getBean("odataconfig");
+                    this.serviceRoot = odataconfig.getProperty("serviceroot");
+                    if (StringUtils.isNotBlank(this.serviceRoot)) {
+                        this.serviceRoot = StringUtils.appendIfMissing(this.serviceRoot, "/");
+                    }
+                    
                     this.serverAddress = odataconfig.getProperty("serveraddress");
-                    if (this.serverAddress == null || this.serverAddress.trim().length() == 0) {
+                    if (StringUtils.isBlank(this.serverAddress)) {
                         throw new ServletException("Denodo OData server address not properly configured: check the 'odataserver.address' property at the configuration file");
                     }
-
-                    if (!this.serverAddress.endsWith("/")) {
-                        this.serverAddress = this.serverAddress + "/";
-                    }
+                    
+                    this.serverAddress = StringUtils.removeStart(this.serverAddress, "/");
+                    this.serverAddress = StringUtils.appendIfMissing(this.serverAddress, "/");
 
                     final Properties authconfig = (Properties) appCtx.getBean("authconfig");
                     String allowAdminUserAsString = authconfig.getProperty("allowadminuser");
@@ -198,7 +203,8 @@ public class DenodoODataFilter implements Filter {
 
 
             final DenodoODataRequestWrapper wrappedRequest = new DenodoODataRequestWrapper(request, dataBaseName);
-            final DenodoODataResponseWrapper wrappedResponse = new DenodoODataResponseWrapper(response, request, dataBaseName);
+            final DenodoODataResponseWrapper wrappedResponse = new DenodoODataResponseWrapper(response, request, dataBaseName,
+                    this.serviceRoot, this.serverAddress);
 
             chain.doFilter(wrappedRequest, wrappedResponse);
 

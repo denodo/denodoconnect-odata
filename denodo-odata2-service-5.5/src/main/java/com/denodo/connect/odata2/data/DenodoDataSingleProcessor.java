@@ -22,6 +22,7 @@
 package com.denodo.connect.odata2.data;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,9 +32,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.ODataCallback;
+import org.apache.olingo.odata2.api.ODataServiceVersion;
 import org.apache.olingo.odata2.api.commons.InlineCount;
+import org.apache.olingo.odata2.api.commons.ODataHttpHeaders;
+import org.apache.olingo.odata2.api.edm.Edm;
 import org.apache.olingo.odata2.api.edm.EdmEntitySet;
 import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.edm.EdmLiteralKind;
@@ -50,6 +55,7 @@ import org.apache.olingo.odata2.api.exception.ODataNotFoundException;
 import org.apache.olingo.odata2.api.exception.ODataNotImplementedException;
 import org.apache.olingo.odata2.api.processor.ODataContext;
 import org.apache.olingo.odata2.api.processor.ODataResponse;
+import org.apache.olingo.odata2.api.processor.ODataResponse.ODataResponseBuilder;
 import org.apache.olingo.odata2.api.processor.ODataSingleProcessor;
 import org.apache.olingo.odata2.api.uri.ExpandSelectTreeNode;
 import org.apache.olingo.odata2.api.uri.KeyPredicate;
@@ -73,6 +79,7 @@ import org.apache.olingo.odata2.api.uri.info.GetEntitySetCountUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetLinksUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntityUriInfo;
+import org.apache.olingo.odata2.api.uri.info.GetServiceDocumentUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetSimplePropertyUriInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -89,13 +96,59 @@ import com.denodo.connect.odata2.util.SQLMetadataUtils;
 public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
     private static final Logger logger = Logger.getLogger(DenodoDataSingleProcessor.class);
-
+    
+    @Value("${odataserver.serviceRoot}")
+    private String serviceRoot;
+    
+    @Value("${odataserver.address}")
+    private String serviceName;
     
     @Value("${server.pageSize}")
     private Integer pageSize;
 
     @Autowired
     private EntityAccessor entityAccessor;
+    
+    
+    
+    private URI getServiceRoot() throws ODataException {
+        
+        // serviceRoot is an optional parameter
+        if (StringUtils.isBlank(this.serviceRoot)) {
+            return this.getContext().getPathInfo().getServiceRoot();
+        }
+        
+        try {
+            if (!this.serviceRoot.endsWith("/")) {
+                if (StringUtils.isNotBlank(this.serviceName)) {
+                    this.serviceName = StringUtils.prependIfMissing(this.serviceName, "/");
+                    this.serviceRoot += this.serviceName;
+                }
+                this.serviceRoot = StringUtils.appendIfMissing(this.serviceRoot, "/");
+            }
+            return new URI(this.serviceRoot);
+        } catch (URISyntaxException e) {
+            throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
+        }
+    }
+    
+    /*
+     * Copy from (non-Javadoc)
+     * @see org.apache.olingo.odata2.api.processor.ODataSingleProcessor#readServiceDocument(org.apache.olingo.odata2.api.uri.info.GetServiceDocumentUriInfo, java.lang.String)
+     * 
+     * because we are manipulating serviceRoot value.
+     */
+    @Override
+    public ODataResponse readServiceDocument(final GetServiceDocumentUriInfo uriInfo, final String contentType)
+        throws ODataException {
+      final Edm entityDataModel = getContext().getService().getEntityDataModel();
+
+      final ODataResponse response = EntityProvider.writeServiceDocument(contentType, entityDataModel, getServiceRoot().toASCIIString());
+      final ODataResponseBuilder odataResponseBuilder = ODataResponse.fromResponse(response).header(
+          ODataHttpHeaders.DATASERVICEVERSION, ODataServiceVersion.V10);
+
+      return odataResponseBuilder.build();
+    }
 
     @Override
     public ODataResponse readEntitySet(final GetEntitySetUriInfo uriInfo, final String contentType) throws ODataException {
@@ -172,8 +225,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             
 
             if (data != null ) {
-                final URI serviceRoot = this.getContext().getPathInfo().getServiceRoot();
-                final ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
+                final ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(getServiceRoot());
 
                 // Expand option
                 List<ArrayList<NavigationPropertySegment>> navigationPropertiesToExpand = uriInfo.getExpand();
@@ -208,7 +260,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                     }
                     
                     for (ArrayList<NavigationPropertySegment> npsarray : navigationPropertiesToExpand) {
-                        callbacks.put(npsarray.get(0).getNavigationProperty().getName(), new WriterCallBack(serviceRoot, expandData));
+                        callbacks.put(npsarray.get(0).getNavigationProperty().getName(), new WriterCallBack(getServiceRoot(), expandData));
                     }
                 } catch (UncategorizedSQLException e) {
                     // Exception that will throw VDP with versions before 6.0. These versions don't have support for EXPAND
@@ -223,25 +275,21 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 
                 propertiesBuilder.expandSelectTree(expandSelectTreeNode).callbacks(callbacks);       
                 
-                String nextLink = null;
-                final ODataContext context = this.getContext();
                 // Limit the number of returned entities and provide a "next" link
                 // if there are further entities.
                 // Almost all system query options in the current request must be carried
                 // over to the URI for the "next" link, with the exception of $skiptoken
                 // and $skip.
              // TODO: Percent-encode "next" link.
-                if((top!=null && top>=data.size()) ||data.size()>=this.pageSize ){
-                    nextLink = (context.getPathInfo().getRequestUri()).toString().replaceAll("[&?]\\$skiptoken.*?(?=&|\\?|$)", "");
-                    nextLink += (nextLink.contains("?") ? "&" : "?") + "$skiptoken="+skiptoken;
+                if ((top != null && top >= data.size()) || data.size() >= this.pageSize) {
+                    String nextLink = getNextLink(skiptoken);
                     propertiesBuilder.nextLink(nextLink);
                 }
-                
-             
-               if(count!=null){
-                   propertiesBuilder.inlineCount(count);
-                   propertiesBuilder.inlineCountType(inlineCount);
-               }
+
+                if (count != null) {
+                    propertiesBuilder.inlineCount(count);
+                    propertiesBuilder.inlineCountType(inlineCount);
+                }
                 
                 return EntityProvider.writeFeed(contentType, entitySetTarget, data, propertiesBuilder.build());
             }
@@ -257,6 +305,20 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         }
 
         throw new ODataNotImplementedException();
+    }
+
+    private String getNextLink(String skiptoken) throws ODataException {
+        
+        StringBuilder nextLink = new StringBuilder();
+        
+        final ODataContext context = this.getContext();
+        String resourcePath = StringUtils.difference(context.getPathInfo().getServiceRoot().toString(), context.getPathInfo().getRequestUri().toString());
+        resourcePath = resourcePath.replaceAll("[&?]\\$skiptoken.*?(?=&|\\?|$)", "");
+        nextLink.append(getServiceRoot().toString());
+        nextLink.append(resourcePath);
+        nextLink.append((resourcePath.contains("?") ? "&" : "?") + "$skiptoken=" + skiptoken);
+        
+        return nextLink.toString();
     }
 
     @Override
@@ -319,8 +381,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         
 
         if (data != null) {
-            final URI serviceRoot = this.getContext().getPathInfo().getServiceRoot();
-            final ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
+            final ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(getServiceRoot());
 
             // Expand option
             List<ArrayList<NavigationPropertySegment>> navigationPropertiesToExpand = uriInfo.getExpand();
@@ -353,7 +414,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 }
                 
                 for (ArrayList<NavigationPropertySegment> npsarray : navigationPropertiesToExpand) {
-                    callbacks.put(npsarray.get(0).getNavigationProperty().getName(), new WriterCallBack(serviceRoot, expandData));
+                    callbacks.put(npsarray.get(0).getNavigationProperty().getName(), new WriterCallBack(getServiceRoot(), expandData));
                 }
             } catch (UncategorizedSQLException e) {
                 // Exception that will throw VDP with versions before 6.0. These versions don't have support for EXPAND
@@ -664,8 +725,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             }
 
             if (data != null) {
-                final URI serviceRoot = this.getContext().getPathInfo().getServiceRoot();
-                final ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
+                final ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(getServiceRoot());
 
                 return EntityProvider.writeLinks(contentType, entitySetTarget, data, propertiesBuilder.build());
             }
@@ -705,8 +765,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             }
 
             if (data != null) {
-                final URI serviceRoot = this.getContext().getPathInfo().getServiceRoot();
-                final ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(serviceRoot);
+                final ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(getServiceRoot());
 
                 return EntityProvider.writeLink(contentType, entitySetTarget, data, propertiesBuilder.build());
             }
@@ -968,4 +1027,5 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
         return selectedItemsAsString;
     }
+    
 }

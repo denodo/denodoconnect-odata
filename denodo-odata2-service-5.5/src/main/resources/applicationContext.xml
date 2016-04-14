@@ -49,6 +49,7 @@
   <!-- throughout the code.                                                -->
   <!-- ******************************************************************* -->
   <util:properties id="odataconfig">
+    <prop key="serviceroot">${odataserver.serviceRoot}</prop>
     <prop key="serveraddress">${odataserver.address}</prop>
   </util:properties>
   

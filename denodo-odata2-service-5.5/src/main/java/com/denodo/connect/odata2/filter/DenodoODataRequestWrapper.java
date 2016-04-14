@@ -24,15 +24,17 @@ package com.denodo.connect.odata2.filter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 
+import org.apache.commons.lang3.StringUtils;
+
 
 public final class DenodoODataRequestWrapper extends HttpServletRequestWrapper {
 
-    private final String dataBaseNameURLFragment;
+    private final String dataBaseName;
 
 
     public DenodoODataRequestWrapper(final HttpServletRequest request, final String dataBaseName) {
         super(request);
-        this.dataBaseNameURLFragment = "/" + dataBaseName;
+        this.dataBaseName = dataBaseName;
     }
 
 
@@ -68,13 +70,18 @@ public final class DenodoODataRequestWrapper extends HttpServletRequestWrapper {
 
     
     private String removeDataBaseName(final String url){
+        
 
-        final int dbPos = url.indexOf(this.dataBaseNameURLFragment);
+        int dbPos = url.indexOf(this.dataBaseName);
         if (dbPos < 0) {
             // no modifications to do... though it is strange that an URL doesn't have the database name for some reason
             return url;
         }
-        return url.substring(0, dbPos) + url.substring(dbPos + this.dataBaseNameURLFragment.length());
+        
+        String serviceRoot = StringUtils.appendIfMissing(url.substring(0, dbPos), "/");
+        String resourcePath = StringUtils.removeStart(url.substring(dbPos + this.dataBaseName.length()), "/");
+        
+        return serviceRoot + resourcePath;
 
     }
     

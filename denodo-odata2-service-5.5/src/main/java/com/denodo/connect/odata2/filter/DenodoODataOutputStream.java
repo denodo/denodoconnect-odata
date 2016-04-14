@@ -26,10 +26,12 @@ import java.io.IOException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.commons.lang3.StringUtils;
+
+
 public final class DenodoODataOutputStream extends ServletOutputStream {
-
-
-    private final String dataBaseNameURLFragment;
+    
+    private final String dataBaseName;
     private final byte[] absoluteURLMarker;
     private final byte[] absoluteURLMarkerReplacement;
     private final byte m0;
@@ -40,34 +42,48 @@ public final class DenodoODataOutputStream extends ServletOutputStream {
     private int overflowLen;
 
 
-    public DenodoODataOutputStream(
-            final ServletOutputStream out, final HttpServletRequest request, final String dataBaseName, final String responseCharacterEncoding)
-            throws IOException {
+    public DenodoODataOutputStream(final ServletOutputStream out, final HttpServletRequest request, final String dataBaseName,
+            final String serviceRoot, final String serviceName, final String responseCharacterEncoding) throws IOException {
         super();
         this.out = out;
-        this.dataBaseNameURLFragment = "/" + dataBaseName;
-        this.absoluteURLMarker = computeURLMarker(request, this.dataBaseNameURLFragment, responseCharacterEncoding);
-        this.absoluteURLMarkerReplacement = computeURLMarkerReplacement(this.absoluteURLMarker, this.dataBaseNameURLFragment, responseCharacterEncoding);
+        this.dataBaseName = dataBaseName;
+        this.absoluteURLMarker = computeURLMarker(request, this.dataBaseName, serviceRoot, serviceName, responseCharacterEncoding);
+        this.absoluteURLMarkerReplacement = computeURLMarkerReplacement(this.absoluteURLMarker, this.dataBaseName, responseCharacterEncoding);
         this.m0 = this.absoluteURLMarker[0]; // We will use this as a fail-fast marker in order to quickly discard most bytes
     }
 
+    private static byte[] computeURLMarker(final HttpServletRequest request, final String dataBaseNameFragment, 
+            final String serviceRoot, final String serviceName, final String responseCharacterEncoding) throws IOException {
 
-
-    private static byte[] computeURLMarker(final HttpServletRequest request, final String dataBaseNameFragment, final String responseCharacterEncoding) throws IOException {
-
-        final String requestURL = request.getRequestURL().toString();
-        final int pos = requestURL.indexOf(dataBaseNameFragment);
-        if (pos < 0) {
-            throw new IOException("Could not extract database name from request URI: '" + request.getRequestURI() + "'");
+        // serviceRoot is an optional parameter
+        if (StringUtils.isBlank(serviceRoot)) {
+            final String requestURL = request.getRequestURL().toString();
+            final int pos = requestURL.indexOf(dataBaseNameFragment);
+            if (pos < 0) {
+                throw new IOException("Could not extract database name from request URI: '" + request.getRequestURI() + "'");
+            }
+            return requestURL.substring(0, pos).getBytes(responseCharacterEncoding);
         }
-
-        return requestURL.substring(0, pos).getBytes(responseCharacterEncoding);
+        
+        return getServiceRoot(serviceRoot, serviceName).getBytes(responseCharacterEncoding);
 
     }
 
+    public static String getServiceRoot(final String serviceRoot, final String serviceName) {
+        
+        StringBuilder sb = new StringBuilder();
+        if (StringUtils.isNotBlank(serviceRoot)) {
+            sb.append(serviceRoot);
+            sb.append(serviceName);
+        }
+        
+        return sb.toString();
 
-    private static byte[] computeURLMarkerReplacement(final byte[] absoluteURLMarker, final String dataBaseNameFragment, final String responseCharacterEncoding) throws IOException {
+    }
 
+    private static byte[] computeURLMarkerReplacement(final byte[] absoluteURLMarker, final String dataBaseName, final String responseCharacterEncoding) throws IOException {
+
+        final String dataBaseNameFragment = dataBaseName + "/";
         final byte[] replacement = new byte[absoluteURLMarker.length + dataBaseNameFragment.length()];
         System.arraycopy(absoluteURLMarker, 0, replacement, 0, absoluteURLMarker.length);
         System.arraycopy(dataBaseNameFragment.getBytes(responseCharacterEncoding), 0, replacement, absoluteURLMarker.length, dataBaseNameFragment.length());

@@ -1,6 +1,6 @@
 20160414
 --------
-#26914 - OData service through a gateway
+- Added #26914 - Implemented "odataserver.serviceRoot" configuration property in order to allow payload URL rewriting.
 
 
 20160331

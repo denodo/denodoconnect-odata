@@ -1,0 +1,20 @@
+20151026
+=======
+Add timeout to HttpClient in OdataCxfClient
+Added RELEASE_NOTES in the distribution
+Thrown an exception explaining that the operation (insertion/update of complex fields) is not supported.
+
+
+20150325
+========
+-Improved logging
+
+20141125
+========
+-Added NTLM authentication. 
+
+20140506
+========
+-Adding basic authentication.
+-Adding possibility to connect to the OSata Server through a proxy, this connection allows authentication. 
+

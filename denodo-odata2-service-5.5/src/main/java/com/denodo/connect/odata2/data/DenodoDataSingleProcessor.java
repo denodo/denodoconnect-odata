@@ -1018,14 +1018,30 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                     selectedItemsAsString = getSelectOptionValues(selectedItems);
                     // If there are properties selected we must get also the key properties because
                     // they are necessary in order to get all the information to write the entry
+                    // We also need to add the items that appear in the order by expression
+                    // because vdp need them in the final schema
                     if (!selectedItemsAsString.isEmpty()) {
                         selectedItemsAsString.addAll(keyProperties);
+                        addOrdersAsString(selectedItemsAsString, uriInfo);
                     }
                 }
             }
         }
 
         return selectedItemsAsString;
+    }
+    
+    private static void addOrdersAsString(final List<String> selectedItemsAsString, final GetEntitySetUriInfo uriInfo) {
+        final OrderByExpression orderByExpression = uriInfo.getOrderBy();
+        if (orderByExpression != null) {
+            final List<OrderExpression> orders = orderByExpression.getOrders();
+            for(OrderExpression order : orders) {
+                String orderItem = order.getExpression().getUriLiteral();
+                if (!selectedItemsAsString.contains(orderItem)) {
+                    selectedItemsAsString.add(orderItem);
+                }
+            }
+        }
     }
     
 }

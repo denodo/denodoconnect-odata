@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.apache.commons.lang3.Range;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.ODataCallback;
@@ -165,33 +166,32 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 logger.debug("The entitySet "+entitySetTarget.getName()+" has not keys");
             }
 
-            // Top System Query Option ($top)
+            // $skip
+            final Integer skip = (uriInfo.getSkip() == null) ? Integer.valueOf(0) : uriInfo.getSkip();
+
+            // $top
             final Integer top = uriInfo.getTop();
 
-            // Skip System Query Option ($skip)
-            final Integer skip = uriInfo.getSkip();
-
-            String skiptoken= uriInfo.getSkipToken();
-            // Inline System Query Option ($skip)
-            InlineCount inlineCount= uriInfo.getInlineCount();
-            Integer topPagination=this.pageSize;
-            Integer skipPagination=0;
-            if(top!=null){
-               if(top<topPagination){
-                   topPagination=top;
-               }
+            String skiptoken = uriInfo.getSkipToken();
+            InlineCount inlineCount = uriInfo.getInlineCount();
+            
+            Integer startPagination = skip;
+            Integer pageElements = this.pageSize;
+            if (skiptoken != null) {
+                startPagination += this.pageSize * Integer.valueOf(skiptoken);
+                skiptoken = String.valueOf(Integer.parseInt(skiptoken) + 1);
+            } else {
+                skiptoken = "1";
             }
-            if(skiptoken!=null){
-                if(skip!=null){
-
-                    skipPagination=skip+topPagination*Integer.valueOf(skiptoken);
-                }else{
-                    skipPagination=topPagination*Integer.valueOf(skiptoken);
+            
+            int endPagination = startPagination + this.pageSize;
+            Range<Integer> currentPage = Range.between(startPagination - skip, endPagination - skip);
+            if (top != null) { 
+                if (currentPage.contains(top) && !currentPage.isEndedBy(top)) { // Range is inclusive and our check is in an exclusive Range
+                    pageElements = top % this.pageSize;
+                } else if (top < startPagination) {
+                    pageElements = 0;
                 }
-            skiptoken=String.valueOf(Integer.valueOf(skiptoken)+1);
-            }else{
-                skipPagination=skip;
-                skiptoken="1";
             }
 
             final String orderByExpressionString = getOrderByExpresion((UriInfo) uriInfo);
@@ -203,7 +203,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             
             if (uriInfo.getNavigationSegments().size() == 0) {
 
-                data =  this.entityAccessor.getEntitySet(entitySetTarget.getEntityType(), orderByExpressionString, topPagination, skipPagination, filterExpressionString,
+                data =  this.entityAccessor.getEntitySet(entitySetTarget.getEntityType(), orderByExpressionString, pageElements, startPagination, filterExpressionString,
                             selectedItemsAsString);
                 if(inlineCount!=null && inlineCount.equals(InlineCount.ALLPAGES)){
                     count=this.entityAccessor.getCountEntitySet(entitySetStart, null,filterExpressionString, null);
@@ -215,7 +215,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 final List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
 
                 data = this.entityAccessor.getEntitySetByAssociation(entitySetStart.getEntityType(), keys,
-                            navigationSegments, entitySetTarget.getEntityType(), orderByExpressionString, topPagination, skipPagination, filterExpressionString,
+                            navigationSegments, entitySetTarget.getEntityType(), orderByExpressionString, pageElements, startPagination, filterExpressionString,
                             selectedItemsAsString);
                 if(inlineCount!=null && inlineCount.equals(InlineCount.ALLPAGES)){
                     count=this.entityAccessor.getCountEntitySet(entitySetStart, keys,filterExpressionString, navigationSegments);
@@ -275,13 +275,11 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 
                 propertiesBuilder.expandSelectTree(expandSelectTreeNode).callbacks(callbacks);       
                 
-                // Limit the number of returned entities and provide a "next" link
-                // if there are further entities.
-                // Almost all system query options in the current request must be carried
-                // over to the URI for the "next" link, with the exception of $skiptoken
-                // and $skip.
-             // TODO: Percent-encode "next" link.
-                if ((top != null && top >= data.size()) || data.size() >= this.pageSize) {
+               
+                // Limit the number of returned entities and provide a "next" link if there are further entities.
+                // Almost all system query options in the current request must be carried over to the URI for the "next" link,
+                // with the exception of $skiptoken.
+                if (hasMoreEntities(data, this.pageSize)) {
                     String nextLink = getNextLink(skiptoken);
                     propertiesBuilder.nextLink(nextLink);
                 }
@@ -305,6 +303,10 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         }
 
         throw new ODataNotImplementedException();
+    }
+    
+    private static boolean hasMoreEntities(final List entities, final Integer pageSize) {
+        return entities != null && !entities.isEmpty() && entities.size() >= pageSize.intValue();
     }
 
     private String getNextLink(String skiptoken) throws ODataException {

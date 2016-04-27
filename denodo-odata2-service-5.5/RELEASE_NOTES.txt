@@ -1,6 +1,7 @@
 20160414
 --------
 - Added #26914 - Implemented "odataserver.serviceRoot" configuration property in order to allow payload URL rewriting.
+- Fixed #27098 - Incorrect implementation of the $top operator
 
 
 20160331

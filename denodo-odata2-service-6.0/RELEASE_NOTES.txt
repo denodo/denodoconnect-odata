@@ -1,7 +1,11 @@
+Current
+-------
+- Fixed #27098 - Incorrect implementation of the $top operator
+- Fixed #27144 - Pagination is implemented improperly
+
 20160414
 --------
 - Added #26914 - Implemented "odataserver.serviceRoot" configuration property in order to allow payload URL rewriting.
-
 
 20160331
 --------

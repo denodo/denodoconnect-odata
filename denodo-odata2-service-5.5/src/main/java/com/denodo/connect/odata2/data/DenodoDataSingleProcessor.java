@@ -194,6 +194,11 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 }
             }
 
+            // In order to know if there are more entities than requested with the value obtained
+            // taking into account the pageSize and top option (pageElements) we will ask for an extra entity
+            // therefore we must add a unit to the variable.
+            pageElements = Integer.valueOf(pageElements.intValue() + 1);
+            
             final String orderByExpressionString = getOrderByExpresion((UriInfo) uriInfo);
             final String filterExpressionString =  getFilterExpresion((UriInfo) uriInfo);
             List<String> selectedItemsAsString;
@@ -284,6 +289,11 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                     propertiesBuilder.nextLink(nextLink);
                 }
 
+                // Remove the extra element of data that we use to know if we need to set the "next" link
+                if (data != null && data.size() == pageElements.intValue()) {
+                    data.remove(data.size()-1);
+                }
+                
                 if (count != null) {
                     propertiesBuilder.inlineCount(count);
                     propertiesBuilder.inlineCountType(inlineCount);
@@ -306,7 +316,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
     }
     
     private static boolean hasMoreEntities(final List entities, final Integer pageSize) {
-        return entities != null && !entities.isEmpty() && entities.size() >= pageSize.intValue();
+        return entities != null && !entities.isEmpty() && entities.size() > pageSize.intValue();
     }
 
     private String getNextLink(String skiptoken) throws ODataException {

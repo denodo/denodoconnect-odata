@@ -1,7 +1,7 @@
-Current
--------
-- Fixed #27098 - Incorrect implementation of the $top operator
-- Fixed #27144 - Pagination is implemented improperly
+20160428
+--------
+- Fixed #27098 - Incorrect implementation of the $top operator.
+- Fixed #27144 - Incorrect inclusion of "__next" links in response when remaining result count is zero.
 
 20160414
 --------

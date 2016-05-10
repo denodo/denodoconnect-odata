@@ -46,7 +46,6 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
 
 import com.denodo.connect.odata4.datasource.DenodoODataAuthDataSource;
 
-
 public class DenodoODataFilter implements Filter {
 
     private static final Logger logger = Logger.getLogger("com.denodo.connect.odata4.auth");
@@ -59,6 +58,7 @@ public class DenodoODataFilter implements Filter {
 
     // OData AUTH convenience constants
     private static final String AUTHORIZATION_CHALLENGE_ATTRIBUTE = "WWW-AUTHENTICATE";
+    private static final String NEGOTIATE = "Negotiate";
     private static final String AUTHORIZATION_CHALLENGE_REALM = "Denodo_OData_Service";
     private static final String AUTHORIZATION_CHALLENGE_BASIC = SecurityContext.BASIC_AUTH + " realm=\""
             + AUTHORIZATION_CHALLENGE_REALM + "\", accept-charset=\"" + CHARACTER_ENCODING + "\"";
@@ -140,6 +140,7 @@ public class DenodoODataFilter implements Filter {
 
             String login = null;
             String password = null;
+            String kerberosClientToken = null;
 
             /*
              * Property that ONLY should be true in development mode, 
@@ -153,34 +154,39 @@ public class DenodoODataFilter implements Filter {
             final String developmentModeDangerousBypassAuthentication = this.servletContext.getInitParameter("developmentModeDangerousBypassAuthentication");
 
             if (!Boolean.parseBoolean(developmentModeDangerousBypassAuthentication)) {
-                // Check request header contains BASIC AUTH segment
                 final String authorizationHeader = request.getHeader(AUTH_KEYWORD);
-                if (authorizationHeader == null || !StringUtils.startsWithIgnoreCase(authorizationHeader, BASIC_AUTH_KEYWORD)) {
-                    String reason = "HTTP request does not contain AUTH segment";
-                    logger.trace(reason);
-                    showLogin(response, reason);
+                if (authorizationHeader == null) {
+                    response.setHeader(AUTHORIZATION_CHALLENGE_ATTRIBUTE, NEGOTIATE);
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    logger.trace("SPNEGO starts");
                     return;
                 }
 
-                // Retrieve credentials
-                String[] credentials = retrieveCredentials(authorizationHeader);
-                if (credentials == null) {
-                    String reason = "Invalid credentials";
-                    logger.trace(reason);
-                    showLogin(response, reason);
-                    return;
+                // Retrieve BASIC credentials
+                if (StringUtils.startsWithIgnoreCase(authorizationHeader, BASIC_AUTH_KEYWORD)) {
+                    String[] credentials = retrieveCredentials(authorizationHeader);
+                    if (credentials == null) {
+                        String reason = "Invalid credentials";
+                        logger.trace(reason);
+                        showLogin(response, reason);
+                        return;
+                    }
+                    
+                    login = credentials[0];
+                    password = credentials[1];
+                    
+                    // Disable access to the service using 'admin' user if this option is established in the configuration
+                    if (!this.allowAdminUser && adminUser.equals(login)) {
+                        String reason = "Invalid user. The access to the service is not allowed with the 'admin' user.";
+                        logger.trace(reason);
+                        showLogin(response, reason);
+                        return;
+                    }
+                    
+                // Retrieve SPNEGO credentials
+                } else if (StringUtils.startsWithIgnoreCase(authorizationHeader, NEGOTIATE)) {
+                    kerberosClientToken = authorizationHeader.substring(NEGOTIATE.length()).trim();
                 }
-
-                // Disable access to the service using 'admin' user if this option is established in the configuration
-                if (!this.allowAdminUser && adminUser.equals(credentials[0])) {
-                    String reason = "Invalid user. The access to the service is not allowed with the 'admin' user.";
-                    logger.trace(reason);
-                    showLogin(response, reason);
-                    return;
-                }
-
-                login = credentials[0];
-                password = credentials[1];
             }
 
 
@@ -191,7 +197,12 @@ public class DenodoODataFilter implements Filter {
                 return;
             }
 
-            final UserAuthenticationInfo userAuthInfo = new UserAuthenticationInfo(login, password, dataBaseName);
+            UserAuthenticationInfo userAuthInfo = null;
+            if (login != null) {
+                userAuthInfo = new UserAuthenticationInfo(login, password, dataBaseName);
+            } else {
+                userAuthInfo = new UserAuthenticationInfo(kerberosClientToken, dataBaseName);
+            }
 
 
             // Set connection parameters
@@ -271,14 +282,15 @@ public class DenodoODataFilter implements Filter {
 
     /**
      * This method fills a map with data required to get an authorized connection to VDP
-     * @param userAuthenticationInfo required user/pass to access a data base.
+     * @param userAuthenticationInfo required user/pass or kerberos token to access a data base.
      * @return
      */
     private static Map<String,String> fillParametersMap(final UserAuthenticationInfo userAuthenticationInfo,
             final String developmentModeDangerousBypassAuthentication){
-        final Map<String,String> parameters = new HashMap<String,String>();
+        final Map<String, String> parameters = new HashMap<String, String>();
         parameters.put(DenodoODataAuthDataSource.DATA_BASE_NAME, userAuthenticationInfo.getDatabaseName());
         parameters.put(DenodoODataAuthDataSource.USER_NAME, userAuthenticationInfo.getLogin());
+        parameters.put(DenodoODataAuthDataSource.KERBEROS_CLIENT_TOKEN, userAuthenticationInfo.getKerberosClientToken());
         parameters.put(DenodoODataAuthDataSource.PASSWORD_NAME, userAuthenticationInfo.getPassword());
         
         /*

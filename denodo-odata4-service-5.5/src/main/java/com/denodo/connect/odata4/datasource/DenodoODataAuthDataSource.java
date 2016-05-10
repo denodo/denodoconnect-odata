@@ -23,10 +23,12 @@ package com.denodo.connect.odata4.datasource;
 
 import java.io.PrintWriter;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Statement;
 import java.util.Map;
+import java.util.Properties;
 
 import javax.sql.DataSource;
 
@@ -45,6 +47,7 @@ public class DenodoODataAuthDataSource implements DataSource {
 
     public final static String USER_NAME = "user";
     public final static String PASSWORD_NAME = "password";
+    public final static String KERBEROS_CLIENT_TOKEN = "KRBClientToken";
     public final static String DATA_BASE_NAME = "databaseName";
     public final static String DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION = "developmentModeDangerousBypassAuthentication";
 
@@ -139,8 +142,8 @@ public class DenodoODataAuthDataSource implements DataSource {
                 // The CONNECT command allows indicating a user name, a password
                 // and a database to initiate a
                 // new session in the server with a new profile.
-
-                if (Boolean.valueOf(this.parameters.get().get(DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION)).booleanValue()) {
+                boolean withKerberos = false;
+                if (Boolean.parseBoolean(getParameter(DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION))) {
                     /*
                      * ONLY FOR DEVELOPMENT
                      * 
@@ -154,18 +157,34 @@ public class DenodoODataAuthDataSource implements DataSource {
                      * (JNDI resource).
                      */
                     command = new StringBuilder("CONNECT ").append(" DATABASE ").append(this.parameters.get().get(DATA_BASE_NAME));
-                } else {
+                } else if (getParameter(USER_NAME) != null) {
 
-                    command = new StringBuilder("CONNECT USER ").append(this.parameters.get().get(USER_NAME)).append(" PASSWORD ")
-                            .append("'").append(this.parameters.get().get(PASSWORD_NAME)).append("'").append(" DATABASE ")
-                            .append(this.parameters.get().get(DATA_BASE_NAME));
+                    command = new StringBuilder("CONNECT USER ").append(getParameter(USER_NAME)).append(" PASSWORD ")
+                            .append("'").append(getParameter(PASSWORD_NAME)).append("'").append(" DATABASE ")
+                            .append(getParameter(DATA_BASE_NAME));
+                } else {
+                    command = new StringBuilder("CONNECT TOKEN '").append(getParameter(KERBEROS_CLIENT_TOKEN)).append("' DATABASE ")
+                            .append(getParameter(DATA_BASE_NAME));
+                    
+                    /* ****** TEMPORAL HACK TO PROVE KERBEROS TOKEN UNTIL VDP IMPLEMENTS CONNECT TOKEN ******* */
+                    withKerberos = true;
+                    
+                    Properties properties = new Properties();
+                    properties.setProperty("useKerberos", "true");
+                    properties.setProperty("debug", "true");
+                    properties.setProperty("KRBClientToken", getParameter(KERBEROS_CLIENT_TOKEN));
+                    
+                    connection = new DenodoODataConnectionWrapper(DriverManager.getConnection("jdbc:vdb://localhost:9999/admin", properties));
+                    /* ****** END HACK ******* */
                 }
 
                 this.authenticatedConnection.set(connection);
-                
-                stmt = connection.createStatement();
-                stmt.execute(command.toString());
-                
+
+                if (!withKerberos) {
+                    stmt = connection.createStatement();
+                    stmt.execute(command.toString());
+                }
+
             }
             return connection;
             
@@ -189,12 +208,16 @@ public class DenodoODataAuthDataSource implements DataSource {
                 }
             }
             logger.error(e);
-            throw new DenodoODataConnectException(e, this.parameters.get().get(DATA_BASE_NAME), this.parameters.get().get(USER_NAME));
+            throw new DenodoODataConnectException(e, getParameter(DATA_BASE_NAME), getParameter(USER_NAME));
         } finally {
         	if (stmt != null) {
         		JdbcUtils.closeStatement(stmt);
         	}
         }
+    }
+
+    private String getParameter(final String name) {
+        return this.parameters.get().get(name);
     }
 
     @Override

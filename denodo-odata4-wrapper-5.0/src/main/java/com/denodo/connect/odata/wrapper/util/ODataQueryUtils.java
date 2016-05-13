@@ -139,18 +139,10 @@ public class ODataQueryUtils {
     }
     
     public static Object prepareValueForInsert( Object value) {
-        if (value == null){
-            return null;
-        } else if (value instanceof String) {
-            return value.toString();
-        } else if (value instanceof java.util.Date) {
-            SimpleDateFormat formatter  =  new SimpleDateFormat(getProperties().getProperty(TIMEFORMAT));
-            return formatter.format(value);
-        }
-        return value.toString();
+        return value;
     }
     
-//    public static OProperty<?> prepareComplexValueForInsert(
+//    public static OProperty<?> prepareComplexValueForInsert(//TODO
 //            String fieldName, CustomWrapperSchemaParameter[] params, Object value){
 //        if (value instanceof CustomWrapperStruct){
 //            CustomWrapperStruct cws = (CustomWrapperStruct) value;

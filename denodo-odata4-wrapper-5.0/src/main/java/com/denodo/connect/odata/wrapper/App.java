@@ -2,16 +2,22 @@ package com.denodo.connect.odata.wrapper;
 
 
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.sql.Timestamp;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.olingo.client.api.ODataClient;
+import org.apache.olingo.client.api.communication.request.cud.ODataEntityCreateRequest;
 import org.apache.olingo.client.api.communication.request.retrieve.EdmMetadataRequest;
 import org.apache.olingo.client.api.communication.request.retrieve.ODataEntitySetIteratorRequest;
 import org.apache.olingo.client.api.communication.request.retrieve.ODataRetrieveRequest;
 import org.apache.olingo.client.api.communication.request.retrieve.ODataServiceDocumentRequest;
+import org.apache.olingo.client.api.communication.response.ODataDeleteResponse;
+import org.apache.olingo.client.api.communication.response.ODataEntityCreateResponse;
 import org.apache.olingo.client.api.communication.response.ODataRetrieveResponse;
 
 // import org.apache.olingo.client.api.edm.xml.v4.annotation.Collection;
@@ -19,6 +25,7 @@ import org.apache.olingo.client.api.communication.response.ODataRetrieveResponse
 import org.apache.olingo.client.api.domain.ClientEntity;
 import org.apache.olingo.client.api.domain.ClientEntitySet;
 import org.apache.olingo.client.api.domain.ClientEntitySetIterator;
+import org.apache.olingo.client.api.domain.ClientLink;
 import org.apache.olingo.client.api.domain.ClientProperty;
 import org.apache.olingo.client.api.domain.ClientServiceDocument;
 import org.apache.olingo.client.api.domain.ClientValue;
@@ -28,13 +35,19 @@ import org.apache.olingo.commons.api.edm.EdmComplexType;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
 import org.apache.olingo.commons.api.edm.EdmEntityType;
 import org.apache.olingo.commons.api.edm.EdmNavigationProperty;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.EdmProperty;
 import org.apache.olingo.commons.api.edm.EdmSchema;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.apache.olingo.commons.api.edm.constants.EdmTypeKind;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmInt32;
 
+import com.denodo.connect.odata.wrapper.util.DataTableColumnType;
+import com.denodo.connect.odata.wrapper.util.ODataEntityUtil;
+import com.denodo.connect.odata.wrapper.util.ODataQueryUtils;
 import com.denodo.vdb.engine.customwrapper.CustomWrapperException;
+import com.denodo.vdb.engine.customwrapper.CustomWrapperSchemaParameter;
+import com.denodo.vdb.engine.customwrapper.expression.CustomWrapperFieldExpression;
 
 /**
  * Based on code from https://templth.wordpress.com/2014/12/03/accessing-odata-v4-service-with-olingo/
@@ -43,27 +56,30 @@ import com.denodo.vdb.engine.customwrapper.CustomWrapperException;
 public class App 
 {
     private final static String _serviceRoot = "http://services.odata.org/V4/OData/(S(pwy3ssmhv5vyhhe5xtfcdwcx))/OData.svc/";
+    private final static String _collection = "Products";
     public static void main( String[] args )
     {
-        System.out.println( "Hello OData!" );
-     
-        final ODataClient client =  ODataClientFactory.getClient();
-        
-        final Map<String, EdmEntitySet> entitySets= new HashMap<String, EdmEntitySet>();
-        EdmMetadataRequest request = client.getRetrieveRequestFactory().getMetadataRequest(_serviceRoot);
-        ODataRetrieveResponse<Edm> response = request.execute();
- 
-        Edm edm = response.getBody();
-        
-
-        List<EdmSchema> schemas = edm.getSchemas();
-        for (final EdmSchema schema : schemas) {  
-            if(schema.getEntityContainer()!=null){
-                for (final EdmEntitySet es : schema.getEntityContainer().getEntitySets()) {
-                    entitySets.put(es.getName(), es);
-                }  
-            }
-        }
+//        delete();
+//        insert();
+//        System.out.println( "Hello OData!" );
+//     
+//        final ODataClient client =  ODataClientFactory.getClient();
+//        
+//        final Map<String, EdmEntitySet> entitySets= new HashMap<String, EdmEntitySet>();
+//        EdmMetadataRequest request = client.getRetrieveRequestFactory().getMetadataRequest(_serviceRoot);
+//        ODataRetrieveResponse<Edm> response = request.execute();
+// 
+//        Edm edm = response.getBody();
+//        
+//
+//        List<EdmSchema> schemas = edm.getSchemas();
+//        for (final EdmSchema schema : schemas) {  
+//            if(schema.getEntityContainer()!=null){
+//                for (final EdmEntitySet es : schema.getEntityContainer().getEntitySets()) {
+//                    entitySets.put(es.getName(), es);
+//                }  
+//            }
+//        }
       
 
 
@@ -71,7 +87,7 @@ public class App
 
         
 //        showMetaData();
-//        showData();
+        showData();
     }
     
     private static void showMetaData() {
@@ -154,7 +170,7 @@ public class App
         String[] a= {"ProductID","ProductName","SupplierID","CategoryID","QuantityPerUnit",
                 "UnitPrice","UnitsInStock","UnitsOnOrder","ReorderLevel","Discontinued"};
         String[] b={"Category","Order_Details","Supplier"};
-        URI productsUri = client.newURIBuilder(_serviceRoot).select(a).expand(b).appendEntitySetSegment("Products").build();    
+        URI productsUri = client.newURIBuilder(_serviceRoot).appendEntitySetSegment("Advertisements").expand("FeaturedProduct").build();    
         
         showData(client, productsUri);
         
@@ -178,6 +194,13 @@ public class App
 
         ClientEntitySetIterator<ClientEntitySet, ClientEntity> iterator = response.getBody();
         
+        Map<String, EdmEntitySet> entitySets= new HashMap<String, EdmEntitySet>();
+        
+        EdmMetadataRequest request2 = client.getRetrieveRequestFactory().getMetadataRequest(_serviceRoot);
+        ODataRetrieveResponse<Edm> response2 = request2.execute();
+        
+        Edm edm = response2.getBody();
+        entitySets=getEntitySetMap(edm); 
         
         
         boolean first = true;
@@ -186,6 +209,31 @@ public class App
         while (iterator.hasNext()) {
             ClientEntity product = iterator.next();
             List<ClientProperty> properties = product.getProperties();
+            for (final ClientLink link : product.getNavigationLinks()) {                     
+              
+                if (link.asInlineEntity() != null) {
+                    EdmEntityType type2 ;
+                    final ClientEntity realtedEntity = link.asInlineEntity().getEntity();
+                    for (EdmEntitySet entitySet: entitySets.values()) {
+                        EdmEntityType type = entitySet.getEntityType();
+                        if (type.getName().equals(realtedEntity.getTypeName().getName())) {
+                            type2=type;
+                        }
+                    }
+                   
+                }
+
+                // 1 to many relationship
+                if (link.asInlineEntitySet() != null) {
+                    final List<ClientEntity> realtedEntities = link.asInlineEntitySet().getEntitySet().getEntities();
+                    if(realtedEntities.size()>0){
+                        final EdmEntityType type = ODataEntityUtil.getEdmEntityType(realtedEntities.get(0)
+                                .getTypeName().getName(), entitySets);
+                        
+                    }
+                }
+            }
+        
             for (ClientProperty property : properties) {
                 String name = property.getName();
                 ClientValue value = property.getValue();
@@ -204,4 +252,82 @@ public class App
         System.out.println(title + "\r\n" + data);
     }
     
+    
+    public static void insert() {
+        final String entityCollection = (String) _collection;
+        String endPoint = (String) _serviceRoot;
+       
+            final ODataClient client =  ODataClientFactory.getClient();
+            ClientEntity newObject = client.getObjectFactory().newEntity(new FullQualifiedName("ODataDemo.Product"));
+            URI uri = client.newURIBuilder(endPoint).appendEntitySetSegment(entityCollection).build();  
+
+                newObject.getProperties().add(client.getObjectFactory().newPrimitiveProperty( "ID",
+                        client.getObjectFactory().newPrimitiveValueBuilder()
+                        .setType(EdmPrimitiveTypeKind.Int32).setValue(13).build()));
+                
+                newObject.getProperties().add(client.getObjectFactory().newPrimitiveProperty( "Name",
+                        client.getObjectFactory().newPrimitiveValueBuilder()
+                        .setType(EdmPrimitiveTypeKind.String).setValue("").build()));
+                newObject.getProperties().add(client.getObjectFactory().newPrimitiveProperty( "Price",
+                        client.getObjectFactory().newPrimitiveValueBuilder()
+                        .setType(EdmPrimitiveTypeKind.Double).setValue(Double.valueOf("22.0")).build()));
+                newObject.getProperties().add(client.getObjectFactory().newPrimitiveProperty( "Rating",
+                        client.getObjectFactory().newPrimitiveValueBuilder()
+                        .setType(EdmPrimitiveTypeKind.Int32).setValue(8).build()));
+                Date date = new Date();
+                newObject.getProperties().add(client.getObjectFactory().newPrimitiveProperty( "ReleaseDate",
+                        client.getObjectFactory().newPrimitiveValueBuilder()
+                        .setType(EdmPrimitiveTypeKind.DateTimeOffset).setValue(date).build()));
+                final ODataEntityCreateRequest<ClientEntity> request = client.getCUDRequestFactory().getEntityCreateRequest(uri, newObject);
+                ODataEntityCreateResponse<ClientEntity> res = request.execute();
+                if (res.getStatusCode()==201) {
+System.out.println("inserted");
+                }      else{
+                    System.out.println("Not inserted"); 
+                }
+
+        }   
+    
+    public static void delete(){
+        String serviceRoot = "http://services.odata.org/V4/OData/(S(h3pggazgkuei3wtiwn3aeclv))/OData.svc/";
+        final ODataClient client =  ODataClientFactory.getClient();
+        URI productsUri = client.newURIBuilder(serviceRoot).filter("ID eq 777")
+                            .appendEntitySetSegment("Products")
+                            .build();
+        ODataRetrieveRequest<ClientEntitySetIterator<ClientEntitySet, ClientEntity>> request = 
+                client.getRetrieveRequestFactory().getEntitySetIteratorRequest(productsUri);
+        
+        request.addCustomHeader("env", "test"); // set custom header so server knows which database to use
+   
+        
+        ODataRetrieveResponse<ClientEntitySetIterator <ClientEntitySet, ClientEntity>> response = request.execute();
+
+        ClientEntitySetIterator<ClientEntitySet, ClientEntity> iterator = response.getBody();
+        while (iterator.hasNext()) {
+        
+              ClientEntity product = iterator.next();
+        ODataDeleteResponse deleteRes = client.getCUDRequestFactory()
+                            .getDeleteRequest(product.getId()).execute();
+
+        if (deleteRes.getStatusCode()==204) {
+            // Deleted
+            System.out.println("deleted");
+        }else{
+            System.out.println("not deleted");
+        }
+        }
+    }
+    private static Map<String, EdmEntitySet> getEntitySetMap(final Edm edm) {
+        final Map<String, EdmEntitySet> entitySets = new HashMap<String, EdmEntitySet>();
+
+        List<EdmSchema> schemas = edm.getSchemas();
+        for (final EdmSchema schema : schemas) {  
+            if(schema.getEntityContainer()!=null){
+                for (final EdmEntitySet es : schema.getEntityContainer().getEntitySets()) {
+                    entitySets.put(es.getName(), es);
+                }  
+            }
+        }
+        return entitySets;
+    }
 }

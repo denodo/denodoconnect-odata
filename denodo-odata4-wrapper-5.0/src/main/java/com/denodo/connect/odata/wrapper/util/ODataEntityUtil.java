@@ -22,20 +22,29 @@
 package com.denodo.connect.odata.wrapper.util;
 
 import java.sql.Types;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
+import com.denodo.connect.odata.wrapper.ODataWrapper;
 import com.denodo.connect.odata.wrapper.exceptions.PropertyNotFoundException;
 import com.denodo.vdb.engine.customwrapper.CustomWrapperException;
 import com.denodo.vdb.engine.customwrapper.CustomWrapperSchemaParameter;
+import com.denodo.vdb.engine.customwrapper.expression.CustomWrapperArrayExpression;
+import com.denodo.vdb.engine.customwrapper.expression.CustomWrapperExpression;
+import com.denodo.vdb.engine.customwrapper.expression.CustomWrapperFieldExpression;
 
+import org.apache.log4j.Logger;
+import org.apache.olingo.client.api.domain.ClientCollectionValue;
+import org.apache.olingo.client.api.domain.ClientComplexValue;
 import org.apache.olingo.client.api.domain.ClientEntity;
 import org.apache.olingo.client.api.domain.ClientProperty;
+import org.apache.olingo.client.api.domain.ClientValue;
 import org.apache.olingo.commons.api.edm.Edm;
 import org.apache.olingo.commons.api.edm.EdmElement;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
 import org.apache.olingo.commons.api.edm.EdmEntityType;
+import org.apache.olingo.commons.api.edm.EdmEnumType;
 import org.apache.olingo.commons.api.edm.EdmNavigationProperty;
 import org.apache.olingo.commons.api.edm.EdmProperty;
 import org.apache.olingo.commons.api.edm.EdmStructuredType;
@@ -45,6 +54,7 @@ import org.apache.olingo.commons.api.edm.constants.EdmTypeKind;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmBinary;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmBoolean;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmDate;
+import org.apache.olingo.commons.core.edm.primitivetype.EdmDateTimeOffset;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmDecimal;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmDouble;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmInt16;
@@ -56,9 +66,9 @@ import org.joda.time.LocalDateTime;
 
 public class ODataEntityUtil {
 
-
+    private static final Logger logger = Logger.getLogger(ODataEntityUtil.class);
     @SuppressWarnings("rawtypes")
-    public static CustomWrapperSchemaParameter createSchemaOlingoParameter(EdmProperty property, boolean isMandatory) {
+    public static CustomWrapperSchemaParameter createSchemaOlingoParameter(EdmProperty property, boolean isMandatory) throws CustomWrapperException {
        if (property.getType().getKind().equals(EdmTypeKind.PRIMITIVE)) {
 
             return new CustomWrapperSchemaParameter(
@@ -93,7 +103,18 @@ public class ODataEntityUtil {
                 property.isNullable(), 
                 isMandatory);
        }
-       return null;
+       if (property.getType().getKind().equals(EdmTypeKind.ENUM)){
+           return new CustomWrapperSchemaParameter(
+                   property.getName(), 
+                   Types.LONGVARCHAR, 
+                   null, 
+                   true, 
+                   CustomWrapperSchemaParameter.ASC_AND_DESC_SORT, 
+                   true /* isUpdateable */, 
+                   property.isNullable(), 
+                   isMandatory);
+       }
+      throw new CustomWrapperException("Property not supported : "+ property.getName());
     }
     @SuppressWarnings("rawtypes")
     public static CustomWrapperSchemaParameter createSchemaOlingoParameter(EdmElement property, boolean isMandatory) {
@@ -140,7 +161,9 @@ public class ODataEntityUtil {
         } else if (edmType instanceof EdmBinary) {
             return Types.BINARY;
         } else if (edmType instanceof EdmDate) {
-            return Types.TIMESTAMP;
+            return Types.TIMESTAMP; 
+        }else if (edmType instanceof EdmDateTimeOffset) {
+                return Types.TIMESTAMP;
         } else if (edmType instanceof EdmDecimal) {
             return Types.DOUBLE;
         } else if (edmType instanceof EdmDouble) {
@@ -172,19 +195,91 @@ public class ODataEntityUtil {
             return p.getValue().asPrimitive().toValue();
         } 
         //  Build complex objets (register)
-        List<ClientProperty> complexValues = (List<ClientProperty>) p.getComplexValue();
-        Object[] complexOutput = null;
-        if(complexValues != null){
-            complexOutput = new Object[complexValues.size()]; 
-            int i = 0;
-            for (ClientProperty complexProp : complexValues) {
-                complexOutput[i] = getOutputValue(complexProp);
-                i++;
+        if (p.hasComplexValue()) {
+            ClientComplexValue complexValues = p.getComplexValue();
+          
+            Object[] complexOutput = null;
+            if(complexValues != null){
+                complexOutput = new Object[complexValues.size()]; 
+                int i = 0;
+                Iterator<ClientProperty > iterator = complexValues.iterator();
+                while (iterator.hasNext()) {
+                    complexOutput[i] = getOutputValue(iterator.next());
+                    i++;
+                    
+                }
             }
+            return complexOutput;
         }
-        return complexOutput;
+        if (p.hasCollectionValue()) {
+            ClientCollectionValue<ClientValue> collectionValues = p.getCollectionValue();//TODO check
+            
+            Object[] complexOutput = null;
+            if(collectionValues != null){
+                complexOutput = new Object[collectionValues.size()]; 
+                int i = 0;
+                logger.trace("collection object "+collectionValues.toString());
+                for (ClientValue complexProp : collectionValues) {
+//                    complexOutput[i] = getOutputValue(complexProp);
+                    i++;
+                }
+            }
+            return complexOutput;
+        }
+        if(p.hasEnumValue()){
+            logger.trace("object with enum");
+        }
+        return null;
     }
 
+//    @SuppressWarnings({ "unchecked", "rawtypes" })
+//    public static Object getOutputValue(ClientValue p) {
+//        if (!p.hasCollectionValue() && !p.hasComplexValue()) {
+//            // Odata4j uses Joda time instead of Java.util.data. It needs to be casted
+////            if (p.getValue() instanceof LocalDateTime) {
+////                return ((LocalDateTime)p.getValue()).toDateTime().toCalendar(new Locale("en_US")).getTime();
+////            }  else if (p.getValue() instanceof Guid) {
+////                return p.getValue().toString();
+////            }//TODO check these types
+//            return p.getValue().asPrimitive().toValue();
+//        } 
+//        //  Build complex objets (register)
+//        if (p.hasComplexValue()) {
+//            ClientComplexValue complexValues = p.getComplexValue();
+//          
+//            Object[] complexOutput = null;
+//            if(complexValues != null){
+//                complexOutput = new Object[complexValues.size()]; 
+//                int i = 0;
+//                Iterator<ClientProperty > iterator = complexValues.iterator();
+//                while (iterator.hasNext()) {
+//                    complexOutput[i] = getOutputValue(iterator.next());
+//                    i++;
+//                    
+//                }
+//            }
+//            return complexOutput;
+//        }
+//        if (p.hasCollectionValue()) {
+//            ClientCollectionValue<ClientValue> collectionValues = p.getCollectionValue();//TODO check
+//            
+//            Object[] complexOutput = null;
+//            if(collectionValues != null){
+//                complexOutput = new Object[collectionValues.size()]; 
+//                int i = 0;
+//                logger.trace("collection object "+collectionValues.toString());
+//                for (ClientValue complexProp : collectionValues) {
+//                    complexOutput[i] = getOutputValue(complexProp);
+//                    i++;
+//                }
+//            }
+//            return complexOutput;
+//        }
+//        if(p.hasEnumValue()){
+//            logger.trace("object with enum");
+//        }
+//        return null;
+//    }
     public static CustomWrapperSchemaParameter createPaginationParameter(String name) {
         return  new CustomWrapperSchemaParameter(
                 name, 
@@ -252,10 +347,13 @@ public class ODataEntityUtil {
     @SuppressWarnings("rawtypes")
     public static Object[] getOutputValueForRelatedEntity(ClientEntity relatedEntity,  EdmEntityType type) {
         Object[] output = new Object[relatedEntity.getProperties().size()];
+        int i = 0;
         for (ClientProperty prop: relatedEntity.getProperties()) {
             String name = prop.getName();
             try {
-                output[getPropertyIndex(type, name)] = getOutputValue(prop);
+              
+                    output[i++] = getOutputValue(prop);
+                
             } catch (PropertyNotFoundException e) {
                 throw e;
             }
@@ -276,12 +374,14 @@ public class ODataEntityUtil {
     private static int getPropertyIndex(EdmEntityType type, String name)  
     throws PropertyNotFoundException {
         int i = 0;
-        for (String prop :type.getPropertyNames()) {
-            if (prop.equals(name)) {
-                return i;
+       
+            for (String prop :type.getPropertyNames()) {
+                if (prop.equals(name)) {
+                    return i;
+                }
+                i++;
             }
-            i++;
-        }
+      
         throw new PropertyNotFoundException(name);
     }
 

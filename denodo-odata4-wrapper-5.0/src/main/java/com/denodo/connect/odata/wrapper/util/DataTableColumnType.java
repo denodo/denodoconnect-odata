@@ -32,6 +32,7 @@ public enum DataTableColumnType {
     BOOLEAN(Types.BOOLEAN, EdmPrimitiveTypeKind.Boolean),
     VARCHAR(Types.VARCHAR, EdmPrimitiveTypeKind.String),
     BIGINT(Types.BIGINT, EdmPrimitiveTypeKind.Int64),
+    INTEGER(Types.INTEGER, EdmPrimitiveTypeKind.Int32),
     DOUBLE(Types.DOUBLE, EdmPrimitiveTypeKind.Double),
     TEXT(Types.CLOB, EdmPrimitiveTypeKind.String),
     DATE(Types.DATE, EdmPrimitiveTypeKind.Date),
@@ -78,6 +79,8 @@ public enum DataTableColumnType {
         switch (type) {
             case Types.VARCHAR:
                 return VARCHAR;
+            case Types.INTEGER:
+                return INTEGER;
             case Types.BIGINT:
                 return BIGINT;
             case Types.DOUBLE:

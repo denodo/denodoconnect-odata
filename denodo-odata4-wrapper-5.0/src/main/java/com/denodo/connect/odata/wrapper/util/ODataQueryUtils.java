@@ -50,9 +50,6 @@ public class ODataQueryUtils {
     
     private static final String FILENAME = "customwrapper.properties";
     private static final String TIMEFORMAT = "timeformat";
-    private static final String NAMESPACE = "namespace";
-
-
     public static String buildSimpleCondition(Map<CustomWrapperFieldExpression, Object> conditionMap, String[] rels) {
         List<String> filterClause = new ArrayList<String>();
         for (CustomWrapperFieldExpression field : conditionMap.keySet()) {
@@ -142,35 +139,7 @@ public class ODataQueryUtils {
         return value;
     }
     
-//    public static OProperty<?> prepareComplexValueForInsert(//TODO
-//            String fieldName, CustomWrapperSchemaParameter[] params, Object value){
-//        if (value instanceof CustomWrapperStruct){
-//            CustomWrapperStruct cws = (CustomWrapperStruct) value;
-//            Object [] atts = cws.getAttributes();
-//            List<OProperty<?>> values = new ArrayList<OProperty<?>>();
-//
-//            List<EdmProperty.Builder> props = new ArrayList<EdmProperty.Builder>();
-//
-//            for(int i = 0; i < params.length; i++){
-//                //Set the value
-//                values.add(OProperties.string(params[i].getName(), atts[i].toString()));
-//
-//                //Set the type
-////                EdmProperty.Builder ep = EdmProperty.newBuilder(params[i].getName()).setType(
-////                        DataTableColumnType.fromJDBCType(params[i].getType()).getEdmSimpleType());
-////                props.add(ep);
-//
-//                logger.info("Param: " + params[i].getName() + ", value: " + atts[i].toString());
-//            }
-//            
-//            EdmComplexType.Builder builder = EdmComplexType.newBuilder();
-//            builder.setNamespace(getProperties().getProperty(NAMESPACE));
-//            builder.setName(fieldName);
-//            builder.addProperties(props);
-//            return OProperties.complex(fieldName, builder.build(), values);
-//        }
-//        return null;
-//    }
+
     
     private static boolean isExpandedField(String[] rels, String field){
         if(rels!=null && rels.length>0){
@@ -196,9 +165,11 @@ public class ODataQueryUtils {
                 try {
                     properties.load(inputStream);
                     logger.info("File '" + FILENAME + "' loaded correctly.");
+                    inputStream.close();
                 } catch (IOException e) {
                     logger.error("There is a problem loading file '" + FILENAME + "': ", e);
                 }
+              
             }else{
                 logger.error("File '" + FILENAME + "' not found in classpath");
             }

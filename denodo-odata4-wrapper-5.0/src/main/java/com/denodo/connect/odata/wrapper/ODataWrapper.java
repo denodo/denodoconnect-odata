@@ -208,11 +208,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     final List<CustomWrapperSchemaParameter> schemaParams = new ArrayList<CustomWrapperSchemaParameter>();
                     List<String> properties = edmType.getPropertyNames();
                     for (String property : properties) {
-                       
                         EdmProperty edmProperty =edmType.getStructuralProperty(property);
-                        logger.debug("Adding property: " +property+ " .Type: " + edmProperty.getType().getName()+ " kind: "+edmProperty.getType().getKind().name());
-                        schemaParams.add(ODataEntityUtil.createSchemaOlingoParameter(edmProperty, false));
-
+                        logger.trace("Adding property: " +property+ " .Type: " + edmProperty.getType().getName()+ " kind: "+edmProperty.getType().getKind().name());
+                        schemaParams.add(ODataEntityUtil.createSchemaOlingoParameter(edmProperty, edm));
                     }
 
                     // add relantioships if expand is checked
@@ -221,7 +219,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
                         for (final String nav : navigationProperties) {
                             EdmNavigationProperty edmNavigationProperty = edmType.getNavigationProperty(nav);
-                            logger.debug("Adding navigation property: " +edmNavigationProperty.getName());
+                            logger.trace("Adding navigation property: " +edmNavigationProperty.getName());
                             schemaParams.add(ODataEntityUtil.createSchemaOlingoFromNavigation(edmNavigationProperty, edm,  false));
                         }
                     }
@@ -399,16 +397,17 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
                 if (!field.hasSubFields()) {
                     final int type = getSchemaParameterType(field.getStringRepresentation(), schemaParameters);
-
-                    logger.info("Class: " + insertValues.get(field).getClass());
-                    logger.info("Field/Value/Type: " + field.getStringRepresentation() + "/"    
-                            + ODataQueryUtils.prepareValueForInsert(insertValues.get(field)) + "/" + DataTableColumnType.fromJDBCType(type).getEdmSimpleType().toString());
-                    logger.info("register/array/contains/condition/field/function/simple/subfield: "
-                            + field.isRegisterExpression() + "/"
-                            + field.isArrayExpression() + "/" + field.isContainsExpression() + "/"
-                            + field.isConditionExpression() + "/" + field.isFieldExpression() + "/"
-                            + field.isFunctionExpression() + "/" + field.isSimpleExpression() + "/"
-                            + field.hasSubFields());
+                    if(logger.isDebugEnabled()){
+                        logger.debug("Class: " + insertValues.get(field).getClass());
+                        logger.debug("Field/Value/Type: " + field.getStringRepresentation() + "/"    
+                                + ODataQueryUtils.prepareValueForInsert(insertValues.get(field)) + "/" + DataTableColumnType.fromJDBCType(type).getEdmSimpleType().toString());
+                        logger.debug("register/array/contains/condition/field/function/simple/subfield: "
+                                + field.isRegisterExpression() + "/"
+                                + field.isArrayExpression() + "/" + field.isContainsExpression() + "/"
+                                + field.isConditionExpression() + "/" + field.isFieldExpression() + "/"
+                                + field.isFunctionExpression() + "/" + field.isSimpleExpression() + "/"
+                                + field.hasSubFields());
+                    }
                     if (type != 2002) {
                         logger.debug("simple property");
                         newObject.getProperties().add(client.getObjectFactory().newPrimitiveProperty( field.getStringRepresentation(),
@@ -439,11 +438,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
             return 0;
         } catch (URISyntaxException e) {
-            // TODO Auto-generated catch block
-
-            e.printStackTrace();
+            throw new CustomWrapperException("Error: Insert syntax is not correct");
         }
-        return 0;
     }
     //
     @Override
@@ -482,7 +478,6 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     ClientEntity newEntity =  client.getObjectFactory().newEntity(product.getTypeName());
 
                     logger.info("Updating entity: "+product.getId().toString());
-                    logger.debug(product.toString());
 
                     final CustomWrapperSchemaParameter[] schemaParameters = getSchemaParameters(inputValues);
                     for (final CustomWrapperFieldExpression field : updateValues.keySet()) {
@@ -490,7 +485,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                         if (!field.hasSubFields()) {
                             final int type = getSchemaParameterType(field.getStringRepresentation(), schemaParameters);
 
-                            logger.info("Field/Value/Type: " + field.getStringRepresentation() + "/"
+                            logger.debug("Field/Value/Type: " + field.getStringRepresentation() + "/"
                                     + updateValues.get(field) + "/" + type + "/" + field.isRegisterExpression() + "/"
                                     + field.isArrayExpression() + "/" + field.isContainsExpression() + "/"
                                     + field.isConditionExpression() + "/" + field.isFieldExpression() + "/"
@@ -569,13 +564,11 @@ public class ODataWrapper extends AbstractCustomWrapper {
                    //deleting every entity in a query
                     ClientEntity product = iterator.next();
                     logger.info("Deleting entity: "+product.getId().toString());
-                    logger.debug(product.toString());
                     ODataDeleteResponse deleteRes = client.getCUDRequestFactory()
                             .getDeleteRequest(product.getId()).execute();
 
                     if (deleteRes.getStatusCode()==204) {
                         deleted++;
-                        logger.debug("Entity deleted ");
                     }
                 }
                 printProxyData();
@@ -609,10 +602,11 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 if (!projectedField.getName().equals(ODataWrapper.PAGINATION_FETCH) &&
                         !projectedField.getName().equals(ODataWrapper.PAGINATION_OFFSET)) {
                     logger.info("Adding field: " + projectedField.getName());
-                    arrayfields.add(projectedField.getName());
-                    odataQuery += projectedField.getName();
+                    arrayfields.add(projectedField.getName());                    
+                    odataQuery += projectedField.getName()+",";
                 }
             }
+            odataQuery.substring(0, odataQuery.length()-1);
             String[] fields = arrayfields.toArray(new String[0]);        
 
             uribuilder=uribuilder.select(fields);
@@ -829,26 +823,6 @@ public class ODataWrapper extends AbstractCustomWrapper {
             }
         }
         return -1;
-    }
-
-    private static String getSchemaParameterName(final String nameParam,
-            final CustomWrapperSchemaParameter[] schemaParameters) {
-        for (final CustomWrapperSchemaParameter param : schemaParameters) {
-            if (nameParam.equalsIgnoreCase(param.getName())) {
-                return param.getName();
-            }
-        }
-        return null;
-    }
-
-    private static CustomWrapperSchemaParameter[]
-            getSchemaParameterColumns(final String nameParam, final CustomWrapperSchemaParameter[] schemaParameters) {
-        for (final CustomWrapperSchemaParameter param : schemaParameters) {
-            if (nameParam.equalsIgnoreCase(param.getName())) {
-                return param.getColumns();
-            }
-        }
-        return null;
     }
 
     private void printProxyData() {

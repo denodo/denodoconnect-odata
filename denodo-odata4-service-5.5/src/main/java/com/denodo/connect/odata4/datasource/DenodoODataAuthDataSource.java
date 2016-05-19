@@ -23,12 +23,10 @@ package com.denodo.connect.odata4.datasource;
 
 import java.io.PrintWriter;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Statement;
 import java.util.Map;
-import java.util.Properties;
 
 import javax.sql.DataSource;
 
@@ -56,6 +54,8 @@ public class DenodoODataAuthDataSource implements DataSource {
     private static final String AUTHORIZATION_ERROR = "Insufficient privileges to connect to the database";
     private static final String CONNECTION_REFUSED_ERROR = "Connection refused";
     private static final String DATABASE_NOT_FOUND_ERROR = ".*Database .* not found";
+    private static final String CONNECT_TOKEN_UNSUPPORTED = ".*parsing query near 'CONNECT'";
+    private static final String KERBEROS_ERROR = ".*[K|k]erberos.*";
 
     private final ThreadLocal<Map<String,String>> parameters = new ThreadLocal<Map<String,String>>();
     
@@ -142,7 +142,6 @@ public class DenodoODataAuthDataSource implements DataSource {
                 // The CONNECT command allows indicating a user name, a password
                 // and a database to initiate a
                 // new session in the server with a new profile.
-                boolean withKerberos = false;
                 if (Boolean.parseBoolean(getParameter(DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION))) {
                     /*
                      * ONLY FOR DEVELOPMENT
@@ -165,25 +164,12 @@ public class DenodoODataAuthDataSource implements DataSource {
                 } else {
                     command = new StringBuilder("CONNECT TOKEN '").append(getParameter(KERBEROS_CLIENT_TOKEN)).append("' DATABASE ")
                             .append(getParameter(DATA_BASE_NAME));
-                    
-                    /* ****** TEMPORAL HACK TO PROVE KERBEROS TOKEN UNTIL VDP IMPLEMENTS CONNECT TOKEN ******* */
-                    withKerberos = true;
-                    
-                    Properties properties = new Properties();
-                    properties.setProperty("useKerberos", "true");
-                    properties.setProperty("debug", "true");
-                    properties.setProperty("KRBClientToken", getParameter(KERBEROS_CLIENT_TOKEN));
-                    
-                    connection = new DenodoODataConnectionWrapper(DriverManager.getConnection("jdbc:vdb://localhost:9999/admin", properties));
-                    /* ****** END HACK ******* */
                 }
 
+                stmt = connection.createStatement();
+                stmt.execute(command.toString());
+                
                 this.authenticatedConnection.set(connection);
-
-                if (!withKerberos) {
-                    stmt = connection.createStatement();
-                    stmt.execute(command.toString());
-                }
 
             }
             return connection;
@@ -206,6 +192,14 @@ public class DenodoODataAuthDataSource implements DataSource {
                     logger.error("Database not found", e);
                     throw new DenodoODataResourceNotFoundException(e);
                 }
+                if (e.getMessage().matches(KERBEROS_ERROR)) { // Check Kerberos authentication disabled
+                    logger.error(e);
+                    throw new DenodoODataKerberosUnsupportedException(e);
+                }                
+                if (e.getMessage().matches(CONNECT_TOKEN_UNSUPPORTED)) { // Check connect token sentence unsupported
+                    logger.error(e);
+                    throw new DenodoODataKerberosUnsupportedException(e);
+                }                
             }
             logger.error(e);
             throw new DenodoODataConnectException(e, getParameter(DATA_BASE_NAME), getParameter(USER_NAME));

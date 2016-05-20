@@ -20,6 +20,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 
+import org.apache.log4j.Logger;
+
 /**
  * 
  * This class allow us to have a connection wrapper in order to reestablish the session (CLOSE)
@@ -28,6 +30,8 @@ import java.util.concurrent.Executor;
  */
 public class DenodoODataConnectionWrapper implements Connection {
 
+    private static final Logger logger = Logger.getLogger(DenodoODataConnectionWrapper.class);
+    
     private Connection connection;
 
     public DenodoODataConnectionWrapper(Connection connection) {
@@ -57,12 +61,20 @@ public class DenodoODataConnectionWrapper implements Connection {
     }
     
     public void closeConnection() throws SQLException {
+
         if (this.connection != null && !this.connection.isClosed()) {
             //CLOSE: allows the previous session to be reestablished after having established a new session with the CONNECT command
-            Statement  stmt = this.connection.createStatement();
-            stmt.execute("CLOSE");
+            try {
+                Statement  stmt = this.connection.createStatement();
+                stmt.execute("CLOSE");
+            } catch (SQLException e) {
+                logger.warn("Could not close JDBC Connection", e);
+                // Close statement throws an exception when the CONNECT command failed due to e.g. invalid credentials.
+                // Ignore this error because close method must be invoked to release the connection to the pool.
+                // See https://redmine.denodo.com/issues/27519.
+            }
+            this.connection.close();
         }
-        this.connection.close();
     }
 
     @Override

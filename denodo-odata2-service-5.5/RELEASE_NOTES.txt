@@ -1,3 +1,7 @@
+20160523
+--------
+- Fixed #27519 - OData Service goes down after several failed login attempts.
+
 20160428
 --------
 - Fixed #27098 - Incorrect implementation of the $top operator.

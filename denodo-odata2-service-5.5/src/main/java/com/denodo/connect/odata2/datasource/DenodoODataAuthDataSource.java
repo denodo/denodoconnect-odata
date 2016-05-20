@@ -73,13 +73,16 @@ public class DenodoODataAuthDataSource implements DataSource {
         
         try {
             // Call closeConnection only when the request has finished because we are caching authenticated connections.
-            this.authenticatedConnection.get().closeConnection();
+            DenodoODataConnectionWrapper connection = this.authenticatedConnection.get();
+            if (connection != null) {
+                connection.closeConnection();
+            }
         
         } catch (SQLException ex) {
-            logger.debug("Could not close JDBC Connection", ex);
+            logger.warn("Could not close JDBC Connection", ex);
         } catch (Throwable ex) {
             // JDBC driver: It might throw RuntimeException or Error.
-            logger.debug("Unexpected exception on closing JDBC Connection", ex);
+            logger.warn("Unexpected exception on closing JDBC Connection", ex);
         } finally {
             this.authenticatedConnection.remove();
         }
@@ -158,29 +161,30 @@ public class DenodoODataAuthDataSource implements DataSource {
                             .append(this.parameters.get().get(DATA_BASE_NAME));
                 }
 
+                this.authenticatedConnection.set(connection);
+                
                 stmt = connection.createStatement();
                 stmt.execute(command.toString());
                 
-                this.authenticatedConnection.set(connection);
             }
             return connection;
             
         } catch (final SQLException e) {
             if (e.getMessage() != null) {
                 if (e.getMessage().contains(CONNECTION_REFUSED_ERROR)) { // Check connection refused
-                    logger.error(e);
+                    logger.error("Connection refused", e);
                     throw new DenodoODataConnectException(e);
                 }
                 if (e.getMessage().contains(AUTHENTICATION_ERROR)) { // Check invalid credentials
-                    logger.error(e);
+                    logger.error("Invalid credentials", e);
                     throw new DenodoODataAuthenticationException(e);
                 }
                 if (e.getMessage().contains(AUTHORIZATION_ERROR)) { // Check insufficient privileges
-                    logger.error(e);
+                    logger.error("Insufficient privileges", e);
                     throw new DenodoODataAuthorizationException(e);
                 }
                 if (e.getMessage().matches(DATABASE_NOT_FOUND_ERROR)) { // Check data base name exists
-                    logger.error(e);
+                    logger.error("Database not found", e);
                     throw new DenodoODataResourceNotFoundException(e);
                 }
             }

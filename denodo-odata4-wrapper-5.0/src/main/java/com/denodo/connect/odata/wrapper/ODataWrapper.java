@@ -85,10 +85,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
     private final static String INPUT_PARAMETER_ENDPOINT = "Service Endpoint *";
     private final static String INPUT_PARAMETER_EXPAND = "Expand Related Entities";
     private final static String INPUT_PARAMETER_NTLM = "Use NTLM Authentication";
-    private final static String INPUT_PARAMETER_FORMAT = "Service Format *";
     private final static String INPUT_PARAMETER_LIMIT = "Enable Pagination";
-    private final static String INPUT_PARAMETER_FORMAT_JSON = "JSON";
-    private final static String INPUT_PARAMETER_FORMAT_ATOM = "XML-Atom";
     private final static String INPUT_PARAMETER_PROXY_PORT = "Proxy Port";
     private final static String INPUT_PARAMETER_PROXY_HOST = "Proxy Host";
     private final static String INPUT_PARAMETER_USER = "User";
@@ -126,9 +123,6 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     true, CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_ENTITY_COLLECTION, "Entity to be used in the base view",
                     true, CustomWrapperInputParameterTypeFactory.stringType()),
-            new CustomWrapperInputParameter(INPUT_PARAMETER_FORMAT, "Format of the service: XML-Atom or JSON",
-                    true, CustomWrapperInputParameterTypeFactory.enumStringType(new String[] {
-                            INPUT_PARAMETER_FORMAT_JSON, INPUT_PARAMETER_FORMAT_ATOM })),
             new CustomWrapperInputParameter(INPUT_PARAMETER_EXPAND,
                     "If checked, related entities will be mapped as part of the output schema",
                     false, CustomWrapperInputParameterTypeFactory.booleanType(false)),

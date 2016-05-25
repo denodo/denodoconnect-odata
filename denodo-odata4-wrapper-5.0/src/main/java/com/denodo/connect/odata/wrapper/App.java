@@ -4,11 +4,13 @@ package com.denodo.connect.odata.wrapper;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.olingo.client.api.ODataClient;
 import org.apache.olingo.client.api.communication.request.cud.ODataEntityCreateRequest;
@@ -55,8 +57,8 @@ import com.denodo.vdb.engine.customwrapper.expression.CustomWrapperFieldExpressi
  */
 public class App 
 {
-    private final static String _serviceRoot = "http://services.odata.org/V4/OData/(S(pwy3ssmhv5vyhhe5xtfcdwcx))/OData.svc/";
-    private final static String _collection = "Products";
+    private final static String _serviceRoot = "http://services.odata.org/V4/(S(ss2dkcxal5xlnqa0sqxepfcr))/TripPinServiceRW/";
+    private final static String _collection = "People";
     public static void main( String[] args )
     {
 //        delete();
@@ -85,9 +87,14 @@ public class App
 
       
 
-        
-//        showMetaData();
-        showData();
+        try {
+            getSchemaParameters();
+        } catch (CustomWrapperException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+       // showMetaData();
+       showData();
     }
     
     private static void showMetaData() {
@@ -170,7 +177,7 @@ public class App
         String[] a= {"ProductID","ProductName","SupplierID","CategoryID","QuantityPerUnit",
                 "UnitPrice","UnitsInStock","UnitsOnOrder","ReorderLevel","Discontinued"};
         String[] b={"Category","Order_Details","Supplier"};
-        URI productsUri = client.newURIBuilder(_serviceRoot).appendEntitySetSegment("Advertisements").expand("FeaturedProduct").build();    
+        URI productsUri = client.newURIBuilder(_serviceRoot).appendEntitySetSegment("People").expand("Friends").build();    
         
         showData(client, productsUri);
         
@@ -329,5 +336,61 @@ System.out.println("inserted");
             }
         }
         return entitySets;
+    }
+    
+    public static CustomWrapperSchemaParameter[] getSchemaParameters(
+            ) throws CustomWrapperException {
+        try {
+         
+
+            final ODataClient client =  ODataClientFactory.getClient();
+            String uri = _serviceRoot;
+            Map<String, EdmEntitySet> entitySets= new HashMap<String, EdmEntitySet>();
+            EdmMetadataRequest request = client.getRetrieveRequestFactory().getMetadataRequest(uri);
+            ODataRetrieveResponse<Edm> response = request.execute();
+
+            Edm edm = response.getBody();     
+            entitySets=getEntitySetMap(edm);                    
+
+      
+            EdmEntitySet entitySet= entitySets.get(_collection);
+            if(entitySet!=null){
+                final EdmEntityType edmType =entitySet.getEntityType();
+
+                if (edmType != null){
+                    final List<CustomWrapperSchemaParameter> schemaParams = new ArrayList<CustomWrapperSchemaParameter>();
+                    List<String> properties = edmType.getPropertyNames();
+                    for (String property : properties) {
+                       
+                        EdmProperty edmProperty =edmType.getStructuralProperty(property);
+                        schemaParams.add(ODataEntityUtil.createSchemaOlingoParameter(edmProperty, edm));
+
+                    }
+                    // add relantioships if expand is checked
+                 
+                        List<String> navigationProperties= edmType.getNavigationPropertyNames();
+
+                        for (final String nav : navigationProperties) {
+                            EdmNavigationProperty edmNavigationProperty = edmType.getNavigationProperty(nav);
+                         
+                            schemaParams.add(ODataEntityUtil.createSchemaOlingoFromNavigation(edmNavigationProperty, edm,  false));
+                        }
+                   
+                    final CustomWrapperSchemaParameter[] schema = new CustomWrapperSchemaParameter[schemaParams.size()];
+                    for (int i = 0; i < schemaParams.size(); i++) {
+                        schema[i] = schemaParams.get(i);
+                    
+                    }
+                    return schema;
+                }
+            }
+            throw new CustomWrapperException(
+                    "Entity Collection not found for the requested service. Available Entity Collections are " +
+                            entitySets.keySet());
+
+        } catch (final Exception e) {
+          
+            throw new CustomWrapperException(e.getMessage());
+        }
     }
 }

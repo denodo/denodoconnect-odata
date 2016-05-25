@@ -72,7 +72,9 @@ public class ODataEntityUtil {
         if (property.isCollection()) {
             //array with primitive types
             if (property.isPrimitive()) {
-                CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[]{createSchemaOlingoParameter(property,edm)};
+                CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[]{new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType((EdmType) property.getType()), null,  true /* isSearchable */, 
+                        CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
+                        property.isNullable() /*isNullable*/, false /*isMandatory*/)};
                 return new CustomWrapperSchemaParameter(property.getName(), Types.ARRAY, complexParams, true /* isSearchable */, 
                         CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                         property.isNullable() /*isNullable*/, false /*isMandatory*/);
@@ -323,7 +325,7 @@ public class ODataEntityUtil {
     public static CustomWrapperSchemaParameter createSchemaOlingoFromNavigation(EdmNavigationProperty nav, Edm edm, boolean isMandatory)
             throws CustomWrapperException {
         String relName = nav.getName(); // Field name
-
+        
         final EdmEntityType type = edm.getEntityType(nav.getType().getFullQualifiedName());
         if (type != null) {
             List<String> props = type.getPropertyNames();

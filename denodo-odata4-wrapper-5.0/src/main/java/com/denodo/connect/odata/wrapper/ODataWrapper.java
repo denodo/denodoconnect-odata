@@ -113,6 +113,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
     public final static String UPDATE_OPERATION= "UPDATE";
     public final static String DELETE_OPERATION= "DELETE";
     public final static String SELECT_OPERATION= "SELECT";
+    public final static String  CONTAINSTARGET= "@odata.context";
     
     private static final Logger logger = Logger.getLogger(ODataWrapper.class);
 
@@ -321,14 +322,18 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 ClientEntity product = iterator.next();
                 List<ClientProperty> properties = product.getProperties();
                 for (ClientProperty property : properties) {
-                    
-                    final int index = projectedFields.indexOf(new CustomWrapperFieldExpression(property.getName()));
-                   
-                    Object value = ODataEntityUtil.getOutputValue(property);
-                    logger.debug("==> " + property.toString()+"||"+value);
-                    params[index] = value;                   
-                    
+                    logger.debug("non atopa" +property.getName() );
+                    if(!(property.getName().contains(CONTAINSTARGET))){
+                        //If a navigation property  have the property ContainsTarget with value true. A property nameNavigation@odata.context is added in the properties.
+                        //This property has to be ignored this, but there isnot a attribute to differentiate if it is constaintarget.When you obtain the metadata in getschemaparameters the object
+                        //  EdmNavigationProperty has a method containsTarget, but it is not useful in this situation. This property Containstarget -->Gets whether this navigation property is a containment,
+                        //default to false
+                        final int index = projectedFields.indexOf(new CustomWrapperFieldExpression(property.getName()));
 
+                        Object value = ODataEntityUtil.getOutputValue(property);
+                        logger.debug("==> " + property.toString()+"||"+value);
+                        params[index] = value;                   
+                    }
                 }
 
               // If expansion, add related entities

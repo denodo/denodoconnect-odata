@@ -1,0 +1,4 @@
+
+20160120
+========
+- Created first version of this component for Denodo 6.0

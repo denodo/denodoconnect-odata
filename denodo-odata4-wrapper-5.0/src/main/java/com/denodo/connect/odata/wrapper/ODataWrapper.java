@@ -25,6 +25,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -111,6 +112,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
     public final static String DELETE_OPERATION= "DELETE";
     public final static String SELECT_OPERATION= "SELECT";
     public final static String  CONTAINSTARGET= "@odata.context";
+
+    private Map<String, List<String>> propertiesCache = new LinkedHashMap<String, List<String>>();
     
     private static final Logger logger = Logger.getLogger(ODataWrapper.class);
 
@@ -174,6 +177,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
         return configuration;
     }
 
+    @Override
     public CustomWrapperSchemaParameter[] getSchemaParameters(
             final Map<String, String> inputValues) throws CustomWrapperException {
         try {
@@ -192,21 +196,47 @@ public class ODataWrapper extends AbstractCustomWrapper {
             ODataRetrieveResponse<Edm> response = request.execute();
 
             Edm edm = response.getBody();     
-            entitySets=getEntitySetMap(edm);                    
+            entitySets = getEntitySetMap(edm);        
+            
+            Map<EdmEntityType, List<EdmEntityType>> baseTypeMap = getBaseTypeMap(edm);
 
       
-            EdmEntitySet entitySet= entitySets.get(getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION).toString());
+            EdmEntitySet entitySet = entitySets.get(getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION).toString());
             if(entitySet!=null){
-                final EdmEntityType edmType =entitySet.getEntityType();
-
+                final EdmEntityType edmType = entitySet.getEntityType();
+                
                 if (edmType != null){
+                    
                     final List<CustomWrapperSchemaParameter> schemaParams = new ArrayList<CustomWrapperSchemaParameter>();
+                    
                     List<String> properties = edmType.getPropertyNames();
+                    
                     for (String property : properties) {
-                        EdmProperty edmProperty =edmType.getStructuralProperty(property);
+                        EdmProperty edmProperty = edmType.getStructuralProperty(property);
                         logger.trace("Adding property: " +property+ " .Type: " + edmProperty.getType().getName()+ " kind: "+edmProperty.getType().getKind().name());
                         schemaParams.add(ODataEntityUtil.createSchemaOlingoParameter(edmProperty, edm));
                     }
+                    
+                    // Add the properties belonging to a type whose base type is the type of the requested entity set
+                    if (baseTypeMap.containsKey(edmType)) {
+                        
+                        List<String> propertiesAssociated = new ArrayList<String>(properties);
+                        this.propertiesCache.put(entitySet.getName(), propertiesAssociated);
+                        
+                        for (EdmEntityType entityType : baseTypeMap.get(edmType)) {
+                            for (String property : entityType.getPropertyNames()) {
+                                if (!properties.contains(property)) {   
+                                    // Add the property to the cache
+                                    propertiesAssociated.add(property);
+                                    
+                                    EdmProperty edmProperty = entityType.getStructuralProperty(property);
+                                    logger.trace("Adding property: " +property+ " .Type: " + edmProperty.getType().getName()+ " kind: "+edmProperty.getType().getKind().name());
+                                    schemaParams.add(ODataEntityUtil.createSchemaOlingoParameter(edmProperty, edm));
+                                }
+                            }
+                        }
+                    }
+                    
 
                     // add relantioships if expand is checked
                     if (((Boolean) getInputParameterValue(INPUT_PARAMETER_EXPAND).getValue()).booleanValue()) {
@@ -245,6 +275,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
         }
     }
 
+    @Override
     public void run(final CustomWrapperConditionHolder condition,
             final List<CustomWrapperFieldExpression> projectedFields, final CustomWrapperResult result,
             final Map<String, String> inputValues) throws CustomWrapperException {
@@ -286,10 +317,10 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 }                
             }
             if (logger.isDebugEnabled()) {
+                final CustomWrapperSchemaParameter[] schemaParameters = getSchemaParameters(inputValues);
                 for (final CustomWrapperFieldExpression field : projectedFields) {
 
                     if (!field.hasSubFields()) {
-                        final CustomWrapperSchemaParameter[] schemaParameters = getSchemaParameters(inputValues);
                         final int type = getSchemaParameterType(field.getStringRepresentation(), schemaParameters);
 
                         logger.info("Field/Value/Type: " + field.getStringRepresentation() + "/"
@@ -585,29 +616,39 @@ public class ODataWrapper extends AbstractCustomWrapper {
             final CustomWrapperConditionHolder condition, final List<CustomWrapperFieldExpression> projectedFields,
             final Map<String, String> inputValues,String operation) {
        
-//Build the Uri
+        //Build the Uri
 
-        
-        URIBuilder uribuilder=  client.newURIBuilder(endPoint);
+        URIBuilder uribuilder = client.newURIBuilder(endPoint);
         
         String odataQuery = endPoint+ entityCollection ;
             
 
         if(operation.equals(SELECT_OPERATION)){
-            odataQuery+= "?$select=";
+            
+            List<String> cachedProperties = this.propertiesCache.get(entityCollection);
+            List<String> projectedFieldsAsString = getProjectedFieldsAsString(projectedFields);
             final List<String> arrayfields = new ArrayList<String>();
+            
+            if (cachedProperties != null && !cachedProperties.isEmpty()) {
+                if (!projectedFieldsAsString.containsAll(cachedProperties)) {
+                    
+                    for (final String projectedField : projectedFieldsAsString) {
+                        logger.info("Adding field (not contains all): " + projectedField);
+                        arrayfields.add(projectedField);
+                        odataQuery += projectedField + ",";
+                    }
+                    odataQuery+= "?$select=";
 
-            for (final CustomWrapperFieldExpression projectedField : projectedFields) {
-                if (!projectedField.getName().equals(ODataWrapper.PAGINATION_FETCH) &&
-                        !projectedField.getName().equals(ODataWrapper.PAGINATION_OFFSET)) {
-                    logger.info("Adding field: " + projectedField.getName());
-                    arrayfields.add(projectedField.getName());                    
-                    odataQuery += projectedField.getName()+",";
+                    odataQuery.substring(0, odataQuery.length()-1);
+                            
+                } else {
+                    projectedFieldsAsString.clear();
+                    projectedFieldsAsString.add("*");
+                    odataQuery+= "?$select=*";
                 }
             }
-            odataQuery.substring(0, odataQuery.length()-1);
-            String[] fields = arrayfields.toArray(new String[0]);        
-
+            
+            String[] fields = projectedFieldsAsString.toArray(new String[projectedFieldsAsString.size()]);
             uribuilder=uribuilder.select(fields);
             String relations="";
 
@@ -685,7 +726,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
         }
 
         logger.info("Setting query: " + odataQuery);
-        uribuilder=uribuilder.appendEntitySetSegment(entityCollection);
+        uribuilder = uribuilder.appendEntitySetSegment(entityCollection);
         // Adds specific OData URL to the execution trace
         getCustomWrapperPlan().addPlanEntry("OData query", odataQuery);
 
@@ -693,6 +734,19 @@ public class ODataWrapper extends AbstractCustomWrapper {
         return uribuilder.build();
     }
 
+    private static List<String> getProjectedFieldsAsString(List<CustomWrapperFieldExpression> projectedFields) {
+        
+        List<String> fields = new ArrayList<String>();
+        
+        for (final CustomWrapperFieldExpression projectedField : projectedFields) {
+            if (!projectedField.getName().equals(ODataWrapper.PAGINATION_FETCH)
+                    && !projectedField.getName().equals(ODataWrapper.PAGINATION_OFFSET)) {
+                fields.add(projectedField.getName());
+            }
+        }
+        
+        return fields;
+    }
 
     private ODataClient getClient() throws URISyntaxException {
 
@@ -814,6 +868,31 @@ public class ODataWrapper extends AbstractCustomWrapper {
         return entitySets;
     }
 
+    private static Map<EdmEntityType, List<EdmEntityType>> getBaseTypeMap(final Edm edm) {
+        Map<EdmEntityType, List<EdmEntityType>> baseTypeMap = new HashMap<EdmEntityType, List<EdmEntityType>>();    
+        
+        List<EdmSchema> schemas = edm.getSchemas();
+        for (final EdmSchema schema : schemas) {  
+            if(schema.getEntityContainer()!=null){
+                List<EdmEntityType> schemaEntityTypes = schema.getEntityTypes();
+                if (schemaEntityTypes != null) {
+                    for (EdmEntityType edmEntityType : schemaEntityTypes) {
+                        if (edmEntityType != null && edmEntityType.getBaseType() != null) {                            
+                            if (!baseTypeMap.containsKey(edmEntityType.getBaseType())) {
+                                baseTypeMap.put(edmEntityType.getBaseType(), new ArrayList<EdmEntityType>());
+                            }
+                            baseTypeMap.get(edmEntityType.getBaseType()).add(edmEntityType);
+                        }
+                    }
+                }
+            }
+        }
+        
+        return baseTypeMap;
+    }
+    
+    
+    
     private static int getSchemaParameterType(final String nameParam,
             final CustomWrapperSchemaParameter[] schemaParameters) {
         for (final CustomWrapperSchemaParameter param : schemaParameters) {

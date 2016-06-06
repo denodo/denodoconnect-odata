@@ -30,6 +30,7 @@ import org.apache.log4j.Logger;
 import org.apache.olingo.client.api.domain.ClientCollectionValue;
 import org.apache.olingo.client.api.domain.ClientComplexValue;
 import org.apache.olingo.client.api.domain.ClientEntity;
+import org.apache.olingo.client.api.domain.ClientLink;
 import org.apache.olingo.client.api.domain.ClientProperty;
 import org.apache.olingo.client.api.domain.ClientValue;
 import org.apache.olingo.commons.api.edm.Edm;
@@ -55,6 +56,7 @@ import org.apache.olingo.commons.core.edm.primitivetype.EdmInt32;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmInt64;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmSByte;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmSingle;
+import org.apache.olingo.commons.core.edm.primitivetype.EdmStream;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmTimeOfDay;
 
 import com.denodo.connect.odata.wrapper.exceptions.PropertyNotFoundException;
@@ -66,13 +68,14 @@ public class ODataEntityUtil {
     private static final Logger logger = Logger.getLogger(ODataEntityUtil.class);
 
 
-    public static CustomWrapperSchemaParameter createSchemaOlingoParameter(EdmProperty property, Edm edm)
+    public static CustomWrapperSchemaParameter createSchemaOlingoParameter(EdmProperty property, Edm edm, Boolean loadBlobObjects)
             throws CustomWrapperException {  
        
         if (property.isCollection()) {
             //array with primitive types
             if (property.isPrimitive()) {
-                CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[]{new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType((EdmType) property.getType()), null,  true /* isSearchable */, 
+                CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[]{new CustomWrapperSchemaParameter(property.getName(), 
+                        mapODataSimpleType((EdmType) property.getType(), loadBlobObjects), null,  true /* isSearchable */, 
                         CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                         property.isNullable() /*isNullable*/, false /*isMandatory*/)};
                 return new CustomWrapperSchemaParameter(property.getName(), Types.ARRAY, complexParams, true /* isSearchable */, 
@@ -86,7 +89,7 @@ public class ODataEntityUtil {
                 CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[propertyNames.size()];
                 int i = 0;
                 for (String prop : propertyNames) {
-                    complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop),edm);
+                    complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop), edm, loadBlobObjects);
                     i++;
                 }
 
@@ -98,7 +101,7 @@ public class ODataEntityUtil {
                 }
         }
         if (property.isPrimitive()) {
-            return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType((EdmType) property.getType()), null,  true /* isSearchable */, 
+            return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType((EdmType) property.getType(), loadBlobObjects), null,  true /* isSearchable */, 
                     CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                     property.isNullable() /*isNullable*/, false /*isMandatory*/);
         }
@@ -106,7 +109,7 @@ public class ODataEntityUtil {
             //Obtaining the type of the ENUM  
             EdmEntityType customerType = edm.getEntityType(new FullQualifiedName( "NorthwindModel", "Product"));
             
-            return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType((EdmType) customerType), null,  true /* isSearchable */, 
+            return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType((EdmType) customerType, loadBlobObjects), null,  true /* isSearchable */, 
                     CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                     property.isNullable() /*isNullable*/, false /*isMandatory*/);
         }
@@ -117,7 +120,7 @@ public class ODataEntityUtil {
                 CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[propertyNames.size()];
                 int i = 0;
                 for (String prop : propertyNames) {
-                    complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop),edm);
+                    complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop), edm, loadBlobObjects);
                     i++;
                 }
 
@@ -131,11 +134,11 @@ public class ODataEntityUtil {
     }
 
 
-    public static CustomWrapperSchemaParameter createSchemaOlingoParameter(EdmElement property, Edm edm) throws CustomWrapperException {
+    public static CustomWrapperSchemaParameter createSchemaOlingoParameter(EdmElement property, Edm edm, Boolean loadBlobObjects) throws CustomWrapperException {
         logger.trace("property def: " + property.toString() + property.getName() + property.getType().toString());
         if (property.isCollection()) {
             if (property.getType().getKind().equals(EdmTypeKind.PRIMITIVE)) {
-                return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType(property.getType()), null, true /* isSearchable */, 
+                return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType(property.getType(), loadBlobObjects), null, true /* isSearchable */, 
                         CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                         true /*isNullable*/, false /*isMandatory*/);
             }
@@ -146,7 +149,7 @@ public class ODataEntityUtil {
                 CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[propertyNames.size()];
                 int i = 0;
                 for (String prop : propertyNames) {
-                    complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop),edm);
+                    complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop),edm, loadBlobObjects);
                     i++;
                 }
 
@@ -158,7 +161,7 @@ public class ODataEntityUtil {
             }
         }
         if (property.getType().getKind().equals(EdmTypeKind.PRIMITIVE)) {
-            return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType(property.getType()), null, true /* isSearchable */, 
+            return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType(property.getType(), loadBlobObjects), null, true /* isSearchable */, 
                     CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                     true /*isNullable*/, false /*isMandatory*/);
         }
@@ -169,7 +172,7 @@ public class ODataEntityUtil {
             CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[propertyNames.size()];
             int i = 0;
             for (String prop : propertyNames) {
-                complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop), edm);
+                complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop), edm, loadBlobObjects);
                 i++;
             }
 
@@ -183,14 +186,14 @@ public class ODataEntityUtil {
             //Obtaining the type of the ENUM  
             EdmEntityType customerType = edm.getEntityType(new FullQualifiedName( "NorthwindModel", "Product"));
 
-            return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType((EdmType) customerType), null,  true /* isSearchable */, 
+            return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType((EdmType) customerType, loadBlobObjects), null,  true /* isSearchable */, 
                     CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                     true /*isNullable*/, false /*isMandatory*/);
         }
         throw new CustomWrapperException("Property not supported : " + property.getName());
     }
 
-    private static int mapODataSimpleType(EdmType edmType) {
+    private static int mapODataSimpleType(EdmType edmType, Boolean loadBlobObjects) {
         if (edmType instanceof EdmBoolean) {
             return Types.BOOLEAN;
         } else if (edmType instanceof EdmBinary) {
@@ -221,6 +224,8 @@ public class ODataEntityUtil {
             return Types.INTEGER;
         } else if (edmType instanceof EdmTimeOfDay) {
             return Types.TIMESTAMP;
+        } else if (edmType instanceof EdmStream) {
+            return loadBlobObjects != null && loadBlobObjects.booleanValue() ? Types.BLOB : Types.VARCHAR;
         }
         return Types.VARCHAR;
     }
@@ -322,7 +327,7 @@ public class ODataEntityUtil {
                 false /* isUpdateable */, true /* is Nullable */, false /* isMandatory */);
     }
 
-    public static CustomWrapperSchemaParameter createSchemaOlingoFromNavigation(EdmNavigationProperty nav, Edm edm, boolean isMandatory)
+    public static CustomWrapperSchemaParameter createSchemaOlingoFromNavigation(EdmNavigationProperty nav, Edm edm, boolean isMandatory, Boolean loadBlobObjects)
             throws CustomWrapperException {
         String relName = nav.getName(); // Field name
         
@@ -332,7 +337,7 @@ public class ODataEntityUtil {
             CustomWrapperSchemaParameter[] schema = new CustomWrapperSchemaParameter[props.size()];
             int i = 0;
             for (String property : props) {
-                schema[i] = ODataEntityUtil.createSchemaOlingoParameter(type.getProperty(property),edm);
+                schema[i] = ODataEntityUtil.createSchemaOlingoParameter(type.getProperty(property), edm, loadBlobObjects);
                 i++;
             }
 
@@ -359,17 +364,28 @@ public class ODataEntityUtil {
     }
 
     public static Object[] getOutputValueForRelatedEntity(ClientEntity relatedEntity, EdmEntityType type) throws CustomWrapperException {
-        Object[] output = new Object[relatedEntity.getProperties().size()];
+        
+        List<ClientProperty> properties = relatedEntity.getProperties();
+        List<ClientLink> mediaEditLinks = relatedEntity.getMediaEditLinks();
+        Object[] output = new Object[properties.size() + mediaEditLinks.size()];
+        
         int i = 0;
-        for (ClientProperty prop : relatedEntity.getProperties()) {
+        for (ClientProperty prop : properties) {
             try {
-
                 output[i++] = getOutputValue(prop);
-
             } catch (PropertyNotFoundException e) {
                 throw e;
             }
         }
+        
+        for (ClientLink clientLink : mediaEditLinks) {  
+            try {
+                output[i++] = clientLink.getLink();
+            } catch (PropertyNotFoundException e) {
+                throw e;
+            }
+        }
+        
         return output;
     }
 

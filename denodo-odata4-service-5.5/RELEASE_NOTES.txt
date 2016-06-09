@@ -1,0 +1,53 @@
+20160523
+--------
+- Fixed #27519 - OData Service goes down after several failed login attempts.
+
+20160511
+--------
+- Added #23735 - OData 4.0 support
+- Fixed #26151 - Avoid queries inside a rowMap method (e.g. DESC COMMANDS)
+- Fixed #26246 - Minor issue with next links
+- Fixed #26631 - Precedence grouping not honored in filter query options
+
+20160311
+--------
+- Fixed #25532 - Documentation error
+- Added #26047 - per-request caching of authentication in OData
+
+20160129
+--------
+- Added #23067 - Expand System Query Option
+
+20151125
+--------
+- Fixed #24372 - Delete internal VDP type ("relation_link") and avoid Edm.Null types
+
+20151120
+--------
+- Fixed #24041 - Lack of Spring version synchronization
+- Added #24327 - Allow disabling authentication for specific development environments
+
+20151007
+--------
+- Added #23062 - Allow disabling admin access from configuration
+- Added #23063 - Evaluate using JNDI configuration as a default instead of properties
+
+20150909
+--------
+- Fixed #23087 - Combining an OData function at $filter with $inlinecount results in exception.
+- Added #23080 - Add the string functions endswith and lenght.
+- Fixed #23078 - Error handling queries involving case-sensitive elements.
+- Added #23081 - Add the string functions substring(string p0, int pos) and string substring(string p0, int pos, int length).
+- Added #23082 - Add string functions tolower(string p0) and toupper(string p0).
+- Added #23084 - Add String functions trim(string p0) and concat(string p0, string p1).
+- Added #23085 - Add Date Functions (hour, minute, second).
+- Added #23086 - Add Math Functions.
+- Fixed #23110 - Complex properties in string functions using logical negation.
+- Fixed #23116 - Error handling several string functions in the filter section.
+- Fixed #23145 - Error using logical negation.
+- Fixed #23149 - Allow functions as parameters to other functions.
+- Fixed #23191 - The string functions substringof, endswith and startswith must return boolean values.
+
+20150730.BETA1
+--------------
+- First beta version of the Denodo OData Service.

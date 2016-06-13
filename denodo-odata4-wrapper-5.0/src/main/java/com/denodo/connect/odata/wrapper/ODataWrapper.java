@@ -781,7 +781,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
         return fields;
     }
 
-    private ODataClient getClient() throws URISyntaxException {
+    private ODataClient getClient() throws URISyntaxException, CustomWrapperException {
 
     
         ODataClient client;
@@ -794,6 +794,11 @@ public class ODataWrapper extends AbstractCustomWrapper {
         
         //NLTM
         if (((Boolean) getInputParameterValue(INPUT_PARAMETER_NTLM).getValue()).booleanValue()) {
+            if ((getInputParameterValue(INPUT_PARAMETER_PROXY_HOST) != null)
+                    && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_PROXY_HOST).getValue())) {
+                logger.error("It is not allowed the authentication NTLM using a proxy host.");
+                throw  new CustomWrapperException("It is not allowed the authentication NTLM using a proxy host.");
+            }
             String user = "";
             String password = "";
             String domain = "";
@@ -816,6 +821,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 client.getConfiguration().
                 setHttpClientFactory(  new NTLMAuthHttpClientFactory(user, password, null, domain));
             }
+            
         }else{
             
             String user=null;
@@ -867,14 +873,14 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 proxyPassword = (String) getInputParameterValue(INPUT_PARAMETER_PROXY_PASSWORD).getValue();
             } 
             logger.info("Setting PROXY: " + proxyHost + ":" + proxyPort);
-            URI proxy = new URI(proxyHost+":"+proxyPort);           
+            URI proxy = new URI(null,null,proxyHost,Integer.valueOf(proxyPort),null,null,null);           
             if (getInputParameterValue(INPUT_PARAMETER_TIMEOUT) != null) {
                 client.getConfiguration().
-                setHttpClientFactory( new ProxyWrappingHttpTimeoutClientFactory(proxy, proxyUser, proxyPassword, (DefaultHttpClientFactory) client,(Integer) getInputParameterValue(INPUT_PARAMETER_TIMEOUT).getValue()));
+                setHttpClientFactory( new ProxyWrappingHttpTimeoutClientFactory(proxy, proxyUser, proxyPassword, (Integer) getInputParameterValue(INPUT_PARAMETER_TIMEOUT).getValue()));
             }else{
            
                 client.getConfiguration().
-                setHttpClientFactory( new ProxyWrappingHttpClientFactory(proxy, proxyUser, proxyPassword, (DefaultHttpClientFactory) client));
+                setHttpClientFactory( new ProxyWrappingHttpClientFactory(proxy, proxyUser, proxyPassword));
             }
             
                

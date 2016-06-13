@@ -95,7 +95,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
     private final static String INPUT_PARAMETER_EXPAND = "Expand Related Entities";
     private final static String INPUT_PARAMETER_NTLM = "Use NTLM Authentication";
     private final static String INPUT_PARAMETER_LIMIT = "Enable Pagination";
-    private final static String INPUT_PARAMETER_LOAD_MEDIA_LINK_RESOURCES = "Load Media Link Resources";
+    private final static String INPUT_PARAMETER_LOAD_MEDIA_LINK_RESOURCES = "Load Stream Properties";
     private final static String INPUT_PARAMETER_PROXY_PORT = "Proxy Port";
     private final static String INPUT_PARAMETER_PROXY_HOST = "Proxy Host";
     private final static String INPUT_PARAMETER_USER = "User";

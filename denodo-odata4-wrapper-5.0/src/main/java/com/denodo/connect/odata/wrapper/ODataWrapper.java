@@ -24,6 +24,7 @@ package com.denodo.connect.odata.wrapper;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -67,6 +68,8 @@ import org.apache.olingo.commons.api.edm.EdmNavigationProperty;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.EdmProperty;
 import org.apache.olingo.commons.api.edm.EdmSchema;
+import org.apache.olingo.commons.api.edm.EdmType;
+import org.apache.olingo.commons.api.format.ContentType;
 
 import com.denodo.connect.odata.wrapper.http.BasicAuthHttpTimeoutClientFactory;
 import com.denodo.connect.odata.wrapper.http.HttpTimeoutClientFactory;
@@ -121,6 +124,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
     public final static String DELETE_OPERATION= "DELETE";
     public final static String SELECT_OPERATION= "SELECT";
     public final static String  CONTAINSTARGET= "@odata.context";
+    public final static String STREAM_LINK_PROPERTY="Media Read Link";
+    public final static String STREAM_FILE_PROPERTY="Media File";
 
     private Map<String, List<String>> propertiesCache = new LinkedHashMap<String, List<String>>();
     
@@ -216,7 +221,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
             EdmEntitySet entitySet = entitySets.get(getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION).toString());
             if(entitySet!=null){
                 final EdmEntityType edmType = entitySet.getEntityType();
-                
+               
                 if (edmType != null){
                     
                     final List<CustomWrapperSchemaParameter> schemaParams = new ArrayList<CustomWrapperSchemaParameter>();
@@ -250,7 +255,21 @@ public class ODataWrapper extends AbstractCustomWrapper {
                             }
                         }
                     }
-                    
+                    if(edmType.hasStream()){
+                       
+                        if(loadBlobObjects){
+                            logger.trace("Adding property: Stream .Type: Blob ");
+                            schemaParams.add(    new CustomWrapperSchemaParameter(STREAM_FILE_PROPERTY, Types.BLOB, null,  true /* isSearchable */, 
+                                    CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
+                                    true /*isNullable*/, false /*isMandatory*/));
+                        }else{
+                            logger.trace("Adding property: Stream Link .Type: String ");
+                            schemaParams.add(    new CustomWrapperSchemaParameter(STREAM_LINK_PROPERTY, Types.VARCHAR, null,  true /* isSearchable */, 
+                                    CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
+                                    true /*isNullable*/, false /*isMandatory*/));
+                        }
+                       
+                    }
 
                     // add relantioships if expand is checked
                     if (((Boolean) getInputParameterValue(INPUT_PARAMETER_EXPAND).getValue()).booleanValue()) {
@@ -394,6 +413,30 @@ public class ODataWrapper extends AbstractCustomWrapper {
                         logger.debug("==> " + clientLink.getName()+"||"+value);
                         params[index] = value;
                     }
+                }
+                if(product.isMediaEntity()){
+                    Object value = null;
+                    if(loadBlobObjects!=null && loadBlobObjects){
+                        final int index = projectedFields.indexOf(new CustomWrapperFieldExpression(STREAM_FILE_PROPERTY));
+                        
+                        if (index != -1) {
+                            final URI uriMedia= client.newURIBuilder(product.getId().toString()).appendValueSegment().build();
+                            final ODataMediaRequest streamRequest = client.getRetrieveRequestFactory().getMediaEntityRequest(uriMedia);
+                            if (StringUtils.isNotBlank(product.getMediaContentType())) {
+                                streamRequest.setFormat(ContentType.parse(product.getMediaContentType()));
+                              }
+                            final ODataRetrieveResponse<InputStream> streamResponse = streamRequest.execute();
+                            value = IOUtils.toByteArray(streamResponse.getBody());
+                            params[index] = value;
+                        }
+                    }else{
+                        final int index = projectedFields.indexOf(new CustomWrapperFieldExpression(STREAM_LINK_PROPERTY));
+                        if (index != -1) {
+                            value =   uri + product.getMediaContentSource();
+                            params[index] = value;
+                        }
+                    }
+                 
                 }
 
                 // If expansion, add related entities
@@ -660,7 +703,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
         URIBuilder uribuilder = client.newURIBuilder(endPoint);
         
-        String odataQuery = endPoint+ entityCollection ;
+        String odataQuery = endPoint+ entityCollection+"?" ;
             
 
         if(operation.equals(SELECT_OPERATION)){
@@ -677,14 +720,14 @@ public class ODataWrapper extends AbstractCustomWrapper {
                         arrayfields.add(projectedField);
                         odataQuery += projectedField + ",";
                     }
-                    odataQuery+= "?$select=";
+                    odataQuery+= "$select=";
 
                     odataQuery.substring(0, odataQuery.length()-1);
                             
                 } else {
                     projectedFieldsAsString.clear();
                     projectedFieldsAsString.add("*");
-                    odataQuery+= "?$select=*";
+                    odataQuery+= "$select=*";
                 }
             }
             
@@ -715,6 +758,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
            
             final String simpleFilterQuery = ODataQueryUtils.buildSimpleCondition(conditionMap, rels);
             if (!simpleFilterQuery.isEmpty()) {
+                
                 uribuilder = uribuilder.filter(simpleFilterQuery);
                 odataQuery += "&$filter=" + simpleFilterQuery;
             }
@@ -780,7 +824,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
         
         for (final CustomWrapperFieldExpression projectedField : projectedFields) {
             if (!projectedField.getName().equals(ODataWrapper.PAGINATION_FETCH)
-                    && !projectedField.getName().equals(ODataWrapper.PAGINATION_OFFSET)) {
+                    && !projectedField.getName().equals(ODataWrapper.PAGINATION_OFFSET)
+                    && !projectedField.getName().equals(ODataWrapper.STREAM_FILE_PROPERTY)
+                    && !projectedField.getName().equals(ODataWrapper.STREAM_LINK_PROPERTY)) {
                 fields.add(projectedField.getName());
             }
         }

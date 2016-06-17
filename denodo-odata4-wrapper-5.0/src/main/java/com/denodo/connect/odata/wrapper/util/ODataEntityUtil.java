@@ -221,7 +221,7 @@ public class ODataEntityUtil {
         } else if (edmType instanceof EdmSingle) {
             return Types.FLOAT;
         } else if (edmType instanceof EdmGuid) {
-            return Types.INTEGER;
+            return Types.VARCHAR;
         } else if (edmType instanceof EdmTimeOfDay) {
             return Types.TIMESTAMP;
         } else if (edmType instanceof EdmStream) {

@@ -31,6 +31,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -46,35 +47,33 @@ import org.apache.olingo.client.api.communication.response.ODataDeleteResponse;
 import org.apache.olingo.client.api.communication.response.ODataEntityCreateResponse;
 import org.apache.olingo.client.api.communication.response.ODataEntityUpdateResponse;
 import org.apache.olingo.client.api.communication.response.ODataRetrieveResponse;
-import org.apache.olingo.client.api.domain.ClientCollectionValue;
 import org.apache.olingo.client.api.domain.ClientComplexValue;
 import org.apache.olingo.client.api.domain.ClientEntity;
 import org.apache.olingo.client.api.domain.ClientEntitySet;
 import org.apache.olingo.client.api.domain.ClientEntitySetIterator;
 import org.apache.olingo.client.api.domain.ClientLink;
 import org.apache.olingo.client.api.domain.ClientProperty;
-import org.apache.olingo.client.api.domain.ClientValue;
 import org.apache.olingo.client.api.http.HttpClientFactory;
 import org.apache.olingo.client.api.uri.URIBuilder;
 import org.apache.olingo.client.core.ODataClientFactory;
 import org.apache.olingo.client.core.http.BasicAuthHttpClientFactory;
-import org.apache.olingo.client.core.http.DefaultHttpClientFactory;
 import org.apache.olingo.client.core.http.NTLMAuthHttpClientFactory;
 import org.apache.olingo.client.core.http.ProxyWrappingHttpClientFactory;
 import org.apache.olingo.commons.api.edm.Edm;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
 import org.apache.olingo.commons.api.edm.EdmEntityType;
 import org.apache.olingo.commons.api.edm.EdmNavigationProperty;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.EdmProperty;
 import org.apache.olingo.commons.api.edm.EdmSchema;
 import org.apache.olingo.commons.api.edm.EdmType;
 import org.apache.olingo.commons.api.format.ContentType;
+import org.apache.olingo.commons.core.edm.primitivetype.EdmStream;
 
 import com.denodo.connect.odata.wrapper.http.BasicAuthHttpTimeoutClientFactory;
 import com.denodo.connect.odata.wrapper.http.HttpTimeoutClientFactory;
 import com.denodo.connect.odata.wrapper.http.NTLMAuthHttpTimeoutClientFactory;
 import com.denodo.connect.odata.wrapper.http.ProxyWrappingHttpTimeoutClientFactory;
+import com.denodo.connect.odata.wrapper.util.BaseViewMetadata;
 import com.denodo.connect.odata.wrapper.util.DataTableColumnType;
 import com.denodo.connect.odata.wrapper.util.ODataEntityUtil;
 import com.denodo.connect.odata.wrapper.util.ODataQueryUtils;
@@ -127,6 +126,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
     public final static String STREAM_LINK_PROPERTY="Media Read Link";
     public final static String STREAM_FILE_PROPERTY="Media File";
 
+    //It would have  one entry for each base view, because of this it is not implemented a LRU
+    private static Map<String,BaseViewMetadata> metadataMap = new ConcurrentHashMap<String, BaseViewMetadata>();  
+    
     private Map<String, List<String>> propertiesCache = new LinkedHashMap<String, List<String>>();
     
     private static final Logger logger = Logger.getLogger(ODataWrapper.class);
@@ -217,13 +219,22 @@ public class ODataWrapper extends AbstractCustomWrapper {
             
             Map<EdmEntityType, List<EdmEntityType>> baseTypeMap = getBaseTypeMap(edm);
 
-      
-            EdmEntitySet entitySet = entitySets.get(getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION).toString());
+            String entityCollection = getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION).toString();
+            String uriKeyCache=uri;
+            if(uri.endsWith("/")){
+                uriKeyCache=uri+entityCollection;
+            }else{
+                uriKeyCache=uri+"/"+entityCollection;
+            }
+            EdmEntitySet entitySet = entitySets.get(entityCollection);
+            BaseViewMetadata baseViewMetadata = new BaseViewMetadata();
             if(entitySet!=null){
                 final EdmEntityType edmType = entitySet.getEntityType();
                
                 if (edmType != null){
-                    
+                    baseViewMetadata.setOpenType(edmType.isOpenType());
+                    baseViewMetadata.setStreamEntity(edmType.hasStream());
+                    Map<String, EdmType> propertiesMap =new HashMap<String, EdmType>();
                     final List<CustomWrapperSchemaParameter> schemaParams = new ArrayList<CustomWrapperSchemaParameter>();
                     
                     List<String> properties = edmType.getPropertyNames();
@@ -234,6 +245,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                         EdmProperty edmProperty = edmType.getStructuralProperty(property);
                         logger.trace("Adding property: " +property+ " .Type: " + edmProperty.getType().getName()+ " kind: "+edmProperty.getType().getKind().name());
                         schemaParams.add(ODataEntityUtil.createSchemaOlingoParameter(edmProperty, edm, loadBlobObjects));
+                        propertiesMap.put(property, edmProperty.getType());
                     }
                     
                     // Add the properties belonging to a type whose base type is the type of the requested entity set
@@ -251,6 +263,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                     EdmProperty edmProperty = entityType.getStructuralProperty(property);
                                     logger.trace("Adding property: " +property+ " .Type: " + edmProperty.getType().getName()+ " kind: "+edmProperty.getType().getKind().name());
                                     schemaParams.add(ODataEntityUtil.createSchemaOlingoParameter(edmProperty, edm, loadBlobObjects));
+                                    propertiesMap.put(property, edmProperty.getType());
                                 }
                             }
                         }
@@ -262,15 +275,20 @@ public class ODataWrapper extends AbstractCustomWrapper {
                             schemaParams.add(    new CustomWrapperSchemaParameter(STREAM_FILE_PROPERTY, Types.BLOB, null,  true /* isSearchable */, 
                                     CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                                     true /*isNullable*/, false /*isMandatory*/));
+                            propertiesMap.put(STREAM_FILE_PROPERTY, EdmStream.getInstance());
                         }else{
                             logger.trace("Adding property: Stream Link .Type: String ");
                             schemaParams.add(    new CustomWrapperSchemaParameter(STREAM_LINK_PROPERTY, Types.VARCHAR, null,  true /* isSearchable */, 
                                     CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                                     true /*isNullable*/, false /*isMandatory*/));
+                            propertiesMap.put(STREAM_LINK_PROPERTY, EdmStream.getInstance());
                         }
+                      
                        
                     }
-
+                    baseViewMetadata.setProperties(propertiesMap);
+                    metadataMap.put(uriKeyCache, baseViewMetadata);
+                    
                     // add relantioships if expand is checked
                     if (((Boolean) getInputParameterValue(INPUT_PARAMETER_EXPAND).getValue()).booleanValue()) {
                         List<String> navigationProperties= edmType.getNavigationPropertyNames();
@@ -317,10 +335,11 @@ public class ODataWrapper extends AbstractCustomWrapper {
             Boolean loadBlobObjects = (Boolean) getInputParameterValue(INPUT_PARAMETER_LOAD_MEDIA_LINK_RESOURCES).getValue();
             
             final String entityCollection = (String) getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION)
-                    .getValue();           
+                    .getValue();          
             logger.debug("Entity Collection : " + entityCollection);
             final ODataClient client = getClient();
             String uri = (String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT).getValue();
+           
             String[] rels=null;
             Map<String, EdmEntitySet> entitySets= new HashMap<String, EdmEntitySet>();
             
@@ -348,7 +367,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 int index = 0;
                 for (final String nav : navigationProperties) {                   
                     rels[index]= edmType.getNavigationProperty(nav).getName();//Obtain navigation properties of the entity
-                    logger.debug("EXpand collections: "+edmType.getNavigationProperty(nav).getName());
+                    logger.debug("Expand collections: "+edmType.getNavigationProperty(nav).getName());
                     index++;
                 }                
             }
@@ -704,7 +723,12 @@ public class ODataWrapper extends AbstractCustomWrapper {
         URIBuilder uribuilder = client.newURIBuilder(endPoint);
         
         String odataQuery = endPoint+ entityCollection+"?" ;
-            
+        String uriKeyCache="";
+        if(endPoint.endsWith("/")){
+            uriKeyCache=endPoint+entityCollection;
+        }else{
+            uriKeyCache=endPoint+"/"+entityCollection;
+        } 
 
         if(operation.equals(SELECT_OPERATION)){
             
@@ -756,7 +780,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
         if ((conditionMap != null) && !conditionMap.isEmpty()) {
             // Simple condition
            
-            final String simpleFilterQuery = ODataQueryUtils.buildSimpleCondition(conditionMap, rels);
+            final String simpleFilterQuery = ODataQueryUtils.buildSimpleCondition(conditionMap, rels, uriKeyCache, metadataMap);
             if (!simpleFilterQuery.isEmpty()) {
                 
                 uribuilder = uribuilder.filter(simpleFilterQuery);
@@ -765,7 +789,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
         } else if (condition.getComplexCondition() != null) {
             // Complex condition
             final String complexFilterQuery = ODataQueryUtils.buildComplexCondition(condition.getComplexCondition(),
-                    rels);
+                    rels, uriKeyCache, metadataMap);
             if (!complexFilterQuery.isEmpty()) {
                 uribuilder = uribuilder.filter(complexFilterQuery);
                 odataQuery += "&$filter=" + complexFilterQuery;
@@ -798,11 +822,11 @@ public class ODataWrapper extends AbstractCustomWrapper {
                         if (field.getName().equals(ODataWrapper.PAGINATION_FETCH)) {
                             final Integer value = (Integer) completeConditionMap.get(field);
                             uribuilder = uribuilder.top(value.intValue());
-                            odataQuery += "&$top=" + ODataQueryUtils.prepareValueForQuery(value);
+                            odataQuery += "&$top=" + ODataQueryUtils.prepareValueForQuery(value,null,null,null);
                         } else if (field.getName().equals(ODataWrapper.PAGINATION_OFFSET)) {
                             final Integer value = (Integer) completeConditionMap.get(field);
                             uribuilder = uribuilder.skip(value.intValue());
-                            odataQuery += "&$skip=" + ODataQueryUtils.prepareValueForQuery(value);
+                            odataQuery += "&$skip=" + ODataQueryUtils.prepareValueForQuery(value,null,null,null);
                         }
                     }
                 }

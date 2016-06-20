@@ -31,6 +31,7 @@ import java.util.Properties;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+import org.apache.olingo.commons.api.edm.EdmType;
 
 import com.denodo.connect.odata.wrapper.ODataWrapper;
 import com.denodo.connect.odata.wrapper.exceptions.OperationNotSupportedException;
@@ -50,20 +51,23 @@ public class ODataQueryUtils {
     
     private static final String FILENAME = "customwrapper.properties";
     private static final String TIMEFORMAT = "timeformat";
-    public static String buildSimpleCondition(Map<CustomWrapperFieldExpression, Object> conditionMap, String[] rels) {
+    private static final String EDM_TYPE = "Edm.Guid";
+    public static String buildSimpleCondition(Map<CustomWrapperFieldExpression, Object> conditionMap, String[] rels, String uriKeyCache, Map<String,BaseViewMetadata> metadataMap) {
+
         List<String> filterClause = new ArrayList<String>();
         for (CustomWrapperFieldExpression field : conditionMap.keySet()) {
             Object value = conditionMap.get(field);
             if (!field.getName().equals(ODataWrapper.PAGINATION_FETCH) && !field.getName().equals(ODataWrapper.PAGINATION_OFFSET) &&
                     !isExpandedField(rels, field.getName())) {
-                filterClause.add(normalizeFieldName(field.getStringRepresentation()) + " eq " + prepareValueForQuery(value));
+                filterClause.add(normalizeFieldName(field.getStringRepresentation()) + " eq " + prepareValueForQuery(value, uriKeyCache, metadataMap,field.getStringRepresentation()));
             }
         }
         return StringUtils.join(filterClause, " and ");
     }
 
-    public static String buildComplexCondition(CustomWrapperCondition complexCondition,String[] rels) 
+    public static String buildComplexCondition(CustomWrapperCondition complexCondition,String[] rels, String uriKeyCache, Map<String,BaseViewMetadata> metadataMap) 
     throws OperationNotSupportedException {
+
         if (complexCondition.isSimpleCondition()) {
             CustomWrapperSimpleCondition simpleCondition = (CustomWrapperSimpleCondition)complexCondition;
             String field = simpleCondition.getField().toString();
@@ -71,17 +75,17 @@ public class ODataQueryUtils {
                     !isExpandedField(rels, simpleCondition.getField().toString())) {
                 // Contains is implemented using substringof
                 if (simpleCondition.getOperator() == CustomWrapperCondition.OPERATOR_ISCONTAINED) {
-                    return "substringof(" +prepareValueForQuery((simpleCondition.getRightExpression()[0]).toString()) +","+simpleCondition.getField()+")";
+                    return "substringof(" +prepareValueForQuery((simpleCondition.getRightExpression()[0]).toString(),null,null,null) +","+simpleCondition.getField()+")";
                 }
                 return normalizeFieldName(simpleCondition.getField().toString()) +
                 mapOperations(simpleCondition.getOperator()) + 
-                prepareValueForQuery(((CustomWrapperSimpleExpression)simpleCondition.getRightExpression()[0]).getValue());
+                prepareValueForQuery(((CustomWrapperSimpleExpression)simpleCondition.getRightExpression()[0]).getValue(),uriKeyCache, metadataMap,simpleCondition.getField().toString());
             }
             return null;
         } else if (complexCondition.isAndCondition()) {
             List<String> individualConditions = new ArrayList<String>();
             for (CustomWrapperCondition individualCondition : ((CustomWrapperAndCondition)complexCondition).getConditions()) {
-                String condString = buildComplexCondition(individualCondition, rels);
+                String condString = buildComplexCondition(individualCondition, rels, uriKeyCache, metadataMap);
                 if (condString!= null  && !condString.isEmpty()) {
                     individualConditions.add("("+condString+")");
                 }
@@ -90,18 +94,25 @@ public class ODataQueryUtils {
         } else if (complexCondition.isOrCondition()) {
             List<String> individualConditions = new ArrayList<String>();
             for (CustomWrapperCondition individualCondition : ((CustomWrapperOrCondition)complexCondition).getConditions()) {
-                String condString = buildComplexCondition(individualCondition, rels);
+                String condString = buildComplexCondition(individualCondition, rels, uriKeyCache, metadataMap);
                 if (condString!= null  && !condString.isEmpty()) {
                     individualConditions.add("("+condString+")");
                 }
             }
             return StringUtils.join(individualConditions, " or ");
         } else if (complexCondition.isNotCondition()) {
-            return "not("+buildComplexCondition(((CustomWrapperNotCondition)complexCondition).getCondition(), rels)+")";
+            return "not("+buildComplexCondition(((CustomWrapperNotCondition)complexCondition).getCondition(), rels, uriKeyCache, metadataMap)+")";
         }
         throw new OperationNotSupportedException();
     }
 
+    private static EdmType getEdmType(String uriKeyCache, Map<String,BaseViewMetadata> metadataMap, String property){
+        BaseViewMetadata baseViewMetadata = metadataMap.get(uriKeyCache);
+        if (baseViewMetadata != null){
+           return baseViewMetadata.getProperties().get(property);
+        }
+        return null;
+    }
     private static String mapOperations(String operation) throws OperationNotSupportedException {
         if (CustomWrapperCondition.OPERATOR_EQ.equals(operation)) {
             return " eq ";
@@ -123,11 +134,22 @@ public class ODataQueryUtils {
         return field.replace(".","/");
     }
 
-    public static String prepareValueForQuery(Object value) {
+    public static String prepareValueForQuery(Object value,  String uriKeyCache, Map<String,BaseViewMetadata> metadataMap, String property) {
+        EdmType edmType=null;
+        if(property!=null){
+            //Search the edmTyoe of source Odata
+            edmType = getEdmType(uriKeyCache,metadataMap, property);
+        }
+        
         if (value == null){
             return null;
         }else if (value instanceof String) {
-            return "'"+value+"'";
+            if(edmType!=null && edmType.toString().equals(EDM_TYPE)){
+                //The edm.guid type does not accept quotes in the query
+                return value.toString();  
+            }else{
+                return "'"+value+"'";
+            }
         }  else if (value instanceof java.util.Date) {
             SimpleDateFormat formatter  =  new SimpleDateFormat(getProperties().getProperty(TIMEFORMAT));
             return "datetime'"+formatter.format(value)+"'";

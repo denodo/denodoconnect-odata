@@ -27,7 +27,6 @@ import java.net.URISyntaxException;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -47,12 +46,14 @@ import org.apache.olingo.client.api.communication.response.ODataDeleteResponse;
 import org.apache.olingo.client.api.communication.response.ODataEntityCreateResponse;
 import org.apache.olingo.client.api.communication.response.ODataEntityUpdateResponse;
 import org.apache.olingo.client.api.communication.response.ODataRetrieveResponse;
+import org.apache.olingo.client.api.domain.ClientCollectionValue;
 import org.apache.olingo.client.api.domain.ClientComplexValue;
 import org.apache.olingo.client.api.domain.ClientEntity;
 import org.apache.olingo.client.api.domain.ClientEntitySet;
 import org.apache.olingo.client.api.domain.ClientEntitySetIterator;
 import org.apache.olingo.client.api.domain.ClientLink;
 import org.apache.olingo.client.api.domain.ClientProperty;
+import org.apache.olingo.client.api.domain.ClientValue;
 import org.apache.olingo.client.api.http.HttpClientFactory;
 import org.apache.olingo.client.api.uri.URIBuilder;
 import org.apache.olingo.client.core.ODataClientFactory;
@@ -65,6 +66,7 @@ import org.apache.olingo.commons.api.edm.EdmEntityType;
 import org.apache.olingo.commons.api.edm.EdmNavigationProperty;
 import org.apache.olingo.commons.api.edm.EdmProperty;
 import org.apache.olingo.commons.api.edm.EdmSchema;
+import org.apache.olingo.commons.api.edm.EdmStructuredType;
 import org.apache.olingo.commons.api.edm.EdmType;
 import org.apache.olingo.commons.api.format.ContentType;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmStream;
@@ -129,8 +131,6 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
     //It would have  one entry for each base view, because of this it is not implemented a LRU
     private static Map<String,BaseViewMetadata> metadataMap = new ConcurrentHashMap<String, BaseViewMetadata>();  
-    
-    private Map<String, List<String>> propertiesCache = new LinkedHashMap<String, List<String>>();
     
     private static final Logger logger = Logger.getLogger(ODataWrapper.class);
 
@@ -213,6 +213,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
             String uri = (String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT).getValue();
             Map<String, EdmEntitySet> entitySets= new HashMap<String, EdmEntitySet>();
             EdmMetadataRequest request = client.getRetrieveRequestFactory().getMetadataRequest(uri);
+
             ODataRetrieveResponse<Edm> response = request.execute();
 
             Edm edm = response.getBody();     
@@ -231,7 +232,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 if (edmType != null){
                     baseViewMetadata.setOpenType(edmType.isOpenType());
                     baseViewMetadata.setStreamEntity(edmType.hasStream());
-                    Map<String, EdmType> propertiesMap =new HashMap<String, EdmType>();
+                    Map<String, EdmType> propertiesMap = new HashMap<String, EdmType>();
                     final List<CustomWrapperSchemaParameter> schemaParams = new ArrayList<CustomWrapperSchemaParameter>();
                     
                     List<String> properties = edmType.getPropertyNames();
@@ -248,15 +249,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     // Add the properties belonging to a type whose base type is the type of the requested entity set
                     if (baseTypeMap.containsKey(edmType)) {
                         
-                        List<String> propertiesAssociated = new ArrayList<String>(properties);
-                        this.propertiesCache.put(entitySet.getName(), propertiesAssociated);
-                        
                         for (EdmEntityType entityType : baseTypeMap.get(edmType)) {
                             for (String property : entityType.getPropertyNames()) {
                                 if (!properties.contains(property)) {   
-                                    // Add the property to the cache
-                                    propertiesAssociated.add(property);
-                                    
                                     EdmProperty edmProperty = entityType.getStructuralProperty(property);
                                     logger.trace("Adding property: " +property+ " .Type: " + edmProperty.getType().getName()+ " kind: "+edmProperty.getType().getKind().name());
                                     schemaParams.add(ODataEntityUtil.createSchemaOlingoParameter(edmProperty, edm, loadBlobObjects));
@@ -345,6 +340,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 //obtaining metadata               
                 
                 EdmMetadataRequest request = client.getRetrieveRequestFactory().getMetadataRequest(uri);
+
                 ODataRetrieveResponse<Edm> response = request.execute();
                 
                 Edm edm = response.getBody();
@@ -391,6 +387,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     inputValues, SELECT_OPERATION, loadBlobObjects);
             ODataRetrieveRequest<ClientEntitySetIterator<ClientEntitySet, ClientEntity>> request = 
                     client.getRetrieveRequestFactory().getEntitySetIteratorRequest(finalURI);
+
             ODataRetrieveResponse<ClientEntitySetIterator <ClientEntitySet, ClientEntity>> response = request.execute();
             ClientEntitySetIterator<ClientEntitySet, ClientEntity> iterator = response.getBody();
             
@@ -421,6 +418,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                             URIBuilder uribuilder = client.newURIBuilder(uri);
                             uribuilder.appendSingletonSegment(clientLink.getLink().getRawPath());
                             ODataMediaRequest request2 = client.getRetrieveRequestFactory().getMediaRequest(uribuilder.build());
+
                             ODataRetrieveResponse<InputStream> response2 = request2.execute();
                             
                             value = IOUtils.toByteArray(response2.getBody());
@@ -442,6 +440,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                             if (StringUtils.isNotBlank(product.getMediaContentType())) {
                                 streamRequest.setFormat(ContentType.parse(product.getMediaContentType()));
                               }
+
                             final ODataRetrieveResponse<InputStream> streamResponse = streamRequest.execute();
                             value = IOUtils.toByteArray(streamResponse.getBody());
                             params[index] = value;
@@ -516,6 +515,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
             //Request to obtain the fullqualifiedName of the collection , where we want insert
             Map<String, EdmEntitySet> entitySets= new HashMap<String, EdmEntitySet>();
             EdmMetadataRequest requestMetadata = client.getRetrieveRequestFactory().getMetadataRequest(endPoint);
+
             ODataRetrieveResponse<Edm> responseMetadata = requestMetadata.execute();
             Edm edm = responseMetadata.getBody();     
             entitySets=getEntitySetMap(edm);                    
@@ -543,30 +543,37 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                 + field.isFunctionExpression() + "/" + field.isSimpleExpression() + "/"
                                 + field.hasSubFields());
                     }
+
                     EdmType edmType = edmProperties.get(field.getStringRepresentation());
                   
                     if(edmType!=null && edmType.toString().equals(EDM_STREAM_TYPE)){
                         throw new CustomWrapperException("The insertion of stream properties is not supported. "+field.getStringRepresentation()+" is a stream property in the source ");
                     }
-                    // Register type = 2002
-                    if (type != 2002) {
-                        logger.debug("simple property");
+
+                    if (type == Types.STRUCT) {
+                        logger.debug("Inserting struct property");
+                        String schemaParameterName = getSchemaParameterName(field.getStringRepresentation(), schemaParameters);
+                        final ClientComplexValue complexValue = getComplexValue(client, schemaParameterName, 
+                                schemaParameters, insertValues.get(field), edmProperties);
+                        
+                        newObject.getProperties().add(client.getObjectFactory().newComplexProperty(schemaParameterName, 
+                                complexValue));
+                    } else if (type == Types.ARRAY) {
+                        logger.debug("Inserting array property");
+                        String schemaParameterName = getSchemaParameterName(field.getStringRepresentation(), schemaParameters);
+                        final ClientCollectionValue<ClientValue> collectionValue = getCollectionValue(client, schemaParameterName, 
+                                schemaParameters, insertValues.get(field), edmProperties);
+                        
+                        newObject.getProperties().add(client.getObjectFactory().newCollectionProperty(schemaParameterName,
+                                collectionValue));
+                    } else {
+                        logger.debug("Inserting simple property");
                         newObject.getProperties().add(client.getObjectFactory().newPrimitiveProperty( field.getStringRepresentation(),
                                 client.getObjectFactory().newPrimitiveValueBuilder().
                                 setType(DataTableColumnType.fromJDBCType(type).getEdmSimpleType()).
                                 setValue( ODataQueryUtils.prepareValueForInsert(insertValues.get(field))).build()));
-
-
-                    } else {
-                        logger.debug("complex property");
-
-                        String schemaParameterName = getSchemaParameterName(field.getStringRepresentation(), schemaParameters);
-                        final ClientComplexValue complexValue = getComplexValue(client, schemaParameterName, 
-                                schemaParameters, insertValues.get(field));
-                        
-                        newObject.getProperties().add(client.getObjectFactory().newComplexProperty(schemaParameterName, 
-                                complexValue));
                     }
+                    
                 } else {
                     logger.error("Insertion of complex types is not supported ");
                     throw new CustomWrapperException("Insertion of complex types is not supported");
@@ -575,6 +582,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
 
             final ODataEntityCreateRequest<ClientEntity> request = client.getCUDRequestFactory().getEntityCreateRequest(uri, newObject);
+
             ODataEntityCreateResponse<ClientEntity> res = request.execute();
             if (res.getStatusCode()==201) {
                 return 1;//Created
@@ -618,7 +626,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
                 //Searching the entities that match with the conditions of the where(1 query)
                 //TODO check if there is a way to filter and delete in the same query. 
-                URI productsUri = getURI(serviceRoot, entityCollection, rels, client, conditions, null, inputValues,UPDATE_OPERATION,loadBlobObjects);
+                URI productsUri = getURI(serviceRoot, entityCollection, rels, client, conditions, null, inputValues, UPDATE_OPERATION, loadBlobObjects);
+
                 ODataRetrieveRequest<ClientEntitySetIterator<ClientEntitySet, ClientEntity>> request = 
                         client.getRetrieveRequestFactory().getEntitySetIteratorRequest(productsUri);
 
@@ -646,21 +655,30 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                     + field.isConditionExpression() + "/" + field.isFieldExpression() + "/"
                                     + field.isFunctionExpression() + "/" + field.isSimpleExpression());
 
-
                             
                             EdmType edmType = edmProperties.get(field.getStringRepresentation());
                             
                             if(edmType!=null && edmType.toString().equals(EDM_STREAM_TYPE)){
                                 throw new CustomWrapperException("The update of stream properties is not supported. "+field.getStringRepresentation()+" is a stream property in the source ");
                             }
-                            if (type == 2002) {
+
+                            if (type == Types.STRUCT) {
+                                logger.debug("Updating struct property");
                                 String schemaParameterName = getSchemaParameterName(field.getStringRepresentation(), schemaParameters);
                                 final ClientComplexValue complexValue = getComplexValue(client, schemaParameterName, 
-                                        schemaParameters, updateValues.get(field));
-                                
+                                        schemaParameters, updateValues.get(field), edmProperties);
                                 newEntity.getProperties().add(client.getObjectFactory().newComplexProperty(schemaParameterName, 
                                         complexValue));
+                            } else if (type == Types.ARRAY) {
+                                logger.debug("Updating array property");
+                                String schemaParameterName = getSchemaParameterName(field.getStringRepresentation(), schemaParameters);
+                                final ClientCollectionValue<ClientValue> collectionValue = getCollectionValue(client, schemaParameterName, 
+                                        schemaParameters, updateValues.get(field), edmProperties);
+                                
+                                newEntity.getProperties().add(client.getObjectFactory().newCollectionProperty(schemaParameterName,
+                                        collectionValue));
                             } else {
+                                logger.debug("Updating simple property");
                                 newEntity.getProperties().add(client.getObjectFactory().newPrimitiveProperty( field.getStringRepresentation(),
                                         client.getObjectFactory().newPrimitiveValueBuilder().
                                         setType(DataTableColumnType.fromJDBCType(type).getEdmSimpleType()).
@@ -672,6 +690,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                             logger.error("Update of complex types is not supported ");
                             throw new CustomWrapperException("Update of complex types is not supported");
                         }
+                        
                         ODataEntityUpdateRequest<ClientEntity> req = client
                                 .getCUDRequestFactory().getEntityUpdateRequest(product.getId(),
                                         UpdateType.PATCH,newEntity );
@@ -768,32 +787,20 @@ public class ODataWrapper extends AbstractCustomWrapper {
         }
 
         if(operation.equals(SELECT_OPERATION)){
-            
-            List<String> cachedProperties = this.propertiesCache.get(entityCollection);
+            odataQuery+= "$select=";
+
             List<String> projectedFieldsAsString = getProjectedFieldsAsString(projectedFields);
             final List<String> arrayfields = new ArrayList<String>();
-            
-            if (cachedProperties != null && !cachedProperties.isEmpty()) {
-                if (!projectedFieldsAsString.containsAll(cachedProperties)) {
-                    
-                    for (final String projectedField : projectedFieldsAsString) {
-                        logger.info("Adding field (not contains all): " + projectedField);
-                        arrayfields.add(projectedField);
-                        odataQuery += projectedField + ",";
-                    }
-                    odataQuery+= "$select=";
 
-                    odataQuery.substring(0, odataQuery.length()-1);
-                            
-                } else {
-                    projectedFieldsAsString.clear();
-                    projectedFieldsAsString.add("*");
-                    odataQuery+= "$select=*";
-                }
+            for (final String projectedField : projectedFieldsAsString) {
+                logger.info("Adding field: " + projectedField);
+                arrayfields.add(projectedField);
+                odataQuery += projectedField + ",";
             }
             
-            String[] fields = projectedFieldsAsString.toArray(new String[projectedFieldsAsString.size()]);
-            uribuilder=uribuilder.select(fields);
+            String[] fields = projectedFieldsAsString.toArray(new String[projectedFieldsAsString.size()]);       
+            uribuilder = uribuilder.select(fields);
+            
             String relations="";
 
 
@@ -1088,22 +1095,38 @@ public class ODataWrapper extends AbstractCustomWrapper {
     }
     
     private static ClientComplexValue getComplexValue(final ODataClient client, final String fieldName,
-            final CustomWrapperSchemaParameter[] schemaParameters, final Object value) {
-
-        final ClientComplexValue complex = client.getObjectFactory().newComplexValue(fieldName);
-
+            final CustomWrapperSchemaParameter[] schemaParameters, final Object value,
+            final Map<String, EdmType> edmProperties) {
+        return getComplexValue(client, fieldName, schemaParameters, value, edmProperties, null);
+    }
+    
+    private static ClientComplexValue getComplexValue(final ODataClient client, final String fieldName,
+            final CustomWrapperSchemaParameter[] schemaParameters, final Object value, 
+            final Map<String, EdmType> edmProperties, final EdmType edmType) {
+        
         if (value instanceof CustomWrapperStruct) {
+            
+            EdmType complexEdmType = edmType;
+            CustomWrapperSchemaParameter[] params = schemaParameters;
+            
+            if (edmType == null) {
+            
+                complexEdmType = edmProperties.get(fieldName);
+
+                params = getSchemaParameterColumns(fieldName, schemaParameters);
+            }
+            
+            final ClientComplexValue complex = client.getObjectFactory().newComplexValue(complexEdmType.getFullQualifiedName().toString());
+            
             CustomWrapperStruct cws = (CustomWrapperStruct) value;
             Object[] atts = cws.getAttributes();
-
-            CustomWrapperSchemaParameter[] params = getSchemaParameterColumns(fieldName, schemaParameters);
             
             for (int i = 0; i < params.length; i++) {
 
-                if (params[i].getType() == 2002) {
+                if (params[i].getType() == Types.STRUCT) {
                     String schemaParameterName = getSchemaParameterName(params[i].getName(), schemaParameters);
                     complex.add(client.getObjectFactory().newComplexProperty(schemaParameterName, getComplexValue(client, schemaParameterName, 
-                            getSchemaParameterColumns(params[i].getName(), schemaParameters), atts[i])));
+                            getSchemaParameterColumns(params[i].getName(), schemaParameters), atts[i], edmProperties)));
                 } else {
                     complex.add(client.getObjectFactory().newPrimitiveProperty(
                             params[i].getName(),
@@ -1111,12 +1134,44 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                     .setType(DataTableColumnType.fromJDBCType(params[i].getType()).getEdmSimpleType())
                                     .setValue(atts[i].toString()).build()));
                 }
-                logger.info("Param: " + params[i].getName() + ", value: " + atts[i].toString());
+                logger.info("Getting complex param: " + params[i].getName() + ", value: " + atts[i].toString());
             }
 
+            return complex;
         }
 
-        return complex;
+        return null;
+    }
+    
+    
+    private static ClientCollectionValue<ClientValue> getCollectionValue(final ODataClient client, final String fieldName,
+            final CustomWrapperSchemaParameter[] schemaParameters, final Object value, final Map<String, EdmType> edmProperties) {
+
+
+        EdmType edmType = edmProperties.get(fieldName);
+        
+        final ClientCollectionValue<ClientValue> collection = client.getObjectFactory().newCollectionValue("Collection(" + edmType.getFullQualifiedName().toString() + ")");
+        
+        final Object[] arrayElements = (Object[]) value;
+        
+        if (edmType instanceof EdmStructuredType) {
+            
+            CustomWrapperSchemaParameter[] params = getSchemaParameterColumns(fieldName, schemaParameters);
+            
+            for (Object arrayElement : arrayElements) {
+                // Array's elements are structs
+                ClientValue newComplexValue = getComplexValue(client, edmType.getFullQualifiedName().toString(), params, (CustomWrapperStruct)arrayElement, edmProperties, edmType);
+                collection.add(newComplexValue);
+            }
+        } else {
+            // It is a primitive type
+            for (Object arrayElement : arrayElements) {
+                collection.add(client.getObjectFactory().newPrimitiveValueBuilder().setType(edmType).setValue(((CustomWrapperStruct) arrayElement).getAttributes()[0].toString()).build());
+                logger.info("Getting collection value: " + ((CustomWrapperStruct) arrayElement).getAttributes()[0].toString());
+            }
+        }
+        
+        return collection;
     }
     
     private void printProxyData() {

@@ -107,12 +107,12 @@ public class ODataQueryUtils {
     }
 
     private static EdmType getEdmType(BaseViewMetadata baseViewMetadata, String property){
-     
         if (baseViewMetadata != null){
            return baseViewMetadata.getProperties().get(property);
         }
         return null;
     }
+    
     private static String mapOperations(String operation) throws OperationNotSupportedException {
         if (CustomWrapperCondition.OPERATOR_EQ.equals(operation)) {
             return " eq ";

@@ -38,5 +38,10 @@ public class BaseViewMetadata {
     public void setProperties(Map<String, EdmType> properties) {
         this.properties = properties;
     }
+
+    @Override
+    public String toString() {
+        return "BaseViewMetadata [openType=" + openType + ", streamEntity=" + streamEntity + ", properties=" + properties.toString() + "]";
+    }
     
 }

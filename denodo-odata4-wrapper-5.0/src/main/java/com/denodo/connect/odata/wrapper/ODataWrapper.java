@@ -125,6 +125,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
     public final static String  CONTAINSTARGET= "@odata.context";
     public final static String STREAM_LINK_PROPERTY="Media Read Link";
     public final static String STREAM_FILE_PROPERTY="Media File";
+    private static final String EDM_STREAM_TYPE = "Edm.Stream";
 
     //It would have  one entry for each base view, because of this it is not implemented a LRU
     private static Map<String,BaseViewMetadata> metadataMap = new ConcurrentHashMap<String, BaseViewMetadata>();  
@@ -220,12 +221,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
             Map<EdmEntityType, List<EdmEntityType>> baseTypeMap = getBaseTypeMap(edm);
 
             String entityCollection = getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION).toString();
-            String uriKeyCache=uri;
-            if(uri.endsWith("/")){
-                uriKeyCache=uri+entityCollection;
-            }else{
-                uriKeyCache=uri+"/"+entityCollection;
-            }
+            String uriKeyCache=getUriKeyCache(uri, entityCollection);
+           
             EdmEntitySet entitySet = entitySets.get(entityCollection);
             BaseViewMetadata baseViewMetadata = new BaseViewMetadata();
             if(entitySet!=null){
@@ -389,8 +386,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     }
                 }
             }
+            
             final URI finalURI = getURI(uri, entityCollection, rels, client, condition, projectedFields,
-                    inputValues, SELECT_OPERATION);
+                    inputValues, SELECT_OPERATION, loadBlobObjects);
             ODataRetrieveRequest<ClientEntitySetIterator<ClientEntitySet, ClientEntity>> request = 
                     client.getRetrieveRequestFactory().getEntitySetIteratorRequest(finalURI);
             ODataRetrieveResponse<ClientEntitySetIterator <ClientEntitySet, ClientEntity>> response = request.execute();
@@ -499,10 +497,21 @@ public class ODataWrapper extends AbstractCustomWrapper {
         final String entityCollection = (String) getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION).getValue();
         String endPoint = (String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT).getValue();
         logger.info("Inserting entity: " + entityCollection);
-
+        String uriKeyCache=getUriKeyCache(endPoint, entityCollection);
         ODataClient client;
-        try {
+        try { 
+            BaseViewMetadata baseViewMetadata = metadataMap.get(uriKeyCache);
             client = getClient();
+            if(baseViewMetadata==null){
+                Boolean loadBlobObjects = (Boolean) getInputParameterValue(INPUT_PARAMETER_LOAD_MEDIA_LINK_RESOURCES).getValue();
+                addMetadataCache(endPoint, entityCollection, client, loadBlobObjects);
+                baseViewMetadata = metadataMap.get(uriKeyCache);
+            }
+
+            if(baseViewMetadata.getStreamEntity()){
+                throw new CustomWrapperException("The update of Stream entities is not supported");
+            }
+
 
             //Request to obtain the fullqualifiedName of the collection , where we want insert
             Map<String, EdmEntitySet> entitySets= new HashMap<String, EdmEntitySet>();
@@ -518,7 +527,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
 
             final CustomWrapperSchemaParameter[] schemaParameters = getSchemaParameters(inputValues);
-
+            Map<String, EdmType> edmProperties = baseViewMetadata.getProperties();
             for (final CustomWrapperFieldExpression field : insertValues.keySet()) {
 
                 if (!field.hasSubFields()) {
@@ -534,7 +543,11 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                 + field.isFunctionExpression() + "/" + field.isSimpleExpression() + "/"
                                 + field.hasSubFields());
                     }
-                    
+                    EdmType edmType = edmProperties.get(field.getStringRepresentation());
+                  
+                    if(edmType!=null && edmType.toString().equals(EDM_STREAM_TYPE)){
+                        throw new CustomWrapperException("The insertion of stream properties is not supported. "+field.getStringRepresentation()+" is a stream property in the source ");
+                    }
                     // Register type = 2002
                     if (type != 2002) {
                         logger.debug("simple property");
@@ -577,8 +590,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
     public int update(final Map<CustomWrapperFieldExpression, Object> updateValues,
             final CustomWrapperConditionHolder conditions, final Map<String, String> inputValues)
                     throws CustomWrapperException {
-
-
+      
         ODataClient client;
         try {
             client = getClient();
@@ -589,6 +601,16 @@ public class ODataWrapper extends AbstractCustomWrapper {
             logger.info("Updating entity: " + entityCollection);
             String serviceRoot = (String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT).getValue();
             String[] rels=null;
+            String uriKeyCache=getUriKeyCache(serviceRoot, entityCollection);
+            BaseViewMetadata baseViewMetadata = metadataMap.get(uriKeyCache);
+            Boolean loadBlobObjects = (Boolean) getInputParameterValue(INPUT_PARAMETER_LOAD_MEDIA_LINK_RESOURCES).getValue();
+            if(baseViewMetadata==null){
+               
+                addMetadataCache(serviceRoot, entityCollection, client, loadBlobObjects);
+                baseViewMetadata = metadataMap.get(uriKeyCache);
+            }
+            
+
 
             final Map<CustomWrapperFieldExpression, Object> conditionsMap = conditions.getConditionMap(true);
             final List<CustomWrapperFieldExpression> conditionsList = new ArrayList<CustomWrapperFieldExpression>();
@@ -596,12 +618,13 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
                 //Searching the entities that match with the conditions of the where(1 query)
                 //TODO check if there is a way to filter and delete in the same query. 
-                URI productsUri = getURI(serviceRoot, entityCollection, rels, client, conditions, null, inputValues,UPDATE_OPERATION);
+                URI productsUri = getURI(serviceRoot, entityCollection, rels, client, conditions, null, inputValues,UPDATE_OPERATION,loadBlobObjects);
                 ODataRetrieveRequest<ClientEntitySetIterator<ClientEntitySet, ClientEntity>> request = 
                         client.getRetrieveRequestFactory().getEntitySetIteratorRequest(productsUri);
 
                 ODataRetrieveResponse<ClientEntitySetIterator <ClientEntitySet, ClientEntity>> response = request.execute();
                 ClientEntitySetIterator<ClientEntitySet, ClientEntity> iterator = response.getBody();
+                Map<String, EdmType> edmProperties = baseViewMetadata.getProperties();
                 while (iterator.hasNext()) {
                     //deleting every entity in a query
                     ClientEntity product = iterator.next();
@@ -611,8 +634,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     logger.info("Updating entity: " + product.getId().toString());
 
                     final CustomWrapperSchemaParameter[] schemaParameters = getSchemaParameters(inputValues);
+                  
                     for (final CustomWrapperFieldExpression field : updateValues.keySet()) {
-
+                  
                         if (!field.hasSubFields()) {
                             final int type = getSchemaParameterType(field.getStringRepresentation(), schemaParameters);
 
@@ -623,7 +647,12 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                     + field.isFunctionExpression() + "/" + field.isSimpleExpression());
 
 
-                            logger.debug("update type: " + type);
+                            
+                            EdmType edmType = edmProperties.get(field.getStringRepresentation());
+                            
+                            if(edmType!=null && edmType.toString().equals(EDM_STREAM_TYPE)){
+                                throw new CustomWrapperException("The update of stream properties is not supported. "+field.getStringRepresentation()+" is a stream property in the source ");
+                            }
                             if (type == 2002) {
                                 String schemaParameterName = getSchemaParameterName(field.getStringRepresentation(), schemaParameters);
                                 final ClientComplexValue complexValue = getComplexValue(client, schemaParameterName, 
@@ -686,7 +715,15 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 
                 //Searching the entities that match with the conditions of the where(1 query)
                 //TODO check if there is a way to filter and delete in the same query. 
-                URI productsUri = getURI(serviceRoot, entityCollection, rels, client, conditions, null, inputValues, DELETE_OPERATION);
+                String uriKeyCache=getUriKeyCache(serviceRoot, entityCollection);
+                BaseViewMetadata baseViewMetadata = metadataMap.get(uriKeyCache);
+                Boolean loadBlobObjects = (Boolean) getInputParameterValue(INPUT_PARAMETER_LOAD_MEDIA_LINK_RESOURCES).getValue();
+                if(baseViewMetadata==null){
+                   
+                    addMetadataCache(serviceRoot, entityCollection, client, loadBlobObjects);
+                    baseViewMetadata = metadataMap.get(uriKeyCache);
+                }
+                URI productsUri = getURI(serviceRoot, entityCollection, rels, client, conditions, null, inputValues, DELETE_OPERATION, loadBlobObjects);
                 ODataRetrieveRequest<ClientEntitySetIterator<ClientEntitySet, ClientEntity>> request = 
                         client.getRetrieveRequestFactory().getEntitySetIteratorRequest(productsUri);
 
@@ -716,19 +753,19 @@ public class ODataWrapper extends AbstractCustomWrapper {
     private URI getURI(String endPoint ,final String entityCollection, final String[] rels,
             final ODataClient client,
             final CustomWrapperConditionHolder condition, final List<CustomWrapperFieldExpression> projectedFields,
-            final Map<String, String> inputValues,String operation) {
+            final Map<String, String> inputValues,String operation,  Boolean loadBlobObjects) throws CustomWrapperException {
        
         //Build the Uri
 
         URIBuilder uribuilder = client.newURIBuilder(endPoint);
         
-        String odataQuery = endPoint+ entityCollection+"?" ;
-        String uriKeyCache="";
-        if(endPoint.endsWith("/")){
-            uriKeyCache=endPoint+entityCollection;
-        }else{
-            uriKeyCache=endPoint+"/"+entityCollection;
-        } 
+        String odataQuery = endPoint+ "/"+entityCollection+"?" ;
+        String uriKeyCache=getUriKeyCache(endPoint, entityCollection);
+        BaseViewMetadata baseViewMetadata =metadataMap.get(uriKeyCache);
+        if(baseViewMetadata==null){
+            addMetadataCache(endPoint, entityCollection, client, loadBlobObjects);
+            baseViewMetadata = metadataMap.get(uriKeyCache);
+        }
 
         if(operation.equals(SELECT_OPERATION)){
             
@@ -779,8 +816,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
         final Map<CustomWrapperFieldExpression, Object> conditionMap = condition.getConditionMap();
         if ((conditionMap != null) && !conditionMap.isEmpty()) {
             // Simple condition
-           
-            final String simpleFilterQuery = ODataQueryUtils.buildSimpleCondition(conditionMap, rels, uriKeyCache, metadataMap);
+         
+            final String simpleFilterQuery = ODataQueryUtils.buildSimpleCondition(conditionMap, rels, baseViewMetadata);
+            logger.trace("Filter simple :" + simpleFilterQuery);
             if (!simpleFilterQuery.isEmpty()) {
                 
                 uribuilder = uribuilder.filter(simpleFilterQuery);
@@ -789,7 +827,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
         } else if (condition.getComplexCondition() != null) {
             // Complex condition
             final String complexFilterQuery = ODataQueryUtils.buildComplexCondition(condition.getComplexCondition(),
-                    rels, uriKeyCache, metadataMap);
+                    rels, baseViewMetadata);
             if (!complexFilterQuery.isEmpty()) {
                 uribuilder = uribuilder.filter(complexFilterQuery);
                 odataQuery += "&$filter=" + complexFilterQuery;
@@ -822,11 +860,11 @@ public class ODataWrapper extends AbstractCustomWrapper {
                         if (field.getName().equals(ODataWrapper.PAGINATION_FETCH)) {
                             final Integer value = (Integer) completeConditionMap.get(field);
                             uribuilder = uribuilder.top(value.intValue());
-                            odataQuery += "&$top=" + ODataQueryUtils.prepareValueForQuery(value,null,null,null);
+                            odataQuery += "&$top=" + value.intValue();
                         } else if (field.getName().equals(ODataWrapper.PAGINATION_OFFSET)) {
                             final Integer value = (Integer) completeConditionMap.get(field);
                             uribuilder = uribuilder.skip(value.intValue());
-                            odataQuery += "&$skip=" + ODataQueryUtils.prepareValueForQuery(value,null,null,null);
+                            odataQuery += "&$skip=" + value.intValue();
                         }
                     }
                 }
@@ -1039,6 +1077,16 @@ public class ODataWrapper extends AbstractCustomWrapper {
         return null;
     }
     
+    private static String getUriKeyCache(String endPoint, String entityCollection){
+        String uriKeyCache="";
+        if(endPoint.endsWith("/")){
+            uriKeyCache=endPoint+entityCollection;
+        }else{
+            uriKeyCache=endPoint+"/"+entityCollection;
+        } 
+        return uriKeyCache;
+    }
+    
     private static ClientComplexValue getComplexValue(final ODataClient client, final String fieldName,
             final CustomWrapperSchemaParameter[] schemaParameters, final Object value) {
 
@@ -1079,6 +1127,68 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 );
         getCustomWrapperPlan().addPlanEntry(HTTP_PROXY_PORT, proxyPort);
         logger.info("PROXY DATA->  HTTP_PROXY_HOST: " + proxyHost + ", HTTP_PROXY_HOST: " + proxyPort);
+    }
+    
+    public static void addMetadataCache(String uri, String entityCollection, ODataClient client, Boolean loadBlobObjects) throws CustomWrapperException {
+        try {
+           
+            Map<String, EdmEntitySet> entitySets= new HashMap<String, EdmEntitySet>();
+            EdmMetadataRequest request = client.getRetrieveRequestFactory().getMetadataRequest(uri);
+            ODataRetrieveResponse<Edm> response = request.execute();
+
+            Edm edm = response.getBody();     
+            entitySets = getEntitySetMap(edm);   
+            Map<EdmEntityType, List<EdmEntityType>> baseTypeMap = getBaseTypeMap(edm);
+
+            String uriKeyCache=getUriKeyCache(uri, entityCollection);
+            EdmEntitySet entitySet = entitySets.get(entityCollection);
+            BaseViewMetadata baseViewMetadata = new BaseViewMetadata();
+            logger.debug("Start :Inserting metadata cache");
+            if(entitySet!=null){
+                final EdmEntityType edmType = entitySet.getEntityType();
+                if (edmType != null){
+                    baseViewMetadata.setOpenType(edmType.isOpenType());
+                    baseViewMetadata.setStreamEntity(edmType.hasStream());
+                    Map<String, EdmType> propertiesMap =new HashMap<String, EdmType>();
+                 
+                    
+                    List<String> properties = edmType.getPropertyNames();        
+                    for (String property : properties) {
+                        EdmProperty edmProperty = edmType.getStructuralProperty(property);
+                        logger.trace("Adding property metadata: " +property+ " .Type: " + edmProperty.getType().getName()+ " kind: "+edmProperty.getType().getKind().name());
+                      
+                        propertiesMap.put(property, edmProperty.getType());
+                    }
+                    logger.trace("xx"+properties.toString());
+                    // Add the properties belonging to a type whose base type is the type of the requested entity set
+                    if (baseTypeMap.containsKey(edmType)) {
+                        for (EdmEntityType entityType : baseTypeMap.get(edmType)) {
+                            for (String property : entityType.getPropertyNames()) {
+                                if (!properties.contains(property)) {   
+                                    EdmProperty edmProperty = entityType.getStructuralProperty(property);
+                                    logger.trace("Adding property metadata: " +property+ " .Type: " + edmProperty.getType().getName()+ " kind: "+edmProperty.getType().getKind().name());
+                                    propertiesMap.put(property, edmProperty.getType());
+                                }
+                            }
+                        }
+                    }
+                    if(edmType.hasStream()){
+                        if(loadBlobObjects){
+                            propertiesMap.put(STREAM_FILE_PROPERTY, EdmStream.getInstance());
+                        }else{
+                            propertiesMap.put(STREAM_LINK_PROPERTY, EdmStream.getInstance());
+                        }
+                    }
+                    baseViewMetadata.setProperties(propertiesMap);
+                    metadataMap.put(uriKeyCache, baseViewMetadata);
+                                }
+            }
+           
+            logger.debug("End :Inserting metadata cache");
+        } catch (final Exception e) {
+            logger.error("Error accessing metadata", e);
+            throw new CustomWrapperException(e.getMessage());
+        }
     }
     
 }

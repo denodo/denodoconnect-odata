@@ -37,6 +37,7 @@ import org.apache.olingo.commons.api.edm.Edm;
 import org.apache.olingo.commons.api.edm.EdmElement;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
 import org.apache.olingo.commons.api.edm.EdmEntityType;
+import org.apache.olingo.commons.api.edm.EdmEnumType;
 import org.apache.olingo.commons.api.edm.EdmNavigationProperty;
 import org.apache.olingo.commons.api.edm.EdmProperty;
 import org.apache.olingo.commons.api.edm.EdmStructuredType;
@@ -57,6 +58,7 @@ import org.apache.olingo.commons.core.edm.primitivetype.EdmInt64;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmSByte;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmSingle;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmStream;
+import org.apache.olingo.commons.core.edm.primitivetype.EdmString;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmTimeOfDay;
 
 import com.denodo.connect.odata.wrapper.exceptions.PropertyNotFoundException;
@@ -107,9 +109,8 @@ public class ODataEntityUtil {
         }
         if (property.getType().getKind().equals(EdmTypeKind.ENUM)) {
             //Obtaining the type of the ENUM  
-            EdmEntityType customerType = edm.getEntityType(new FullQualifiedName( "NorthwindModel", "Product"));
-            
-            return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType((EdmType) customerType, loadBlobObjects), null,  true /* isSearchable */, 
+            //ENUM type always is a string
+            return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType( property.getType(), loadBlobObjects), null,  true /* isSearchable */, 
                     CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                     property.isNullable() /*isNullable*/, false /*isMandatory*/);
         }
@@ -184,9 +185,9 @@ public class ODataEntityUtil {
         }
         if (property.getType().getKind().equals(EdmTypeKind.ENUM)) {
             //Obtaining the type of the ENUM  
-            EdmEntityType customerType = edm.getEntityType(new FullQualifiedName( "NorthwindModel", "Product"));
+        
 
-            return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType((EdmType) customerType, loadBlobObjects), null,  true /* isSearchable */, 
+            return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType( property.getType(),loadBlobObjects), null,  true /* isSearchable */, 
                     CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                     true /*isNullable*/, false /*isMandatory*/);
         }
@@ -226,6 +227,8 @@ public class ODataEntityUtil {
             return Types.TIMESTAMP;
         } else if (edmType instanceof EdmStream) {
             return loadBlobObjects != null && loadBlobObjects.booleanValue() ? Types.BLOB : Types.VARCHAR;
+        } else if (edmType instanceof EdmString) {
+            return Types.VARCHAR;
         }
         return Types.VARCHAR;
     }

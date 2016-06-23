@@ -128,6 +128,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
     public final static String STREAM_LINK_PROPERTY="Media Read Link";
     public final static String STREAM_FILE_PROPERTY="Media File";
     private static final String EDM_STREAM_TYPE = "Edm.Stream";
+    private static final String EDM_ENUM = "ENUM";
 
     //It would have  one entry for each base view, because of this it is not implemented a LRU
     private static Map<String,BaseViewMetadata> metadataMap = new ConcurrentHashMap<String, BaseViewMetadata>();  
@@ -545,35 +546,43 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     }
 
                     EdmType edmType = edmProperties.get(field.getStringRepresentation());
-                  
+
                     if(edmType!=null && edmType.toString().equals(EDM_STREAM_TYPE)){
                         throw new CustomWrapperException("The insertion of stream properties is not supported. "+field.getStringRepresentation()+" is a stream property in the source ");
                     }
 
-                    if (type == Types.STRUCT) {
-                        logger.debug("Inserting struct property");
-                        String schemaParameterName = getSchemaParameterName(field.getStringRepresentation(), schemaParameters);
-                        final ClientComplexValue complexValue = getComplexValue(client, schemaParameterName, 
-                                schemaParameters, insertValues.get(field), edmProperties);
-                        
-                        newObject.getProperties().add(client.getObjectFactory().newComplexProperty(schemaParameterName, 
-                                complexValue));
-                    } else if (type == Types.ARRAY) {
-                        logger.debug("Inserting array property");
-                        String schemaParameterName = getSchemaParameterName(field.getStringRepresentation(), schemaParameters);
-                        final ClientCollectionValue<ClientValue> collectionValue = getCollectionValue(client, schemaParameterName, 
-                                schemaParameters, insertValues.get(field), edmProperties);
-                        
-                        newObject.getProperties().add(client.getObjectFactory().newCollectionProperty(schemaParameterName,
-                                collectionValue));
-                    } else {
-                        logger.debug("Inserting simple property");
-                        newObject.getProperties().add(client.getObjectFactory().newPrimitiveProperty( field.getStringRepresentation(),
-                                client.getObjectFactory().newPrimitiveValueBuilder().
-                                setType(DataTableColumnType.fromJDBCType(type).getEdmSimpleType()).
-                                setValue( ODataQueryUtils.prepareValueForInsert(insertValues.get(field))).build()));
+                    if(edmType!=null && edmType.getKind().name().equals(EDM_ENUM)){
+                        logger.info("Property: "+field.getStringRepresentation()+"/Edm Type: "+ edmType.getKind().name()+" Type Name: "+edmType.getFullQualifiedName().toString());
+                        newObject.getProperties().add(client.getObjectFactory().newEnumProperty( field.getStringRepresentation(),
+                                client.getObjectFactory().newEnumValue(edmType.getFullQualifiedName().toString(), (String) ODataQueryUtils.prepareValueForInsert(insertValues.get(field)))));
+                    }else{
+                        if (type == Types.STRUCT) {
+                            logger.debug("Inserting struct property");
+                            String schemaParameterName = getSchemaParameterName(field.getStringRepresentation(), schemaParameters);
+                            final ClientComplexValue complexValue = getComplexValue(client, schemaParameterName, 
+                                    schemaParameters, insertValues.get(field), edmProperties);
+
+                            newObject.getProperties().add(client.getObjectFactory().newComplexProperty(schemaParameterName, 
+                                    complexValue));
+                        } else if (type == Types.ARRAY) {
+                            logger.debug("Inserting array property");
+                            String schemaParameterName = getSchemaParameterName(field.getStringRepresentation(), schemaParameters);
+                            final ClientCollectionValue<ClientValue> collectionValue = getCollectionValue(client, schemaParameterName, 
+                                    schemaParameters, insertValues.get(field), edmProperties);
+
+                            newObject.getProperties().add(client.getObjectFactory().newCollectionProperty(schemaParameterName,
+                                    collectionValue));
+                        } else {
+                            logger.debug("Inserting simple property");
+                            newObject.getProperties().add(client.getObjectFactory().newPrimitiveProperty( field.getStringRepresentation(),
+                                    client.getObjectFactory().newPrimitiveValueBuilder().
+                                    setType(DataTableColumnType.fromJDBCType(type).getEdmSimpleType()).
+                                    setValue( ODataQueryUtils.prepareValueForInsert(insertValues.get(field))).build()));
+
+
+                        }
                     }
-                    
+
                 } else {
                     logger.error("Insertion of complex types is not supported ");
                     throw new CustomWrapperException("Insertion of complex types is not supported");
@@ -657,34 +666,38 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
                             
                             EdmType edmType = edmProperties.get(field.getStringRepresentation());
-                            
+
                             if(edmType!=null && edmType.toString().equals(EDM_STREAM_TYPE)){
                                 throw new CustomWrapperException("The update of stream properties is not supported. "+field.getStringRepresentation()+" is a stream property in the source ");
                             }
 
-                            if (type == Types.STRUCT) {
-                                logger.debug("Updating struct property");
-                                String schemaParameterName = getSchemaParameterName(field.getStringRepresentation(), schemaParameters);
-                                final ClientComplexValue complexValue = getComplexValue(client, schemaParameterName, 
-                                        schemaParameters, updateValues.get(field), edmProperties);
-                                newEntity.getProperties().add(client.getObjectFactory().newComplexProperty(schemaParameterName, 
-                                        complexValue));
-                            } else if (type == Types.ARRAY) {
-                                logger.debug("Updating array property");
-                                String schemaParameterName = getSchemaParameterName(field.getStringRepresentation(), schemaParameters);
-                                final ClientCollectionValue<ClientValue> collectionValue = getCollectionValue(client, schemaParameterName, 
-                                        schemaParameters, updateValues.get(field), edmProperties);
-                                
-                                newEntity.getProperties().add(client.getObjectFactory().newCollectionProperty(schemaParameterName,
-                                        collectionValue));
-                            } else {
-                                logger.debug("Updating simple property");
-                                newEntity.getProperties().add(client.getObjectFactory().newPrimitiveProperty( field.getStringRepresentation(),
-                                        client.getObjectFactory().newPrimitiveValueBuilder().
-                                        setType(DataTableColumnType.fromJDBCType(type).getEdmSimpleType()).
+                            if(edmType!=null && edmType.getKind().name().equals(EDM_ENUM)){                
+                                newEntity.getProperties().add(client.getObjectFactory().newEnumProperty( field.getStringRepresentation(),
+                                        client.getObjectFactory().newEnumValue(edmType.getFullQualifiedName().toString(), (String) ODataQueryUtils.prepareValueForInsert(updateValues.get(field)))));
+                            }else{
+                                if (type == Types.STRUCT) {
+                                    logger.debug("Updating struct property");
+                                    String schemaParameterName = getSchemaParameterName(field.getStringRepresentation(), schemaParameters);
+                                    final ClientComplexValue complexValue = getComplexValue(client, schemaParameterName, 
+                                            schemaParameters, updateValues.get(field), edmProperties);
+                                    newEntity.getProperties().add(client.getObjectFactory().newComplexProperty(schemaParameterName, 
+                                            complexValue));
+                                } else if (type == Types.ARRAY) {
+                                    logger.debug("Updating array property");
+                                    String schemaParameterName = getSchemaParameterName(field.getStringRepresentation(), schemaParameters);
+                                    final ClientCollectionValue<ClientValue> collectionValue = getCollectionValue(client, schemaParameterName, 
+                                            schemaParameters, updateValues.get(field), edmProperties);
+
+                                    newEntity.getProperties().add(client.getObjectFactory().newCollectionProperty(schemaParameterName,
+                                            collectionValue));
+                                } else {
+                                    logger.debug("Updating simple property");
+                                    newEntity.getProperties().add(client.getObjectFactory().newPrimitiveProperty( field.getStringRepresentation(),
+                                            client.getObjectFactory().newPrimitiveValueBuilder().
+                                            setType(DataTableColumnType.fromJDBCType(type).getEdmSimpleType()).
                                         setValue( ODataQueryUtils.prepareValueForInsert(updateValues.get(field))).build()));
                             }
-
+                            }
 
                         } else {
                             logger.error("Update of complex types is not supported ");

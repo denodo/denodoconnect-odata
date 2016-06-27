@@ -69,6 +69,7 @@ import org.apache.olingo.commons.api.edm.EdmSchema;
 import org.apache.olingo.commons.api.edm.EdmStructuredType;
 import org.apache.olingo.commons.api.edm.EdmType;
 import org.apache.olingo.commons.api.format.ContentType;
+import org.apache.olingo.commons.core.edm.EdmPropertyImpl;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmStream;
 
 import com.denodo.connect.odata.wrapper.http.BasicAuthHttpTimeoutClientFactory;
@@ -233,7 +234,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 if (edmType != null){
                     baseViewMetadata.setOpenType(edmType.isOpenType());
                     baseViewMetadata.setStreamEntity(edmType.hasStream());
-                    Map<String, EdmType> propertiesMap = new HashMap<String, EdmType>();
+                    Map<String, EdmProperty> propertiesMap = new HashMap<String, EdmProperty>();
                     final List<CustomWrapperSchemaParameter> schemaParams = new ArrayList<CustomWrapperSchemaParameter>();
                     
                     List<String> properties = edmType.getPropertyNames();
@@ -243,8 +244,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     for (String property : properties) {
                         EdmProperty edmProperty = edmType.getStructuralProperty(property);
                         logger.trace("Adding property: " +property+ " .Type: " + edmProperty.getType().getName()+ " kind: "+edmProperty.getType().getKind().name());
-                        schemaParams.add(ODataEntityUtil.createSchemaOlingoParameter(edmProperty, edm, loadBlobObjects));
-                        propertiesMap.put(property, edmProperty.getType());
+                        schemaParams.add(ODataEntityUtil.createSchemaOlingoParameter(edmProperty,  loadBlobObjects));
+                        propertiesMap.put(property, edmProperty);
                     }
                     
                     // Add the properties belonging to a type whose base type is the type of the requested entity set
@@ -255,8 +256,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                 if (!properties.contains(property)) {   
                                     EdmProperty edmProperty = entityType.getStructuralProperty(property);
                                     logger.trace("Adding property: " +property+ " .Type: " + edmProperty.getType().getName()+ " kind: "+edmProperty.getType().getKind().name());
-                                    schemaParams.add(ODataEntityUtil.createSchemaOlingoParameter(edmProperty, edm, loadBlobObjects));
-                                    propertiesMap.put(property, edmProperty.getType());
+                                    schemaParams.add(ODataEntityUtil.createSchemaOlingoParameter(edmProperty,  loadBlobObjects));
+                                    propertiesMap.put(property, edmProperty);
                                 }
                             }
                         }
@@ -268,13 +269,13 @@ public class ODataWrapper extends AbstractCustomWrapper {
                             schemaParams.add(    new CustomWrapperSchemaParameter(STREAM_FILE_PROPERTY, Types.BLOB, null,  true /* isSearchable */, 
                                     CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                                     true /*isNullable*/, false /*isMandatory*/));
-                            propertiesMap.put(STREAM_FILE_PROPERTY, EdmStream.getInstance());
+                          //TODO   propertiesMap.put(STREAM_FILE_PROPERTY, EdmStream.getInstance());
                         }else{
                             logger.trace("Adding property: Stream Link .Type: String ");
                             schemaParams.add(    new CustomWrapperSchemaParameter(STREAM_LINK_PROPERTY, Types.VARCHAR, null,  true /* isSearchable */, 
                                     CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                                     true /*isNullable*/, false /*isMandatory*/));
-                            propertiesMap.put(STREAM_LINK_PROPERTY, EdmStream.getInstance());
+                            //TODO propertiesMap.put(STREAM_LINK_PROPERTY, EdmStream.getInstance());
                         }
                       
                        
@@ -528,7 +529,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
 
             final CustomWrapperSchemaParameter[] schemaParameters = getSchemaParameters(inputValues);
-            Map<String, EdmType> edmProperties = baseViewMetadata.getProperties();
+            Map<String, EdmProperty> edmProperties = baseViewMetadata.getProperties();
             for (final CustomWrapperFieldExpression field : insertValues.keySet()) {
 
                 if (!field.hasSubFields()) {
@@ -545,16 +546,16 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                 + field.hasSubFields());
                     }
 
-                    EdmType edmType = edmProperties.get(field.getStringRepresentation());
+                    EdmProperty edmProperty = edmProperties.get(field.getStringRepresentation());
 
-                    if(edmType!=null && edmType.toString().equals(EDM_STREAM_TYPE)){
+                    if(edmProperty!=null && edmProperty.getType().toString().equals(EDM_STREAM_TYPE)){
                         throw new CustomWrapperException("The insertion of stream properties is not supported. "+field.getStringRepresentation()+" is a stream property in the source ");
                     }
 
-                    if(edmType!=null && edmType.getKind().name().equals(EDM_ENUM)){
-                        logger.info("Property: "+field.getStringRepresentation()+"/Edm Type: "+ edmType.getKind().name()+" Type Name: "+edmType.getFullQualifiedName().toString());
+                    if(edmProperty!=null && edmProperty.getType().getKind().name().equals(EDM_ENUM)){
+                        logger.info("Property: "+field.getStringRepresentation()+"/Edm Type: "+ edmProperty.getType().getKind().name()+" Type Name: "+edmProperty.getType().getFullQualifiedName().toString());
                         newObject.getProperties().add(client.getObjectFactory().newEnumProperty( field.getStringRepresentation(),
-                                client.getObjectFactory().newEnumValue(edmType.getFullQualifiedName().toString(), (String) ODataQueryUtils.prepareValueForInsert(insertValues.get(field)))));
+                                client.getObjectFactory().newEnumValue(edmProperty.getType().getFullQualifiedName().toString(), (String) ODataQueryUtils.prepareValueForInsert(insertValues.get(field)))));
                     }else{
                         if (type == Types.STRUCT) {
                             logger.debug("Inserting struct property");
@@ -642,7 +643,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
                 ODataRetrieveResponse<ClientEntitySetIterator <ClientEntitySet, ClientEntity>> response = request.execute();
                 ClientEntitySetIterator<ClientEntitySet, ClientEntity> iterator = response.getBody();
-                Map<String, EdmType> edmProperties = baseViewMetadata.getProperties();
+                Map<String, EdmProperty> edmProperties = baseViewMetadata.getProperties();
                 while (iterator.hasNext()) {
                     //deleting every entity in a query
                     ClientEntity product = iterator.next();
@@ -665,7 +666,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                     + field.isFunctionExpression() + "/" + field.isSimpleExpression());
 
                             
-                            EdmType edmType = edmProperties.get(field.getStringRepresentation());
+                            EdmType edmType = edmProperties.get(field.getStringRepresentation()).getType();
 
                             if(edmType!=null && edmType.toString().equals(EDM_STREAM_TYPE)){
                                 throw new CustomWrapperException("The update of stream properties is not supported. "+field.getStringRepresentation()+" is a stream property in the source ");
@@ -1116,13 +1117,13 @@ public class ODataWrapper extends AbstractCustomWrapper {
     
     private static ClientComplexValue getComplexValue(final ODataClient client, final String fieldName,
             final CustomWrapperSchemaParameter[] schemaParameters, final Object value,
-            final Map<String, EdmType> edmProperties) {
+            final Map<String, EdmProperty> edmProperties) {
         return getComplexValue(client, fieldName, schemaParameters, value, edmProperties, null);
     }
     
     private static ClientComplexValue getComplexValue(final ODataClient client, final String fieldName,
             final CustomWrapperSchemaParameter[] schemaParameters, final Object value, 
-            final Map<String, EdmType> edmProperties, final EdmType edmType) {
+            final Map<String, EdmProperty> edmProperties, final EdmType edmType) {
         
         if (value instanceof CustomWrapperStruct) {
             
@@ -1131,7 +1132,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
             
             if (edmType == null) {
             
-                complexEdmType = edmProperties.get(fieldName);
+                complexEdmType = edmProperties.get(fieldName).getType();
 
                 params = getSchemaParameterColumns(fieldName, schemaParameters);
             }
@@ -1165,10 +1166,10 @@ public class ODataWrapper extends AbstractCustomWrapper {
     
     
     private static ClientCollectionValue<ClientValue> getCollectionValue(final ODataClient client, final String fieldName,
-            final CustomWrapperSchemaParameter[] schemaParameters, final Object value, final Map<String, EdmType> edmProperties) {
+            final CustomWrapperSchemaParameter[] schemaParameters, final Object value, final Map<String, EdmProperty> edmProperties) {
 
 
-        EdmType edmType = edmProperties.get(fieldName);
+        EdmType edmType = edmProperties.get(fieldName).getType();
         
         final ClientCollectionValue<ClientValue> collection = client.getObjectFactory().newCollectionValue("Collection(" + edmType.getFullQualifiedName().toString() + ")");
         
@@ -1224,7 +1225,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 if (edmType != null){
                     baseViewMetadata.setOpenType(edmType.isOpenType());
                     baseViewMetadata.setStreamEntity(edmType.hasStream());
-                    Map<String, EdmType> propertiesMap =new HashMap<String, EdmType>();
+                    Map<String, EdmProperty> propertiesMap =new HashMap<String, EdmProperty>();
                  
                     
                     List<String> properties = edmType.getPropertyNames();        
@@ -1232,7 +1233,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                         EdmProperty edmProperty = edmType.getStructuralProperty(property);
                         logger.trace("Adding property metadata: " +property+ " .Type: " + edmProperty.getType().getName()+ " kind: "+edmProperty.getType().getKind().name());
                       
-                        propertiesMap.put(property, edmProperty.getType());
+                        propertiesMap.put(property, edmProperty);
                     }
                     logger.trace("xx"+properties.toString());
                     // Add the properties belonging to a type whose base type is the type of the requested entity set
@@ -1242,17 +1243,18 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                 if (!properties.contains(property)) {   
                                     EdmProperty edmProperty = entityType.getStructuralProperty(property);
                                     logger.trace("Adding property metadata: " +property+ " .Type: " + edmProperty.getType().getName()+ " kind: "+edmProperty.getType().getKind().name());
-                                    propertiesMap.put(property, edmProperty.getType());
+                                    propertiesMap.put(property, edmProperty);
                                 }
                             }
                         }
                     }
                     if(edmType.hasStream()){
-                        if(loadBlobObjects){
-                            propertiesMap.put(STREAM_FILE_PROPERTY, EdmStream.getInstance());
-                        }else{
-                            propertiesMap.put(STREAM_LINK_PROPERTY, EdmStream.getInstance());
-                        }
+//                        if(loadBlobObjects){
+//                            propertiesMap.put(STREAM_FILE_PROPERTY, EdmProperty);
+//                        }else{
+//                            propertiesMap.put(STREAM_LINK_PROPERTY, (EdmProperty)EdmStream.getInstance());
+//                        }
+                        //TODO
                     }
                     baseViewMetadata.setProperties(propertiesMap);
                     metadataMap.put(uriKeyCache, baseViewMetadata);

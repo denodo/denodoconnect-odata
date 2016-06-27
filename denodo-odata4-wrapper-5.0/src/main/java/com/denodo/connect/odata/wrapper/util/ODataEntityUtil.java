@@ -70,7 +70,7 @@ public class ODataEntityUtil {
     private static final Logger logger = Logger.getLogger(ODataEntityUtil.class);
 
 
-    public static CustomWrapperSchemaParameter createSchemaOlingoParameter(EdmProperty property, Edm edm, Boolean loadBlobObjects)
+    public static CustomWrapperSchemaParameter createSchemaOlingoParameter(EdmProperty property,  Boolean loadBlobObjects)
             throws CustomWrapperException {  
        
         if (property.isCollection()) {
@@ -91,7 +91,7 @@ public class ODataEntityUtil {
                 CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[propertyNames.size()];
                 int i = 0;
                 for (String prop : propertyNames) {
-                    complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop), edm, loadBlobObjects);
+                    complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop),  loadBlobObjects);
                     i++;
                 }
 
@@ -121,7 +121,7 @@ public class ODataEntityUtil {
                 CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[propertyNames.size()];
                 int i = 0;
                 for (String prop : propertyNames) {
-                    complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop), edm, loadBlobObjects);
+                    complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop),  loadBlobObjects);
                     i++;
                 }
 
@@ -135,7 +135,7 @@ public class ODataEntityUtil {
     }
 
 
-    public static CustomWrapperSchemaParameter createSchemaOlingoParameter(EdmElement property, Edm edm, Boolean loadBlobObjects) throws CustomWrapperException {
+    public static CustomWrapperSchemaParameter createSchemaOlingoParameter(EdmElement property, Boolean loadBlobObjects) throws CustomWrapperException {
         logger.trace("property def: " + property.toString() + property.getName() + property.getType().toString());
         if (property.isCollection()) {
             if (property.getType().getKind().equals(EdmTypeKind.PRIMITIVE)) {
@@ -150,7 +150,7 @@ public class ODataEntityUtil {
                 CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[propertyNames.size()];
                 int i = 0;
                 for (String prop : propertyNames) {
-                    complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop),edm, loadBlobObjects);
+                    complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop),loadBlobObjects);
                     i++;
                 }
 
@@ -173,7 +173,7 @@ public class ODataEntityUtil {
             CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[propertyNames.size()];
             int i = 0;
             for (String prop : propertyNames) {
-                complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop), edm, loadBlobObjects);
+                complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop),  loadBlobObjects);
                 i++;
             }
 
@@ -340,7 +340,7 @@ public class ODataEntityUtil {
             CustomWrapperSchemaParameter[] schema = new CustomWrapperSchemaParameter[props.size()];
             int i = 0;
             for (String property : props) {
-                schema[i] = ODataEntityUtil.createSchemaOlingoParameter(type.getProperty(property), edm, loadBlobObjects);
+                schema[i] = ODataEntityUtil.createSchemaOlingoParameter(type.getProperty(property),  loadBlobObjects);
                 i++;
             }
 

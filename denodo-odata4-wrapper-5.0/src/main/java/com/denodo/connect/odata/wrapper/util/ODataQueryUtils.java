@@ -108,7 +108,7 @@ public class ODataQueryUtils {
 
     private static EdmType getEdmType(BaseViewMetadata baseViewMetadata, String property){
         if (baseViewMetadata != null){
-           return baseViewMetadata.getProperties().get(property);
+           return baseViewMetadata.getProperties().get(property).getType();
         }
         return null;
     }

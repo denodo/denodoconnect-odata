@@ -803,12 +803,19 @@ public class ODataWrapper extends AbstractCustomWrapper {
             odataQuery+= "$select=";
 
             List<String> projectedFieldsAsString = getProjectedFieldsAsString(projectedFields);
-            final List<String> arrayfields = new ArrayList<String>();
-
-            for (final String projectedField : projectedFieldsAsString) {
-                logger.info("Adding field: " + projectedField);
-                arrayfields.add(projectedField);
-                odataQuery += projectedField + ",";
+            
+            if (ODataQueryUtils.areAllSelected(baseViewMetadata, projectedFieldsAsString)) {
+                logger.info("Adding field: *");
+                projectedFieldsAsString.clear();
+                projectedFieldsAsString.add("*");
+                odataQuery+= "*";
+            } else {
+                final List<String> arrayfields = new ArrayList<String>();
+                for (final String projectedField : projectedFieldsAsString) {
+                    logger.info("Adding field: " + projectedField);
+                    arrayfields.add(projectedField);
+                    odataQuery += projectedField + ",";
+                }
             }
             
             String[] fields = projectedFieldsAsString.toArray(new String[projectedFieldsAsString.size()]);       

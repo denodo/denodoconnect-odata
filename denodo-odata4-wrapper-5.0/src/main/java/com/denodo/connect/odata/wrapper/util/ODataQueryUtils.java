@@ -203,19 +203,12 @@ public class ODataQueryUtils {
     
     public static boolean areAllSelected(final BaseViewMetadata baseViewMetadata, final List<String> selectedProperties) {
         
-        if (baseViewMetadata.getProperties().keySet().size() != selectedProperties.size()) {
-            return false;
-        }
-        
-        int count = 0;
         for (String keyProperty : baseViewMetadata.getProperties().keySet()) {
             if (!selectedProperties.contains(keyProperty)) {
                 return false;
             }
-            count++;
         }
         
-        
-        return selectedProperties.size() == count;
+        return true;
     }
 }

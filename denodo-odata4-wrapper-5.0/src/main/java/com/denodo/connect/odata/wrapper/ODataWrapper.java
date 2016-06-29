@@ -459,22 +459,26 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 if (rels != null && rels.length > 0) {
                     logger.debug("expanded collections");
                     for (final ClientLink link : product.getNavigationLinks()) {
-                        logger.debug("name collection  " + link.getName());
                         final int index = projectedFields.indexOf(new CustomWrapperFieldExpression(link.getName()));
-                        // 1 to 1 relantionships
-                        if (link.asInlineEntity() != null) {
-                            final ClientEntity realtedEntity = link.asInlineEntity().getEntity();
-                            final EdmEntityType type = ODataEntityUtil.getEdmEntityType(realtedEntity.getTypeName().getName(), entitySets);
-                            params[index] = ODataEntityUtil.getOutputValueForRelatedEntity(realtedEntity, type);
-                        }
-
-                        // 1 to many relationship
-                        if (link.asInlineEntitySet() != null) {
-                            final List<ClientEntity> realtedEntities = link.asInlineEntitySet().getEntitySet().getEntities();
-                            if (realtedEntities.size() > 0) {
-                                final EdmEntityType type = ODataEntityUtil.getEdmEntityType(realtedEntities.get(0).getTypeName().getName(),
-                                        entitySets);
-                                params[index] = ODataEntityUtil.getOutputValueForRelatedEntityList(realtedEntities, type);
+                        // When the index is lower than zero means that the related entity is not projected
+                        if (index > 0) {
+                            logger.debug("name collection  " + link.getName());
+                            
+                            // 1 to 1 relantionships
+                            if (link.asInlineEntity() != null) {
+                                final ClientEntity realtedEntity = link.asInlineEntity().getEntity();
+                                final EdmEntityType type = ODataEntityUtil.getEdmEntityType(realtedEntity.getTypeName().getName(), entitySets);
+                                params[index] = ODataEntityUtil.getOutputValueForRelatedEntity(realtedEntity, type);
+                            }
+    
+                            // 1 to many relationship
+                            if (link.asInlineEntitySet() != null) {
+                                final List<ClientEntity> realtedEntities = link.asInlineEntitySet().getEntitySet().getEntities();
+                                if (realtedEntities.size() > 0) {
+                                    final EdmEntityType type = ODataEntityUtil.getEdmEntityType(realtedEntities.get(0).getTypeName().getName(),
+                                            entitySets);
+                                    params[index] = ODataEntityUtil.getOutputValueForRelatedEntityList(realtedEntities, type);
+                                }
                             }
                         }
                     }

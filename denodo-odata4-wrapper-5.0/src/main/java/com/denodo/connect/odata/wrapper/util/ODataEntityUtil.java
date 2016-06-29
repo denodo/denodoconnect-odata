@@ -37,12 +37,10 @@ import org.apache.olingo.commons.api.edm.Edm;
 import org.apache.olingo.commons.api.edm.EdmElement;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
 import org.apache.olingo.commons.api.edm.EdmEntityType;
-import org.apache.olingo.commons.api.edm.EdmEnumType;
 import org.apache.olingo.commons.api.edm.EdmNavigationProperty;
 import org.apache.olingo.commons.api.edm.EdmProperty;
 import org.apache.olingo.commons.api.edm.EdmStructuredType;
 import org.apache.olingo.commons.api.edm.EdmType;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.apache.olingo.commons.api.edm.constants.EdmTypeKind;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmBinary;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmBoolean;
@@ -70,20 +68,22 @@ public class ODataEntityUtil {
     private static final Logger logger = Logger.getLogger(ODataEntityUtil.class);
 
 
-    public static CustomWrapperSchemaParameter createSchemaOlingoParameter(EdmProperty property,  Boolean loadBlobObjects)
+    public static CustomWrapperSchemaParameter createSchemaOlingoParameter(EdmElement property,  Boolean loadBlobObjects)
             throws CustomWrapperException {  
-       
+                
+        boolean isNullable = (property instanceof EdmProperty) ? ((EdmProperty) property).isNullable() : true;  
+                
         if (property.isCollection()) {
             //array with primitive types
-            if (property.isPrimitive()) {
+            if (property.getType().getKind().equals(EdmTypeKind.PRIMITIVE)) {
                 CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[]{new CustomWrapperSchemaParameter(property.getName(), 
                         mapODataSimpleType((EdmType) property.getType(), loadBlobObjects), null,  true /* isSearchable */, 
                         CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
-                        property.isNullable() /*isNullable*/, false /*isMandatory*/)};
+                        isNullable /*isNullable*/, false /*isMandatory*/)};
                 return new CustomWrapperSchemaParameter(property.getName(), Types.ARRAY, complexParams, true /* isSearchable */, 
                         CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
-                        property.isNullable() /*isNullable*/, false /*isMandatory*/);
-                }  
+                        isNullable /*isNullable*/, false /*isMandatory*/);
+            }  
             //array of complex types
             if(property.getType() instanceof EdmStructuredType){
                 EdmStructuredType edmStructuralType = ((EdmStructuredType) property.getType());
@@ -99,20 +99,20 @@ public class ODataEntityUtil {
 
                 return new CustomWrapperSchemaParameter(property.getName(), Types.ARRAY, complexParams, true /* isSearchable */, 
                         CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
-                        property.isNullable() /*isNullable*/, false /*isMandatory*/);
+                        isNullable /*isNullable*/, false /*isMandatory*/);
                 }
         }
-        if (property.isPrimitive()) {
+        if (property.getType().getKind().equals(EdmTypeKind.PRIMITIVE)) {
             return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType((EdmType) property.getType(), loadBlobObjects), null,  true /* isSearchable */, 
                     CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
-                    property.isNullable() /*isNullable*/, false /*isMandatory*/);
+                    isNullable /*isNullable*/, false /*isMandatory*/);
         }
         if (property.getType().getKind().equals(EdmTypeKind.ENUM)) {
             //Obtaining the type of the ENUM  
             //ENUM type always is a string
             return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType( property.getType(), loadBlobObjects), null,  true /* isSearchable */, 
                     CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
-                    property.isNullable() /*isNullable*/, false /*isMandatory*/);
+                    isNullable /*isNullable*/, false /*isMandatory*/);
         }
         if (property.getType() instanceof EdmStructuredType) {
             //complex type
@@ -121,6 +121,7 @@ public class ODataEntityUtil {
                 CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[propertyNames.size()];
                 int i = 0;
                 for (String prop : propertyNames) {
+                    logger.info("property name: "+ prop);
                     complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop),  loadBlobObjects);
                     i++;
                 }
@@ -129,70 +130,11 @@ public class ODataEntityUtil {
 
                 return new CustomWrapperSchemaParameter(property.getName(), Types.STRUCT, complexParams,  true /* isSearchable */, 
                         CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
-                        property.isNullable() /*isNullable*/, false /*isMandatory*/);
+                        isNullable /*isNullable*/, false /*isMandatory*/);
                 }
         throw new CustomWrapperException("Property not supported : " + property.getName());
     }
 
-
-    public static CustomWrapperSchemaParameter createSchemaOlingoParameter(EdmElement property, Boolean loadBlobObjects) throws CustomWrapperException {
-        logger.trace("property def: " + property.toString() + property.getName() + property.getType().toString());
-        if (property.isCollection()) {
-            if (property.getType().getKind().equals(EdmTypeKind.PRIMITIVE)) {
-                return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType(property.getType(), loadBlobObjects), null, true /* isSearchable */, 
-                        CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
-                        true /*isNullable*/, false /*isMandatory*/);
-            }
-
-            if (property.getType() instanceof EdmStructuredType) {
-                EdmStructuredType edmStructuralType = ((EdmStructuredType) property.getType());
-                List<String> propertyNames = edmStructuralType.getPropertyNames();
-                CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[propertyNames.size()];
-                int i = 0;
-                for (String prop : propertyNames) {
-                    complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop),loadBlobObjects);
-                    i++;
-                }
-
-                // Complex data types
-
-                return new CustomWrapperSchemaParameter(property.getName(), Types.STRUCT, complexParams, true /* isSearchable */, 
-                        CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
-                        false /*isNullable*/, false /*isMandatory*/);
-            }
-        }
-        if (property.getType().getKind().equals(EdmTypeKind.PRIMITIVE)) {
-            return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType(property.getType(), loadBlobObjects), null, true /* isSearchable */, 
-                    CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
-                    true /*isNullable*/, false /*isMandatory*/);
-        }
-
-        if (property.getType() instanceof EdmStructuredType) {
-            EdmStructuredType edmStructuralType = ((EdmStructuredType) property.getType());
-            List<String> propertyNames = edmStructuralType.getPropertyNames();
-            CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[propertyNames.size()];
-            int i = 0;
-            for (String prop : propertyNames) {
-                complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop),  loadBlobObjects);
-                i++;
-            }
-
-            // Complex data types
-
-            return new CustomWrapperSchemaParameter(property.getName(), Types.STRUCT, complexParams, true /* isSearchable */, 
-                    CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
-                    false /*isNullable*/, false /*isMandatory*/);
-        }
-        if (property.getType().getKind().equals(EdmTypeKind.ENUM)) {
-            //Obtaining the type of the ENUM  
-        
-
-            return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType( property.getType(),loadBlobObjects), null,  true /* isSearchable */, 
-                    CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
-                    true /*isNullable*/, false /*isMandatory*/);
-        }
-        throw new CustomWrapperException("Property not supported : " + property.getName());
-    }
 
     private static int mapODataSimpleType(EdmType edmType, Boolean loadBlobObjects) {
         if (edmType instanceof EdmBoolean) {

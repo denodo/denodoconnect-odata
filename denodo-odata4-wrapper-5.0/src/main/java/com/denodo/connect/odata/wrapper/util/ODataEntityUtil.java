@@ -21,18 +21,25 @@
  */
 package com.denodo.connect.odata.wrapper.util;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Types;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
+import org.apache.olingo.client.api.ODataClient;
+import org.apache.olingo.client.api.communication.request.retrieve.ODataMediaRequest;
+import org.apache.olingo.client.api.communication.response.ODataRetrieveResponse;
 import org.apache.olingo.client.api.domain.ClientCollectionValue;
 import org.apache.olingo.client.api.domain.ClientComplexValue;
 import org.apache.olingo.client.api.domain.ClientEntity;
 import org.apache.olingo.client.api.domain.ClientLink;
 import org.apache.olingo.client.api.domain.ClientProperty;
 import org.apache.olingo.client.api.domain.ClientValue;
+import org.apache.olingo.client.api.uri.URIBuilder;
 import org.apache.olingo.commons.api.edm.Edm;
 import org.apache.olingo.commons.api.edm.EdmElement;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
@@ -308,7 +315,8 @@ public class ODataEntityUtil {
         return null;
     }
 
-    public static Object[] getOutputValueForRelatedEntity(ClientEntity relatedEntity, EdmEntityType type) throws CustomWrapperException {
+    public static Object[] getOutputValueForRelatedEntity(final ClientEntity relatedEntity, final ODataClient client,
+            final String uri, final Boolean loadBlobObjects) throws CustomWrapperException, IOException {
         
         List<ClientProperty> properties = relatedEntity.getProperties();
         List<ClientLink> mediaEditLinks = relatedEntity.getMediaEditLinks();
@@ -324,22 +332,32 @@ public class ODataEntityUtil {
         }
         
         for (ClientLink clientLink : mediaEditLinks) {  
-            try {
-                output[i++] = clientLink.getLink();
-            } catch (PropertyNotFoundException e) {
-                throw e;
+            Object value = null;
+            if (loadBlobObjects != null && loadBlobObjects.booleanValue()) {
+                URIBuilder uribuilder = client.newURIBuilder(uri);
+                uribuilder.appendSingletonSegment(clientLink.getLink().getRawPath());
+                ODataMediaRequest request2 = client.getRetrieveRequestFactory().getMediaRequest(uribuilder.build());
+
+                ODataRetrieveResponse<InputStream> response2 = request2.execute();
+
+                value = IOUtils.toByteArray(response2.getBody());
+            } else {
+                value = uri + clientLink.getLink();
             }
+
+            output[i++] = value;
+
         }
         
         return output;
     }
 
-    public static Object[] getOutputValueForRelatedEntityList(List<ClientEntity> relatedEntities, EdmEntityType type)
-            throws CustomWrapperException {
+    public static Object[] getOutputValueForRelatedEntityList(final List<ClientEntity> relatedEntities, final ODataClient client, 
+            final String uri, final Boolean loadBlobObjects) throws CustomWrapperException, IOException {
         Object[] output = new Object[relatedEntities.size()];
         int i = 0;
         for (ClientEntity entity : relatedEntities) {
-            output[i] = getOutputValueForRelatedEntity(entity, type);
+            output[i] = getOutputValueForRelatedEntity(entity, client, uri, loadBlobObjects);
             i++;
         }
         return output;

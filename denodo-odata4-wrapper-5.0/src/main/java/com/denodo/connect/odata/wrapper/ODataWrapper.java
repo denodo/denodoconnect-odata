@@ -468,7 +468,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                             if (link.asInlineEntity() != null) {
                                 final ClientEntity realtedEntity = link.asInlineEntity().getEntity();
                                 final EdmEntityType type = ODataEntityUtil.getEdmEntityType(realtedEntity.getTypeName().getName(), entitySets);
-                                params[index] = ODataEntityUtil.getOutputValueForRelatedEntity(realtedEntity, type);
+                                params[index] = ODataEntityUtil.getOutputValueForRelatedEntity(realtedEntity, client, uri, loadBlobObjects);
                             }
     
                             // 1 to many relationship
@@ -477,7 +477,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                 if (realtedEntities.size() > 0) {
                                     final EdmEntityType type = ODataEntityUtil.getEdmEntityType(realtedEntities.get(0).getTypeName().getName(),
                                             entitySets);
-                                    params[index] = ODataEntityUtil.getOutputValueForRelatedEntityList(realtedEntities, type);
+                                    params[index] = ODataEntityUtil.getOutputValueForRelatedEntityList(realtedEntities, client, uri, loadBlobObjects);
                                 }
                             }
                         }

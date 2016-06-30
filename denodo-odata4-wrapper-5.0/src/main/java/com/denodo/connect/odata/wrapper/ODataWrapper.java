@@ -124,8 +124,6 @@ public class ODataWrapper extends AbstractCustomWrapper {
     public final static String DELETE_OPERATION= "DELETE";
     public final static String SELECT_OPERATION= "SELECT";
     public final static String  CONTAINSTARGET= "@odata.context";
-    public final static String STREAM_LINK_PROPERTY="Media Read Link";
-    public final static String STREAM_FILE_PROPERTY="Media File";
     private static final String EDM_STREAM_TYPE = "Edm.Stream";
     private static final String EDM_ENUM = "ENUM";
 
@@ -264,13 +262,13 @@ public class ODataWrapper extends AbstractCustomWrapper {
                        
                         if(loadBlobObjects){
                             logger.trace("Adding property: Stream .Type: Blob ");
-                            schemaParams.add(    new CustomWrapperSchemaParameter(STREAM_FILE_PROPERTY, Types.BLOB, null,  true /* isSearchable */, 
+                            schemaParams.add(    new CustomWrapperSchemaParameter(ODataEntityUtil.STREAM_FILE_PROPERTY, Types.BLOB, null,  true /* isSearchable */, 
                                     CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                                     true /*isNullable*/, false /*isMandatory*/));
                           //TODO   propertiesMap.put(STREAM_FILE_PROPERTY, EdmStream.getInstance());
                         }else{
                             logger.trace("Adding property: Stream Link .Type: String ");
-                            schemaParams.add(    new CustomWrapperSchemaParameter(STREAM_LINK_PROPERTY, Types.VARCHAR, null,  true /* isSearchable */, 
+                            schemaParams.add(    new CustomWrapperSchemaParameter(ODataEntityUtil.STREAM_LINK_PROPERTY, Types.VARCHAR, null,  true /* isSearchable */, 
                                     CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                                     true /*isNullable*/, false /*isMandatory*/));
                             //TODO propertiesMap.put(STREAM_LINK_PROPERTY, EdmStream.getInstance());
@@ -432,7 +430,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 if(product.isMediaEntity()){
                     Object value = null;
                     if(loadBlobObjects!=null && loadBlobObjects){
-                        final int index = projectedFields.indexOf(new CustomWrapperFieldExpression(STREAM_FILE_PROPERTY));
+                        final int index = projectedFields.indexOf(new CustomWrapperFieldExpression(ODataEntityUtil.STREAM_FILE_PROPERTY));
                         
                         if (index != -1) {
                             final URI uriMedia= client.newURIBuilder(product.getId().toString()).appendValueSegment().build();
@@ -446,7 +444,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                             params[index] = value;
                         }
                     }else{
-                        final int index = projectedFields.indexOf(new CustomWrapperFieldExpression(STREAM_LINK_PROPERTY));
+                        final int index = projectedFields.indexOf(new CustomWrapperFieldExpression(ODataEntityUtil.STREAM_LINK_PROPERTY));
                         if (index != -1) {
                             value =   uri + product.getMediaContentSource();
                             params[index] = value;
@@ -467,7 +465,6 @@ public class ODataWrapper extends AbstractCustomWrapper {
                             // 1 to 1 relantionships
                             if (link.asInlineEntity() != null) {
                                 final ClientEntity realtedEntity = link.asInlineEntity().getEntity();
-                                final EdmEntityType type = ODataEntityUtil.getEdmEntityType(realtedEntity.getTypeName().getName(), entitySets);
                                 params[index] = ODataEntityUtil.getOutputValueForRelatedEntity(realtedEntity, client, uri, loadBlobObjects);
                             }
     
@@ -475,8 +472,6 @@ public class ODataWrapper extends AbstractCustomWrapper {
                             if (link.asInlineEntitySet() != null) {
                                 final List<ClientEntity> realtedEntities = link.asInlineEntitySet().getEntitySet().getEntities();
                                 if (realtedEntities.size() > 0) {
-                                    final EdmEntityType type = ODataEntityUtil.getEdmEntityType(realtedEntities.get(0).getTypeName().getName(),
-                                            entitySets);
                                     params[index] = ODataEntityUtil.getOutputValueForRelatedEntityList(realtedEntities, client, uri, loadBlobObjects);
                                 }
                             }
@@ -917,8 +912,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
         for (final CustomWrapperFieldExpression projectedField : projectedFields) {
             if (!projectedField.getName().equals(ODataWrapper.PAGINATION_FETCH)
                     && !projectedField.getName().equals(ODataWrapper.PAGINATION_OFFSET)
-                    && !projectedField.getName().equals(ODataWrapper.STREAM_FILE_PROPERTY)
-                    && !projectedField.getName().equals(ODataWrapper.STREAM_LINK_PROPERTY)) {
+                    && !projectedField.getName().equals(ODataEntityUtil.STREAM_FILE_PROPERTY)
+                    && !projectedField.getName().equals(ODataEntityUtil.STREAM_LINK_PROPERTY)) {
                 fields.add(projectedField.getName());
             }
         }

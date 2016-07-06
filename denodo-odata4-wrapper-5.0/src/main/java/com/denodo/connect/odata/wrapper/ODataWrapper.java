@@ -388,6 +388,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
             URI nextLink = finalURI;
             
             while (nextLink != null) {
+                logger.trace("Next link: " + nextLink);
                 ODataRetrieveRequest<ClientEntitySetIterator<ClientEntitySet, ClientEntity>> request = 
                         client.getRetrieveRequestFactory().getEntitySetIteratorRequest(nextLink);
 
@@ -646,6 +647,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 URI nextLink = productsUri;
                 
                 while (nextLink != null) {
+                    logger.trace("Next link: " + nextLink);
                     ODataRetrieveRequest<ClientEntitySetIterator<ClientEntitySet, ClientEntity>> request = 
                             client.getRetrieveRequestFactory().getEntitySetIteratorRequest(nextLink);
 
@@ -770,6 +772,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 URI nextLink = productsUri;
                 
                 while (nextLink != null) {
+                    logger.trace("Next link: " + nextLink);
                     ODataRetrieveRequest<ClientEntitySetIterator<ClientEntitySet, ClientEntity>> request = 
                             client.getRetrieveRequestFactory().getEntitySetIteratorRequest(nextLink);
 

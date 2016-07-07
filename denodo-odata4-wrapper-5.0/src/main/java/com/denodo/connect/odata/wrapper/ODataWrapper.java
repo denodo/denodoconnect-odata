@@ -98,7 +98,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
     private final static String INPUT_PARAMETER_EXPAND = "Expand Related Entities";
     private final static String INPUT_PARAMETER_NTLM = "Use NTLM Authentication";
     private final static String INPUT_PARAMETER_LIMIT = "Enable Pagination";
-    private final static String INPUT_PARAMETER_LOAD_MEDIA_LINK_RESOURCES = "Load Stream Properties";
+    private final static String INPUT_PARAMETER_LOAD_MEDIA_LINK_RESOURCES = "Load Streams";
     private final static String INPUT_PARAMETER_PROXY_PORT = "Proxy Port";
     private final static String INPUT_PARAMETER_PROXY_HOST = "Proxy Host";
     private final static String INPUT_PARAMETER_USER = "User";
@@ -150,7 +150,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     false, CustomWrapperInputParameterTypeFactory.booleanType(false)),
             new CustomWrapperInputParameter(
                     INPUT_PARAMETER_LOAD_MEDIA_LINK_RESOURCES,
-                    "If checked, Edm.Stream properties will be loaded as BLOB objects",
+                    "If checked, Edm.Stream properties and Stream entities will be loaded as BLOB objects",
                     false, CustomWrapperInputParameterTypeFactory.booleanType(false)),
             new CustomWrapperInputParameter(INPUT_PARAMETER_NTLM, "If checked, NTLM authentication will be used",
                             false, CustomWrapperInputParameterTypeFactory.booleanType(false)),

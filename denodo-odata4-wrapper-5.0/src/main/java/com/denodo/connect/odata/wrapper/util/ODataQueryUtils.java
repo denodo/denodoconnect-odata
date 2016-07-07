@@ -154,7 +154,7 @@ public class ODataQueryUtils {
             }
         }  else if (value instanceof java.util.Date) {
             SimpleDateFormat formatter  =  new SimpleDateFormat(getProperties().getProperty(TIMEFORMAT));
-            return "datetime'"+formatter.format(value)+"'";
+            return formatter.format(value);
         }
         return value.toString();
     }

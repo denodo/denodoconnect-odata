@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.sql.Types;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -285,11 +286,13 @@ public class ODataEntityUtil {
                 false /* isUpdateable */, true /* is Nullable */, false /* isMandatory */);
     }
 
-    public static CustomWrapperSchemaParameter createSchemaOlingoFromNavigation(EdmNavigationProperty nav, Edm edm, boolean isMandatory, Boolean loadBlobObjects)
+    public static CustomWrapperSchemaParameter createSchemaOlingoFromNavigation(EdmNavigationProperty nav, Edm edm, boolean isMandatory, Boolean loadBlobObjects,  Map<String, EdmEntityType> navigationPropertiesMap )
             throws CustomWrapperException {
         String relName = nav.getName(); // Field name
         
         final EdmEntityType type = edm.getEntityType(nav.getType().getFullQualifiedName());
+        
+        navigationPropertiesMap.put(relName,type);//add to cache
         if (type != null) {
             List<String> props = type.getPropertyNames();
             int schemaSize = props.size() + (type.hasStream() ? 1 : 0); 

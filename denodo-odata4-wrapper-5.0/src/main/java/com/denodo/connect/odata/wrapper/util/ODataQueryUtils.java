@@ -31,10 +31,13 @@ import java.util.Properties;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+import org.apache.olingo.commons.api.edm.EdmProperty;
+import org.apache.olingo.commons.api.edm.EdmStructuredType;
 import org.apache.olingo.commons.api.edm.EdmType;
 
 import com.denodo.connect.odata.wrapper.ODataWrapper;
 import com.denodo.connect.odata.wrapper.exceptions.OperationNotSupportedException;
+import com.denodo.vdb.engine.customwrapper.CustomWrapperException;
 import com.denodo.vdb.engine.customwrapper.condition.CustomWrapperAndCondition;
 import com.denodo.vdb.engine.customwrapper.condition.CustomWrapperCondition;
 import com.denodo.vdb.engine.customwrapper.condition.CustomWrapperNotCondition;
@@ -52,7 +55,7 @@ public class ODataQueryUtils {
     private static final String FILENAME = "customwrapper.properties";
     private static final String TIMEFORMAT = "timeformat";
     private static final String EDM_GUID_TYPE = "Edm.Guid";
-    public static String buildSimpleCondition(Map<CustomWrapperFieldExpression, Object> conditionMap, String[] rels,  BaseViewMetadata baseViewMetadata) {
+    public static String buildSimpleCondition(Map<CustomWrapperFieldExpression, Object> conditionMap, String[] rels,  BaseViewMetadata baseViewMetadata) throws CustomWrapperException {
 
         List<String> filterClause = new ArrayList<String>();
         for (CustomWrapperFieldExpression field : conditionMap.keySet()) {
@@ -66,7 +69,7 @@ public class ODataQueryUtils {
     }
 
     public static String buildComplexCondition(CustomWrapperCondition complexCondition,String[] rels,  BaseViewMetadata baseViewMetadata) 
-    throws OperationNotSupportedException {
+    throws OperationNotSupportedException, CustomWrapperException {
 
         if (complexCondition.isSimpleCondition()) {
             CustomWrapperSimpleCondition simpleCondition = (CustomWrapperSimpleCondition)complexCondition;
@@ -106,11 +109,50 @@ public class ODataQueryUtils {
         throw new OperationNotSupportedException();
     }
 
-    private static EdmType getEdmType(BaseViewMetadata baseViewMetadata, String property){
+    private static EdmType getEdmType(BaseViewMetadata baseViewMetadata, String property) throws CustomWrapperException{
         if (baseViewMetadata != null){
-           return baseViewMetadata.getProperties().get(property).getType();
+            if(baseViewMetadata.getProperties().get(property)!=null){
+                return baseViewMetadata.getProperties().get(property).getType();
+            }else{
+                logger.trace("Complex Property:  "+property);
+                String[] names = property.split("\\.");
+                logger.trace("Names:  "+names.length);
+                String nameProperty= names[1];
+                if(nameProperty!=null ){
+                    EdmProperty edmProperty =   baseViewMetadata.getProperties().get(nameProperty);
+                    if(edmProperty==null){
+                        edmProperty =  (EdmProperty) baseViewMetadata.getNavigationProperties().get(nameProperty);
+                        if(edmProperty==null){
+                            throw new CustomWrapperException("The type of the property "+property+ " is not found. ");
+                        }
+                    }
+
+
+                   
+                    for (int i = 1; i < names.length; i++) {
+
+                        if (edmProperty.isCollection()) {
+                            throw new CustomWrapperException("It is no allowed filters over collection properties ");
+                        }
+
+                        if (edmProperty.getType() instanceof EdmStructuredType) {
+                            //complex type
+                            EdmStructuredType edmStructuralType = ((EdmStructuredType) edmProperty.getType());
+                            edmProperty=(EdmProperty) edmStructuralType.getProperty(names[i]);
+                            // Complex data types
+
+                        }
+                      
+
+                    }
+                    return edmProperty.getType();
+                }
+
+
+            }
         }
-        return null;
+        throw new CustomWrapperException("The type of the property "+property+ " is not found. ");
+
     }
     
     private static String mapOperations(String operation) throws OperationNotSupportedException {
@@ -134,8 +176,9 @@ public class ODataQueryUtils {
         return field.replace(".","/");
     }
 
-    public static String prepareValueForQuery(Object value, BaseViewMetadata baseViewMetadata, String property) {
+    public static String prepareValueForQuery(Object value, BaseViewMetadata baseViewMetadata, String property) throws CustomWrapperException {
         EdmType edmType=null;
+        logger.trace("Property: "+property+"| baseViewMetadata: "+ (baseViewMetadata!=null?baseViewMetadata.toString():"null"));
         if(property!=null){
             //Search the edmType of source Odata
     

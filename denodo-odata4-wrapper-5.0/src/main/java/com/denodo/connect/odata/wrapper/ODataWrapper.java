@@ -276,9 +276,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
                       
                        
                     }
-                    baseViewMetadata.setProperties(propertiesMap);
-                    metadataMap.put(uriKeyCache, baseViewMetadata);
-                    
+                  
+                    Map<String, EdmEntityType> navigationPropertiesMap = new HashMap<String, EdmEntityType>();
                     // add relantioships if expand is checked
                     if (((Boolean) getInputParameterValue(INPUT_PARAMETER_EXPAND).getValue()).booleanValue()) {
                         List<String> navigationProperties= edmType.getNavigationPropertyNames();
@@ -286,10 +285,15 @@ public class ODataWrapper extends AbstractCustomWrapper {
                         for (final String nav : navigationProperties) {
                             EdmNavigationProperty edmNavigationProperty = edmType.getNavigationProperty(nav);
                             logger.trace("Adding navigation property: " +edmNavigationProperty.getName());
-                            schemaParams.add(ODataEntityUtil.createSchemaOlingoFromNavigation(edmNavigationProperty, edm,  false, loadBlobObjects));
+                            schemaParams.add(ODataEntityUtil.createSchemaOlingoFromNavigation(edmNavigationProperty, edm,  false, loadBlobObjects,navigationPropertiesMap));
+                            
                         }
                     }
-
+                    
+                    //Cache
+                    baseViewMetadata.setProperties(propertiesMap);
+                    baseViewMetadata.setNavigationProperties(navigationPropertiesMap);
+                    metadataMap.put(uriKeyCache, baseViewMetadata);
                     // support for pagination
                     if (inputValues.containsKey(INPUT_PARAMETER_LIMIT) &&
                             ((Boolean) getInputParameterValue(INPUT_PARAMETER_LIMIT).getValue()).booleanValue()) {
@@ -1254,7 +1258,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     baseViewMetadata.setOpenType(edmType.isOpenType());
                     baseViewMetadata.setStreamEntity(edmType.hasStream());
                     Map<String, EdmProperty> propertiesMap =new HashMap<String, EdmProperty>();
-                 
+                    Map<String, EdmEntityType> navigationPropertiesMap =new HashMap<String, EdmEntityType>();
                     
                     List<String> properties = edmType.getPropertyNames();        
                     for (String property : properties) {
@@ -1263,7 +1267,14 @@ public class ODataWrapper extends AbstractCustomWrapper {
                       
                         propertiesMap.put(property, edmProperty);
                     }
-                    logger.trace("xx"+properties.toString());
+                    List<String> navigationProperties = edmType.getNavigationPropertyNames();   
+                    for (String property : navigationProperties) {
+                        EdmNavigationProperty edmNavigationProperty = edmType.getNavigationProperty(property);
+                       
+                        final EdmEntityType typeNavigation = edm.getEntityType(edmNavigationProperty.getType().getFullQualifiedName());
+                        navigationPropertiesMap.put(property, typeNavigation);
+                        logger.trace("Adding navigation property metadata: " +property+ " .Type: " + typeNavigation.getName());
+                    }
                     // Add the properties belonging to a type whose base type is the type of the requested entity set
                     if (baseTypeMap.containsKey(edmType)) {
                         for (EdmEntityType entityType : baseTypeMap.get(edmType)) {

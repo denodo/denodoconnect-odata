@@ -1295,6 +1295,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
 //                        }
                         //TODO
                     }
+                    baseViewMetadata.setNavigationProperties(navigationPropertiesMap);
                     baseViewMetadata.setProperties(propertiesMap);
                     metadataMap.put(uriKeyCache, baseViewMetadata);
                                 }

@@ -265,13 +265,13 @@ public class ODataWrapper extends AbstractCustomWrapper {
                             schemaParams.add(    new CustomWrapperSchemaParameter(ODataEntityUtil.STREAM_FILE_PROPERTY, Types.BLOB, null,  true /* isSearchable */, 
                                     CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                                     true /*isNullable*/, false /*isMandatory*/));
-                          //TODO   propertiesMap.put(STREAM_FILE_PROPERTY, EdmStream.getInstance());
+                            propertiesMap.put(ODataEntityUtil.STREAM_FILE_PROPERTY, null);
                         }else{
                             logger.trace("Adding property: Stream Link .Type: String ");
                             schemaParams.add(    new CustomWrapperSchemaParameter(ODataEntityUtil.STREAM_LINK_PROPERTY, Types.VARCHAR, null,  true /* isSearchable */, 
                                     CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                                     true /*isNullable*/, false /*isMandatory*/));
-                            //TODO propertiesMap.put(STREAM_LINK_PROPERTY, EdmStream.getInstance());
+                            propertiesMap.put(ODataEntityUtil.STREAM_LINK_PROPERTY, null);
                         }
                       
                        
@@ -388,7 +388,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
             
             final URI finalURI = getURI(uri, entityCollection, rels, client, condition, projectedFields,
                     inputValues, SELECT_OPERATION, loadBlobObjects);
-            
+            logger.debug("URI query: "+finalURI);
             URI nextLink = finalURI;
             
             while (nextLink != null) {
@@ -865,6 +865,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
         // Delegate filters
         // Multi-value field will be ignored!
         final Map<CustomWrapperFieldExpression, Object> conditionMap = condition.getConditionMap();
+
         if ((conditionMap != null) && !conditionMap.isEmpty()) {
             // Simple condition
          
@@ -1288,12 +1289,11 @@ public class ODataWrapper extends AbstractCustomWrapper {
                         }
                     }
                     if(edmType.hasStream()){
-//                        if(loadBlobObjects){
-//                            propertiesMap.put(STREAM_FILE_PROPERTY, EdmProperty);
-//                        }else{
-//                            propertiesMap.put(STREAM_LINK_PROPERTY, (EdmProperty)EdmStream.getInstance());
-//                        }
-                        //TODO
+                        if(loadBlobObjects){
+                            propertiesMap.put(ODataEntityUtil.STREAM_FILE_PROPERTY, null);
+                        }else{
+                            propertiesMap.put(ODataEntityUtil.STREAM_LINK_PROPERTY, null);
+                        }
                     }
                     baseViewMetadata.setNavigationProperties(navigationPropertiesMap);
                     baseViewMetadata.setProperties(propertiesMap);

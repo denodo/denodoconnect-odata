@@ -76,8 +76,8 @@ import com.denodo.vdb.engine.customwrapper.CustomWrapperSchemaParameter;
 
 public class ODataEntityUtil {
 
-    public final static String STREAM_LINK_PROPERTY="Media Read Link";
-    public final static String STREAM_FILE_PROPERTY="Media File";
+    public final static String STREAM_LINK_PROPERTY="MediaReadLink";
+    public final static String STREAM_FILE_PROPERTY="MediaFile";
     
     private static final Logger logger = Logger.getLogger(ODataEntityUtil.class);
 

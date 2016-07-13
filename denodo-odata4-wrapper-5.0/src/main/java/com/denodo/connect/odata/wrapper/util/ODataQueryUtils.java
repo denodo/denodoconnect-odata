@@ -34,6 +34,7 @@ import org.apache.log4j.Logger;
 import org.apache.olingo.commons.api.edm.EdmProperty;
 import org.apache.olingo.commons.api.edm.EdmStructuredType;
 import org.apache.olingo.commons.api.edm.EdmType;
+import org.apache.olingo.commons.core.edm.primitivetype.EdmString;
 
 import com.denodo.connect.odata.wrapper.ODataWrapper;
 import com.denodo.connect.odata.wrapper.exceptions.OperationNotSupportedException;
@@ -60,8 +61,10 @@ public class ODataQueryUtils {
         List<String> filterClause = new ArrayList<String>();
         for (CustomWrapperFieldExpression field : conditionMap.keySet()) {
             Object value = conditionMap.get(field);
-            if (!field.getName().equals(ODataWrapper.PAGINATION_FETCH) && !field.getName().equals(ODataWrapper.PAGINATION_OFFSET) &&
-                    !isExpandedField(rels, field.getName())) {
+            if (!field.getName().equals(ODataWrapper.PAGINATION_FETCH) && !field.getName().equals(ODataWrapper.PAGINATION_OFFSET) ) {
+                if(isExpandedField(rels, field.getName())){
+                    throw new CustomWrapperException("It is not allowed filter by the property:"+field.getName() +". Filtering elements of expand entities is not supported");
+                }
                 filterClause.add(normalizeFieldName(field.getStringRepresentation()) + " eq " + prepareValueForQuery(value,   baseViewMetadata,field.getStringRepresentation()));
             }
         }
@@ -74,8 +77,11 @@ public class ODataQueryUtils {
         if (complexCondition.isSimpleCondition()) {
             CustomWrapperSimpleCondition simpleCondition = (CustomWrapperSimpleCondition)complexCondition;
             String field = simpleCondition.getField().toString();
-            if (!field.equals(ODataWrapper.PAGINATION_FETCH) && !field.equals(ODataWrapper.PAGINATION_OFFSET) &&
-                    !isExpandedField(rels, simpleCondition.getField().toString())) {
+            if (!field.equals(ODataWrapper.PAGINATION_FETCH) && !field.equals(ODataWrapper.PAGINATION_OFFSET)
+                  ) {
+                if(isExpandedField(rels, simpleCondition.getField().toString())){
+                    throw new CustomWrapperException("It is not allowed filter by the property:"+simpleCondition.getField().toString() +". Filtering elements of expand entities is not supported");
+                }
                 // Contains is implemented using substringof
                 if (simpleCondition.getOperator() == CustomWrapperCondition.OPERATOR_ISCONTAINED) {
                     return "substringof(" +prepareValueForQuery((simpleCondition.getRightExpression()[0]).toString(),  baseViewMetadata,null) +","+simpleCondition.getField()+")";
@@ -113,10 +119,13 @@ public class ODataQueryUtils {
         if (baseViewMetadata != null){
             if(baseViewMetadata.getProperties().get(property)!=null){
                 return baseViewMetadata.getProperties().get(property).getType();
-            }else{
-                logger.trace("Complex Property:  "+property);
+            }else if(property.equals(ODataEntityUtil.STREAM_LINK_PROPERTY)){
+                throw new CustomWrapperException("It is not allowed filter by "+property+ ". The search by \"media read links\" is not supported. ");
+            }    
+            else{
+
+                //Complex types
                 String[] names = property.split("\\.");
-                logger.trace("Names:  "+names.length);
                 String nameProperty= names[1];
                 if(nameProperty!=null ){
                     EdmProperty edmProperty =   baseViewMetadata.getProperties().get(nameProperty);
@@ -127,23 +136,19 @@ public class ODataQueryUtils {
                         }
                     }
 
-
-                   
                     for (int i = 1; i < names.length; i++) {
 
                         if (edmProperty.isCollection()) {
-                            throw new CustomWrapperException("It is no allowed filters over collection properties ");
+                            //Odata does not support searchs over collection properties 
+                            throw new CustomWrapperException("It is not allowed filters by array properties");
                         }
 
                         if (edmProperty.getType() instanceof EdmStructuredType) {
                             //complex type
                             EdmStructuredType edmStructuralType = ((EdmStructuredType) edmProperty.getType());
                             edmProperty=(EdmProperty) edmStructuralType.getProperty(names[i]);
-                            // Complex data types
 
                         }
-                      
-
                     }
                     return edmProperty.getType();
                 }

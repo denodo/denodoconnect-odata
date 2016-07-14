@@ -126,36 +126,62 @@ public class ODataQueryUtils {
 
                 //Complex types
                 String[] names = property.split("\\.");
-                String nameProperty= names[1];
+                String nameProperty= names[0];
+
                 if(nameProperty!=null ){
                     EdmProperty edmProperty =   baseViewMetadata.getProperties().get(nameProperty);
-                    if(edmProperty==null){
-                        edmProperty =  (EdmProperty) baseViewMetadata.getNavigationProperties().get(nameProperty);
-                        if(edmProperty==null){
-                            throw new CustomWrapperException("The type of the property "+property+ " is not found. ");
+                    if(edmProperty!=null){
+                        for (int i = 1; i < names.length; i++) {
+
+                            if (edmProperty.isCollection()) {
+                                //Odata does not support searchs over collection properties 
+                                throw new CustomWrapperException(" Filter by properties of a array is not supported in OData");
+                            }
+
+                            if (edmProperty.getType() instanceof EdmStructuredType) {
+                                //complex type
+                                EdmStructuredType edmStructuralType = ((EdmStructuredType) edmProperty.getType());
+                                edmProperty=(EdmProperty) edmStructuralType.getProperty(names[i]);
+
+                            }
+                        }
+                        return edmProperty.getType();
+                    }else{
+                        CustomNavigationProperty navigationProperty = baseViewMetadata.getNavigationProperties().get(nameProperty);
+                        if(navigationProperty!=null){
+                            if( navigationProperty.getComplexType().equals(CustomNavigationProperty.ComplexType.COLLECTION)){
+                                throw new CustomWrapperException("It is not allowed filter by the property:"+nameProperty +". Filter by properties of a array is not supported in OData");
+
+                            }else{
+                                EdmEntityType entityType=navigationProperty.getEntityType();
+                                EdmElement edmElement= entityType.getProperty(names[1]);
+                                for (int i = 2; i < names.length; i++) {
+
+                                    if (edmElement.getType() instanceof EdmStructuredType) {
+                                        //complex type
+                                        EdmStructuredType edmStructuralType = ((EdmStructuredType) edmElement.getType());
+                                        edmElement=(EdmProperty) edmStructuralType.getProperty(names[i]);
+
+                                    }
+                                }  
+                                return edmElement.getType();
+                            }
+
+
+
                         }
                     }
 
-                    for (int i = 1; i < names.length; i++) {
+                    throw new CustomWrapperException("The type of the property "+property+ " is not found. ");
 
-                        if (edmProperty.isCollection()) {
-                            //Odata does not support searchs over collection properties 
-                            throw new CustomWrapperException("It is not allowed filters by array properties");
-                        }
+                }
 
-                        if (edmProperty.getType() instanceof EdmStructuredType) {
-                            //complex type
-                            EdmStructuredType edmStructuralType = ((EdmStructuredType) edmProperty.getType());
-                            edmProperty=(EdmProperty) edmStructuralType.getProperty(names[i]);
-
-                        }
-                    }
-                    return edmProperty.getType();
+                   
                 }
 
 
             }
-        }
+       
         throw new CustomWrapperException("The type of the property "+property+ " is not found. ");
 
     }

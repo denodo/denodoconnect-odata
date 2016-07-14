@@ -1,6 +1,7 @@
 package com.denodo.connect.odata.wrapper;
 
 
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.Timestamp;
@@ -11,11 +12,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.UUID;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.olingo.client.api.ODataClient;
 import org.apache.olingo.client.api.communication.request.cud.ODataEntityCreateRequest;
 import org.apache.olingo.client.api.communication.request.retrieve.EdmMetadataRequest;
+import org.apache.olingo.client.api.communication.request.retrieve.ODataEntityRequest;
 import org.apache.olingo.client.api.communication.request.retrieve.ODataEntitySetIteratorRequest;
+import org.apache.olingo.client.api.communication.request.retrieve.ODataMediaRequest;
 import org.apache.olingo.client.api.communication.request.retrieve.ODataRetrieveRequest;
 import org.apache.olingo.client.api.communication.request.retrieve.ODataServiceDocumentRequest;
 import org.apache.olingo.client.api.communication.response.ODataDeleteResponse;
@@ -31,6 +37,7 @@ import org.apache.olingo.client.api.domain.ClientLink;
 import org.apache.olingo.client.api.domain.ClientProperty;
 import org.apache.olingo.client.api.domain.ClientServiceDocument;
 import org.apache.olingo.client.api.domain.ClientValue;
+import org.apache.olingo.client.api.uri.URIBuilder;
 import org.apache.olingo.client.core.ODataClientFactory;
 import org.apache.olingo.commons.api.edm.Edm;
 import org.apache.olingo.commons.api.edm.EdmComplexType;
@@ -42,6 +49,7 @@ import org.apache.olingo.commons.api.edm.EdmProperty;
 import org.apache.olingo.commons.api.edm.EdmSchema;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.apache.olingo.commons.api.edm.constants.EdmTypeKind;
+import org.apache.olingo.commons.api.format.ContentType;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmInt32;
 
 import com.denodo.connect.odata.wrapper.util.DataTableColumnType;
@@ -57,10 +65,86 @@ import com.denodo.vdb.engine.customwrapper.expression.CustomWrapperFieldExpressi
  */
 public class App 
 {
-    private final static String _serviceRoot = "http://services.odata.org/V4/(S(ss2dkcxal5xlnqa0sqxepfcr))/TripPinServiceRW/";
+    private final static String _serviceRoot = "http://services.odata.org/V4/(S(sku3hglesxpmmydxmhuprtg3))/TripPinServiceRW";
     private final static String _collection = "People";
     public static void main( String[] args )
-    {
+    { 
+//        showData();
+//        insert();
+        showMetaData();
+   try {
+            
+            Boolean loadBlobObjects = true;
+            
+            final String entityCollection = "Advertisement";           
+            
+            final ODataClient client =  ODataClientFactory.getClient();
+            String uri ="http://services.odata.org/V4/OData/(S(h3pggazgkuei3wtiwn3aeclv))/OData.svc";
+            String[] rels=null;
+            Map<String, EdmEntitySet> entitySets= new HashMap<String, EdmEntitySet>();
+  
+            final URI finalURI = client.newURIBuilder(uri).appendEntitySetSegment("PersonDetails").build();    
+           
+            ODataRetrieveRequest<ClientEntitySetIterator<ClientEntitySet, ClientEntity>> request = 
+                    client.getRetrieveRequestFactory().getEntitySetIteratorRequest(finalURI);
+            ODataRetrieveResponse<ClientEntitySetIterator <ClientEntitySet, ClientEntity>> response = request.execute();
+            ClientEntitySetIterator<ClientEntitySet, ClientEntity> iterator = response.getBody();
+            
+          
+            while (iterator.hasNext()) {
+              
+                ClientEntity product = iterator.next();
+            
+                   
+                
+                 //URIBuilder uribuilder = client.newURIBuilder(product.getId().toString()).appendValueSegment().build();
+               
+                 final URI uri2 = client.newURIBuilder(product.getId().toString()).appendValueSegment().build();
+                 final ODataMediaRequest streamReq = client.getRetrieveRequestFactory().getMediaEntityRequest(uri2);
+                 if (StringUtils.isNotBlank(product.getMediaContentType())) {
+                     streamReq.setFormat(ContentType.parse(product.getMediaContentType()));
+                   }
+                 final ODataRetrieveResponse<InputStream> streamRes = streamReq.execute();
+                        
+                List<ClientLink> mediaEditLinks = product.getMediaEditLinks();
+                List<ClientProperty> properties = product.getProperties();
+                for (ClientProperty property : properties) {
+                    
+                      
+
+                        Object value = ODataEntityUtil.getOutputValue(property);
+                                        
+                    
+                }
+                for (ClientLink clientLink : mediaEditLinks) {
+                  
+                    Object value = null;
+                    
+                        if (loadBlobObjects != null && loadBlobObjects.booleanValue()) {
+                            URIBuilder uribuilder2 = client.newURIBuilder(uri);
+                            uribuilder2.appendSingletonSegment(clientLink.getLink().getRawPath());
+                            ODataMediaRequest request3 = client.getRetrieveRequestFactory().getMediaRequest(uribuilder2.build());
+                            ODataRetrieveResponse<InputStream> response3 = request3.execute();
+                            
+                            value = IOUtils.toByteArray(response3.getBody());
+                        } else {
+                            value = uri + clientLink.getLink();
+                        }
+                  
+                    
+                }
+
+              
+              
+            }
+         
+
+        } catch (final Exception e) {
+            System.out.println(e.getMessage());
+        e.printStackTrace();
+           //TODO
+        }
+    }
 //        delete();
 //        insert();
 //        System.out.println( "Hello OData!" );
@@ -82,21 +166,21 @@ public class App
 //                }  
 //            }
 //        }
-      
-
-
-      
-
-        try {
-            getSchemaParameters();
-        } catch (CustomWrapperException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-       // showMetaData();
-       showData();
-    }
-    
+//      
+//
+//
+//      
+//
+//        try {
+//            getSchemaParameters();
+//        } catch (CustomWrapperException e) {
+//            // TODO Auto-generated catch block
+//            e.printStackTrace();
+//        }
+//       // showMetaData();
+//       showData();
+//    }
+//    
     private static void showMetaData() {
 
         ODataClient client = ODataClientFactory.getClient();
@@ -147,9 +231,8 @@ public class App
 //        }
 //
        
-        EdmEntityType customerType = edm.getEntityType(new FullQualifiedName( "NorthwindModel", "Product"));
+        EdmEntityType customerType = edm.getEntityType(new FullQualifiedName( "Microsoft.OData.SampleService.Models.TripPin", "Person"));
         List<String> propertyNames = customerType.getPropertyNames();
-        
         for (String propertyName : propertyNames) {
             EdmProperty property = customerType.getStructuralProperty(propertyName);
             FullQualifiedName typeName = property.getType().getFullQualifiedName();
@@ -171,21 +254,23 @@ public class App
             System.out.println(typeName);
         }
     }
-    
+//    
     private static void showData() {
         ODataClient client = ODataClientFactory.getClient();
         String[] a= {"ProductID","ProductName","SupplierID","CategoryID","QuantityPerUnit",
                 "UnitPrice","UnitsInStock","UnitsOnOrder","ReorderLevel","Discontinued"};
         String[] b={"Category","Order_Details","Supplier"};
         URI productsUri = client.newURIBuilder(_serviceRoot).appendEntitySetSegment("People").expand("Friends").build();    
-        
-        showData(client, productsUri);
+//        
+//        showData(client, productsUri);
         
 //        productsUri = client.newURIBuilder(_serviceRoot).appendEntitySetSegment("Products").select("Name,Price").build();       
 //        showData(client, productsUri);
 //        
 //        productsUri = client.newURIBuilder(_serviceRoot).appendEntitySetSegment("Products").filter("Category eq 'Lighting' and Price ge 100").build();
 //        showData(client, productsUri);
+      productsUri = client.newURIBuilder(_serviceRoot).appendEntitySetSegment(_collection).build();       
+      showData(client, productsUri);
     }
     
     private static void showData(ODataClient client, URI productsUri ) {
@@ -259,13 +344,14 @@ public class App
         System.out.println(title + "\r\n" + data);
     }
     
-    
+//    
     public static void insert() {
         final String entityCollection = (String) _collection;
         String endPoint = (String) _serviceRoot;
        
             final ODataClient client =  ODataClientFactory.getClient();
-            ClientEntity newObject = client.getObjectFactory().newEntity(new FullQualifiedName("ODataDemo.Product"));
+            ClientEntity newObject = client.getObjectFactory().newEntity(new FullQualifiedName("ODataDemo.Advertisement"));
+            Boolean a = newObject.isMediaEntity();
             URI uri = client.newURIBuilder(endPoint).appendEntitySetSegment(entityCollection).build();  
 
                 newObject.getProperties().add(client.getObjectFactory().newPrimitiveProperty( "ID",
@@ -275,14 +361,14 @@ public class App
                 newObject.getProperties().add(client.getObjectFactory().newPrimitiveProperty( "Name",
                         client.getObjectFactory().newPrimitiveValueBuilder()
                         .setType(EdmPrimitiveTypeKind.String).setValue("").build()));
-                newObject.getProperties().add(client.getObjectFactory().newPrimitiveProperty( "Price",
-                        client.getObjectFactory().newPrimitiveValueBuilder()
-                        .setType(EdmPrimitiveTypeKind.Double).setValue(Double.valueOf("22.0")).build()));
-                newObject.getProperties().add(client.getObjectFactory().newPrimitiveProperty( "Rating",
-                        client.getObjectFactory().newPrimitiveValueBuilder()
-                        .setType(EdmPrimitiveTypeKind.Int32).setValue(8).build()));
+//                newObject.getProperties().add(client.getObjectFactory().newPrimitiveProperty( "Price",
+//                        client.getObjectFactory().newPrimitiveValueBuilder()
+//                        .setType(EdmPrimitiveTypeKind.Double).setValue(Double.valueOf("22.0")).build()));
+//                newObject.getProperties().add(client.getObjectFactory().newPrimitiveProperty( "Rating",
+//                        client.getObjectFactory().newPrimitiveValueBuilder()
+//                        .setType(EdmPrimitiveTypeKind.Int32).setValue(8).build()));
                 Date date = new Date();
-                newObject.getProperties().add(client.getObjectFactory().newPrimitiveProperty( "ReleaseDate",
+                newObject.getProperties().add(client.getObjectFactory().newPrimitiveProperty( "AirDate",
                         client.getObjectFactory().newPrimitiveValueBuilder()
                         .setType(EdmPrimitiveTypeKind.DateTimeOffset).setValue(date).build()));
                 final ODataEntityCreateRequest<ClientEntity> request = client.getCUDRequestFactory().getEntityCreateRequest(uri, newObject);
@@ -294,36 +380,36 @@ System.out.println("inserted");
                 }
 
         }   
-    
-    public static void delete(){
-        String serviceRoot = "http://services.odata.org/V4/OData/(S(h3pggazgkuei3wtiwn3aeclv))/OData.svc/";
-        final ODataClient client =  ODataClientFactory.getClient();
-        URI productsUri = client.newURIBuilder(serviceRoot).filter("ID eq 777")
-                            .appendEntitySetSegment("Products")
-                            .build();
-        ODataRetrieveRequest<ClientEntitySetIterator<ClientEntitySet, ClientEntity>> request = 
-                client.getRetrieveRequestFactory().getEntitySetIteratorRequest(productsUri);
-        
-        request.addCustomHeader("env", "test"); // set custom header so server knows which database to use
-   
-        
-        ODataRetrieveResponse<ClientEntitySetIterator <ClientEntitySet, ClientEntity>> response = request.execute();
-
-        ClientEntitySetIterator<ClientEntitySet, ClientEntity> iterator = response.getBody();
-        while (iterator.hasNext()) {
-        
-              ClientEntity product = iterator.next();
-        ODataDeleteResponse deleteRes = client.getCUDRequestFactory()
-                            .getDeleteRequest(product.getId()).execute();
-
-        if (deleteRes.getStatusCode()==204) {
-            // Deleted
-            System.out.println("deleted");
-        }else{
-            System.out.println("not deleted");
-        }
-        }
-    }
+//    
+//    public static void delete(){
+//        String serviceRoot = "http://services.odata.org/V4/OData/(S(h3pggazgkuei3wtiwn3aeclv))/OData.svc/";
+//        final ODataClient client =  ODataClientFactory.getClient();
+//        URI productsUri = client.newURIBuilder(serviceRoot).filter("ID eq 777")
+//                            .appendEntitySetSegment("Products")
+//                            .build();
+//        ODataRetrieveRequest<ClientEntitySetIterator<ClientEntitySet, ClientEntity>> request = 
+//                client.getRetrieveRequestFactory().getEntitySetIteratorRequest(productsUri);
+//        
+//        request.addCustomHeader("env", "test"); // set custom header so server knows which database to use
+//   
+//        
+//        ODataRetrieveResponse<ClientEntitySetIterator <ClientEntitySet, ClientEntity>> response = request.execute();
+//
+//        ClientEntitySetIterator<ClientEntitySet, ClientEntity> iterator = response.getBody();
+//        while (iterator.hasNext()) {
+//        
+//              ClientEntity product = iterator.next();
+//        ODataDeleteResponse deleteRes = client.getCUDRequestFactory()
+//                            .getDeleteRequest(product.getId()).execute();
+//
+//        if (deleteRes.getStatusCode()==204) {
+//            // Deleted
+//            System.out.println("deleted");
+//        }else{
+//            System.out.println("not deleted");
+//        }
+//        }
+//    }
     private static Map<String, EdmEntitySet> getEntitySetMap(final Edm edm) {
         final Map<String, EdmEntitySet> entitySets = new HashMap<String, EdmEntitySet>();
 
@@ -337,60 +423,60 @@ System.out.println("inserted");
         }
         return entitySets;
     }
-    
-    public static CustomWrapperSchemaParameter[] getSchemaParameters(
-            ) throws CustomWrapperException {
-        try {
-         
-
-            final ODataClient client =  ODataClientFactory.getClient();
-            String uri = _serviceRoot;
-            Map<String, EdmEntitySet> entitySets= new HashMap<String, EdmEntitySet>();
-            EdmMetadataRequest request = client.getRetrieveRequestFactory().getMetadataRequest(uri);
-            ODataRetrieveResponse<Edm> response = request.execute();
-
-            Edm edm = response.getBody();     
-            entitySets=getEntitySetMap(edm);                    
-
-      
-            EdmEntitySet entitySet= entitySets.get(_collection);
-            if(entitySet!=null){
-                final EdmEntityType edmType =entitySet.getEntityType();
-
-                if (edmType != null){
-                    final List<CustomWrapperSchemaParameter> schemaParams = new ArrayList<CustomWrapperSchemaParameter>();
-                    List<String> properties = edmType.getPropertyNames();
-                    for (String property : properties) {
-                       
-                        EdmProperty edmProperty =edmType.getStructuralProperty(property);
-                        schemaParams.add(ODataEntityUtil.createSchemaOlingoParameter(edmProperty, edm));
-
-                    }
-                    // add relantioships if expand is checked
-                 
-                        List<String> navigationProperties= edmType.getNavigationPropertyNames();
-
-                        for (final String nav : navigationProperties) {
-                            EdmNavigationProperty edmNavigationProperty = edmType.getNavigationProperty(nav);
-                         
-                            schemaParams.add(ODataEntityUtil.createSchemaOlingoFromNavigation(edmNavigationProperty, edm,  false));
-                        }
-                   
-                    final CustomWrapperSchemaParameter[] schema = new CustomWrapperSchemaParameter[schemaParams.size()];
-                    for (int i = 0; i < schemaParams.size(); i++) {
-                        schema[i] = schemaParams.get(i);
-                    
-                    }
-                    return schema;
-                }
-            }
-            throw new CustomWrapperException(
-                    "Entity Collection not found for the requested service. Available Entity Collections are " +
-                            entitySets.keySet());
-
-        } catch (final Exception e) {
-          
-            throw new CustomWrapperException(e.getMessage());
-        }
-    }
+//    
+//    public static CustomWrapperSchemaParameter[] getSchemaParameters(
+//            ) throws CustomWrapperException {
+//        try {
+//         
+//
+//            final ODataClient client =  ODataClientFactory.getClient();
+//            String uri = _serviceRoot;
+//            Map<String, EdmEntitySet> entitySets= new HashMap<String, EdmEntitySet>();
+//            EdmMetadataRequest request = client.getRetrieveRequestFactory().getMetadataRequest(uri);
+//            ODataRetrieveResponse<Edm> response = request.execute();
+//
+//            Edm edm = response.getBody();     
+//            entitySets=getEntitySetMap(edm);                    
+//
+//      
+//            EdmEntitySet entitySet= entitySets.get(_collection);
+//            if(entitySet!=null){
+//                final EdmEntityType edmType =entitySet.getEntityType();
+//
+//                if (edmType != null){
+//                    final List<CustomWrapperSchemaParameter> schemaParams = new ArrayList<CustomWrapperSchemaParameter>();
+//                    List<String> properties = edmType.getPropertyNames();
+//                    for (String property : properties) {
+//                       
+//                        EdmProperty edmProperty =edmType.getStructuralProperty(property);
+//                        schemaParams.add(ODataEntityUtil.createSchemaOlingoParameter(edmProperty, edm));
+//
+//                    }
+//                    // add relantioships if expand is checked
+//                 
+//                        List<String> navigationProperties= edmType.getNavigationPropertyNames();
+//
+//                        for (final String nav : navigationProperties) {
+//                            EdmNavigationProperty edmNavigationProperty = edmType.getNavigationProperty(nav);
+//                         
+//                            schemaParams.add(ODataEntityUtil.createSchemaOlingoFromNavigation(edmNavigationProperty, edm,  false));
+//                        }
+//                   
+//                    final CustomWrapperSchemaParameter[] schema = new CustomWrapperSchemaParameter[schemaParams.size()];
+//                    for (int i = 0; i < schemaParams.size(); i++) {
+//                        schema[i] = schemaParams.get(i);
+//                    
+//                    }
+//                    return schema;
+//                }
+//            }
+//            throw new CustomWrapperException(
+//                    "Entity Collection not found for the requested service. Available Entity Collections are " +
+//                            entitySets.keySet());
+//
+//        } catch (final Exception e) {
+//          
+//            throw new CustomWrapperException(e.getMessage());
+//        }
+//    }
 }

@@ -71,6 +71,7 @@ import org.apache.olingo.commons.core.edm.primitivetype.EdmString;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmTimeOfDay;
 
 import com.denodo.connect.odata.wrapper.exceptions.PropertyNotFoundException;
+import com.denodo.vdb.catalog.metadata.vo.InvalidCustomElementParametersException.CustomElement;
 import com.denodo.vdb.engine.customwrapper.CustomWrapperException;
 import com.denodo.vdb.engine.customwrapper.CustomWrapperSchemaParameter;
 
@@ -286,13 +287,13 @@ public class ODataEntityUtil {
                 false /* isUpdateable */, true /* is Nullable */, false /* isMandatory */);
     }
 
-    public static CustomWrapperSchemaParameter createSchemaOlingoFromNavigation(EdmNavigationProperty nav, Edm edm, boolean isMandatory, Boolean loadBlobObjects,  Map<String, EdmEntityType> navigationPropertiesMap )
+    public static CustomWrapperSchemaParameter createSchemaOlingoFromNavigation(EdmNavigationProperty nav, Edm edm, boolean isMandatory, Boolean loadBlobObjects,  Map<String,  CustomNavigationProperty> navigationPropertiesMap )
             throws CustomWrapperException {
         String relName = nav.getName(); // Field name
         
         final EdmEntityType type = edm.getEntityType(nav.getType().getFullQualifiedName());
         
-        navigationPropertiesMap.put(relName,type);//add to cache
+        navigationPropertiesMap.put(relName,new CustomNavigationProperty(type,( nav.isCollection()?CustomNavigationProperty.ComplexType.COLLECTION:CustomNavigationProperty.ComplexType.COMPLEX)));//add to cache
         if (type != null) {
             List<String> props = type.getPropertyNames();
             int schemaSize = props.size() + (type.hasStream() ? 1 : 0); 

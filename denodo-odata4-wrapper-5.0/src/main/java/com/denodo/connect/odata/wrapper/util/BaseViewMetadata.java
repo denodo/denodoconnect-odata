@@ -1,24 +1,22 @@
 package com.denodo.connect.odata.wrapper.util;
 
-import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.olingo.commons.api.edm.EdmEntityType;
 import org.apache.olingo.commons.api.edm.EdmProperty;
 
 public class BaseViewMetadata {
 
     Boolean openType;
     Boolean streamEntity;
-    Map<String,EdmProperty > properties;
-    Map<String,EdmEntityType > navigationProperties;
+    Map<String, EdmProperty > properties;
+    Map<String, CustomNavigationProperty > navigationProperties;
     
     public BaseViewMetadata() {
     }
     
    
     public BaseViewMetadata(Boolean openType, Boolean streamEntity, Map<String, EdmProperty> properties,
-            Map<String, EdmEntityType> navigationProperties) {
+            Map<String, CustomNavigationProperty> navigationProperties) {
         super();
         this.openType = openType;
         this.streamEntity = streamEntity;
@@ -46,11 +44,11 @@ public class BaseViewMetadata {
         this.properties = properties;
     }
 
-    public Map<String, EdmEntityType> getNavigationProperties() {
+    public Map<String, CustomNavigationProperty> getNavigationProperties() {
         return navigationProperties;
     }
 
-    public void setNavigationProperties(Map<String, EdmEntityType> navigationProperties) {
+    public void setNavigationProperties(Map<String, CustomNavigationProperty> navigationProperties) {
         this.navigationProperties = navigationProperties;
     }
 

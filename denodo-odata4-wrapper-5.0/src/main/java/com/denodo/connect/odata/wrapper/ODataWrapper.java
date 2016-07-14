@@ -75,9 +75,11 @@ import com.denodo.connect.odata.wrapper.http.HttpTimeoutClientFactory;
 import com.denodo.connect.odata.wrapper.http.NTLMAuthHttpTimeoutClientFactory;
 import com.denodo.connect.odata.wrapper.http.ProxyWrappingHttpTimeoutClientFactory;
 import com.denodo.connect.odata.wrapper.util.BaseViewMetadata;
+import com.denodo.connect.odata.wrapper.util.CustomNavigationProperty;
 import com.denodo.connect.odata.wrapper.util.DataTableColumnType;
 import com.denodo.connect.odata.wrapper.util.ODataEntityUtil;
 import com.denodo.connect.odata.wrapper.util.ODataQueryUtils;
+import com.denodo.vdb.catalog.metadata.vo.InvalidCustomElementParametersException.CustomElement;
 import com.denodo.vdb.engine.customwrapper.AbstractCustomWrapper;
 import com.denodo.vdb.engine.customwrapper.CustomWrapperConfiguration;
 import com.denodo.vdb.engine.customwrapper.CustomWrapperException;
@@ -277,7 +279,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                        
                     }
                   
-                    Map<String, EdmEntityType> navigationPropertiesMap = new HashMap<String, EdmEntityType>();
+                    Map<String, CustomNavigationProperty> navigationPropertiesMap = new HashMap<String,  CustomNavigationProperty>();
                     // add relantioships if expand is checked
                     if (((Boolean) getInputParameterValue(INPUT_PARAMETER_EXPAND).getValue()).booleanValue()) {
                         List<String> navigationProperties= edmType.getNavigationPropertyNames();
@@ -1259,7 +1261,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     baseViewMetadata.setOpenType(edmType.isOpenType());
                     baseViewMetadata.setStreamEntity(edmType.hasStream());
                     Map<String, EdmProperty> propertiesMap =new HashMap<String, EdmProperty>();
-                    Map<String, EdmEntityType> navigationPropertiesMap =new HashMap<String, EdmEntityType>();
+                    Map<String, CustomNavigationProperty> navigationPropertiesMap =new HashMap<String, CustomNavigationProperty>();
                     
                     List<String> properties = edmType.getPropertyNames();        
                     for (String property : properties) {
@@ -1273,7 +1275,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                         EdmNavigationProperty edmNavigationProperty = edmType.getNavigationProperty(property);
                        
                         final EdmEntityType typeNavigation = edm.getEntityType(edmNavigationProperty.getType().getFullQualifiedName());
-                        navigationPropertiesMap.put(property, typeNavigation);
+                        navigationPropertiesMap.put(property,new CustomNavigationProperty(typeNavigation, (edmNavigationProperty.isCollection()?CustomNavigationProperty.ComplexType.COLLECTION:CustomNavigationProperty.ComplexType.COMPLEX)));
                         logger.trace("Adding navigation property metadata: " +property+ " .Type: " + typeNavigation.getName());
                     }
                     // Add the properties belonging to a type whose base type is the type of the requested entity set

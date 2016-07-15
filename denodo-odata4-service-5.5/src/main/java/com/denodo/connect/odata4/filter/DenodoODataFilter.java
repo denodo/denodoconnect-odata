@@ -179,8 +179,8 @@ public class DenodoODataFilter implements Filter {
                     return;
                 }
 
-                login = credentials[0];
-                password = credentials[1];
+                login = escapeLiteral(credentials[0]);
+                password = escapeLiteral(credentials[1]);
             }
 
 
@@ -293,6 +293,10 @@ public class DenodoODataFilter implements Filter {
         parameters.put(DenodoODataAuthDataSource.DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION, developmentModeDangerousBypassAuthentication);
 
         return parameters;
+    }
+    
+    private static String escapeLiteral(final String literal) {
+        return  literal.replaceAll("'", "''");
     }
 
 }

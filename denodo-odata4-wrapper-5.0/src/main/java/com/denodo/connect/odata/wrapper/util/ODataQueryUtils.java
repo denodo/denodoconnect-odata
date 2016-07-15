@@ -219,7 +219,12 @@ public class ODataQueryUtils {
         }else if (value instanceof String) {
             if(edmType!=null && edmType.toString().equals(EDM_GUID_TYPE)){
                 //The edm.guid type does not accept quotes in the query
-                return value.toString();  
+                if(((String) value).contains("-")){
+                    return value.toString();  }
+                else{
+                    //If not Odata interprets the value as a property('ss') or as a integer('7')
+                    throw new CustomWrapperException("Syntax error in the GUID value: "+value.toString());
+                }
             }else{
                 return "'"+value+"'";
             }

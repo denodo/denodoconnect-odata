@@ -432,7 +432,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                 
                                 value = IOUtils.toByteArray(response2.getBody());
                             } else {
-                                value = uri + clientLink.getLink();
+                                value = uri +"/"+ clientLink.getLink();
                             }
                             logger.debug("==> " + clientLink.getName()+"||"+value);
                             params[index] = value;
@@ -446,8 +446,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
                             if (index != -1) {
                                 final URI uriMedia= client.newURIBuilder(product.getId().toString()).appendValueSegment().build();
                                 final ODataMediaRequest streamRequest = client.getRetrieveRequestFactory().getMediaEntityRequest(uriMedia);
+                                logger.debug("Obtaining media content entity :" +uriMedia.toString()+". Media COntent type:"+product.getMediaContentType());
                                 if (StringUtils.isNotBlank(product.getMediaContentType())) {
-                                    streamRequest.setFormat(ContentType.parse(product.getMediaContentType()));
+                                    streamRequest.setFormat(ContentType.APPLICATION_HTTP);//ContentType.parse(product.getMediaContentType()));
                                   }
     
                                 final ODataRetrieveResponse<InputStream> streamResponse = streamRequest.execute();
@@ -457,7 +458,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                         }else{
                             final int index = projectedFields.indexOf(new CustomWrapperFieldExpression(ODataEntityUtil.STREAM_LINK_PROPERTY));
                             if (index != -1) {
-                                value =   uri + product.getMediaContentSource();
+                                value =   uri +"/"+ product.getMediaContentSource();
                                 params[index] = value;
                             }
                         }

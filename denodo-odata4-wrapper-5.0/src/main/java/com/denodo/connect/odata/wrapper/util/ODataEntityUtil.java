@@ -292,7 +292,7 @@ public class ODataEntityUtil {
         String relName = nav.getName(); // Field name
         
         final EdmEntityType type = edm.getEntityType(nav.getType().getFullQualifiedName());
-        
+        logger.trace("Adding navigation property metadata.Property: "+relName+".It is collection :"+ nav.isCollection());
         navigationPropertiesMap.put(relName,new CustomNavigationProperty(type,( nav.isCollection()?CustomNavigationProperty.ComplexType.COLLECTION:CustomNavigationProperty.ComplexType.COMPLEX)));//add to cache
         if (type != null) {
             List<String> props = type.getPropertyNames();

@@ -63,9 +63,7 @@ public class ODataQueryUtils {
         for (CustomWrapperFieldExpression field : conditionMap.keySet()) {
             Object value = conditionMap.get(field);
             if (!field.getName().equals(ODataWrapper.PAGINATION_FETCH) && !field.getName().equals(ODataWrapper.PAGINATION_OFFSET) ) {
-                if(isExpandedField(rels, field.getName())){
-                    throw new CustomWrapperException("It is not allowed filter by the property:"+field.getName() +". Filtering elements of expand entities is not supported");
-                }
+              
                 filterClause.add(normalizeFieldName(field.getStringRepresentation()) + " eq " + prepareValueForQuery(value,   baseViewMetadata,field.getStringRepresentation()));
             }
         }
@@ -80,9 +78,7 @@ public class ODataQueryUtils {
             String field = simpleCondition.getField().toString();
             if (!field.equals(ODataWrapper.PAGINATION_FETCH) && !field.equals(ODataWrapper.PAGINATION_OFFSET)
                   ) {
-                if(isExpandedField(rels, simpleCondition.getField().toString())){
-                    throw new CustomWrapperException("It is not allowed filter by the property:"+simpleCondition.getField().toString() +". Filtering elements of expand entities is not supported");
-                }
+              
                 // Contains is implemented using substringof
                 if (simpleCondition.getOperator() == CustomWrapperCondition.OPERATOR_ISCONTAINED) {
                     return "substringof(" +prepareValueForQuery((simpleCondition.getRightExpression()[0]).toString(),  baseViewMetadata,null) +","+simpleCondition.getField()+")";
@@ -136,7 +132,7 @@ public class ODataQueryUtils {
 
                             if (edmProperty.isCollection()) {
                                 //Odata does not support searchs over collection properties 
-                                throw new CustomWrapperException(" Filter by properties of a array is not supported in OData");
+                                throw new CustomWrapperException("It is not allowed filter by the property:"+nameProperty +". Filtering by properties of a array is not supported in OData");
                             }
 
                             if (edmProperty.getType() instanceof EdmStructuredType) {
@@ -151,8 +147,8 @@ public class ODataQueryUtils {
                         CustomNavigationProperty navigationProperty = baseViewMetadata.getNavigationProperties().get(nameProperty);
                         if(navigationProperty!=null){
                             if( navigationProperty.getComplexType().equals(CustomNavigationProperty.ComplexType.COLLECTION)){
-                                throw new CustomWrapperException("It is not allowed filter by the property:"+nameProperty +". Filter by properties of a array is not supported in OData");
-
+                                throw new CustomWrapperException("It is not allowed filter by the property:"+nameProperty +". Filtering by properties of a array is not supported in OData");
+                                //Odata does not support searchs over collection properties 
                             }else{
                                 EdmEntityType entityType=navigationProperty.getEntityType();
                                 EdmElement edmElement= entityType.getProperty(names[1]);

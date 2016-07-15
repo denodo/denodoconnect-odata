@@ -1276,7 +1276,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                        
                         final EdmEntityType typeNavigation = edm.getEntityType(edmNavigationProperty.getType().getFullQualifiedName());
                         navigationPropertiesMap.put(property,new CustomNavigationProperty(typeNavigation, (edmNavigationProperty.isCollection()?CustomNavigationProperty.ComplexType.COLLECTION:CustomNavigationProperty.ComplexType.COMPLEX)));
-                        logger.trace("Adding navigation property metadata: " +property+ " .Type: " + typeNavigation.getName());
+                        logger.trace("Adding navigation property metadata: " +property+ " .Type: " + typeNavigation.getName()+".It is Collection :"+edmNavigationProperty.isCollection());
                     }
                     // Add the properties belonging to a type whose base type is the type of the requested entity set
                     if (baseTypeMap.containsKey(edmType)) {

@@ -1,7 +1,7 @@
-Current
--------
+20160715
+--------
 - Fixed #28215 - Missing filter when you expand data
-- Fixed #28224 - Problems logging with apostrophes on passwords
+- Fixed #28224 - Problems logging with apostrophes on CONNECT statements
 
 20160523
 --------

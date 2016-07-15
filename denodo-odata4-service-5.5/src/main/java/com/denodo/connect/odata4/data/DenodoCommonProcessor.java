@@ -21,25 +21,32 @@
  */
 package com.denodo.connect.odata4.data;
 
+import java.sql.Array;
 import java.sql.SQLException;
+import java.sql.Struct;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
 import org.apache.olingo.commons.api.Constants;
+import org.apache.olingo.commons.api.data.ComplexValue;
 import org.apache.olingo.commons.api.data.Entity;
 import org.apache.olingo.commons.api.data.EntityCollection;
 import org.apache.olingo.commons.api.data.Link;
 import org.apache.olingo.commons.api.data.Property;
+import org.apache.olingo.commons.api.data.ValueType;
 import org.apache.olingo.commons.api.edm.EdmElement;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
 import org.apache.olingo.commons.api.edm.EdmEntityType;
+import org.apache.olingo.commons.api.edm.EdmException;
 import org.apache.olingo.commons.api.edm.EdmNavigationProperty;
 import org.apache.olingo.commons.api.edm.EdmNavigationPropertyBinding;
+import org.apache.olingo.commons.api.edm.EdmStructuredType;
+import org.apache.olingo.commons.api.edm.EdmTyped;
 import org.apache.olingo.commons.api.http.HttpStatusCode;
 import org.apache.olingo.server.api.ODataApplicationException;
 import org.apache.olingo.server.api.uri.UriInfo;
@@ -53,10 +60,10 @@ import org.apache.olingo.server.api.uri.queryoption.TopOption;
 import org.apache.olingo.server.api.uri.queryoption.expression.Expression;
 import org.apache.olingo.server.api.uri.queryoption.expression.ExpressionVisitException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.UncategorizedSQLException;
 import org.springframework.stereotype.Component;
 
 import com.denodo.connect.odata4.util.ProcessorUtils;
+import com.denodo.connect.odata4.util.URIUtils;
 
 @Component
 public class DenodoCommonProcessor {
@@ -65,117 +72,10 @@ public class DenodoCommonProcessor {
     private EntityAccessor entityAccessor;
     
     
-    public void handleExpandedData(final ExpandOption expandOption, final EdmEntitySet startEdmEntitySet, 
-            final Entity entity, final List<String> keyProperties, final String baseURI, final UriInfo uriInfo) 
-                    throws ODataApplicationException {
-        
-        EntityCollection entityCollection = new EntityCollection();
-        entityCollection.getEntities().add(entity);
-        
-        handleExpandedData(expandOption, startEdmEntitySet, entityCollection, keyProperties, baseURI, uriInfo, null);
-    }
+    private static final Logger logger = Logger.getLogger(DenodoCommonProcessor.class);
     
-    public void handleExpandedData(final ExpandOption expandOption, final EdmEntitySet startEdmEntitySet, 
-            final EntityCollection entityCollection, final List<String> keyProperties, final String baseURI, final UriInfo uriInfo) 
-                    throws ODataApplicationException {
-        handleExpandedData(expandOption, startEdmEntitySet, entityCollection, keyProperties, baseURI, uriInfo, null);
-    }
     
-    private void handleExpandedData(final ExpandOption expandOption, final EdmEntitySet startEdmEntitySet, 
-            final EntityCollection entityCollection, final List<String> keyProperties, final String baseURI, final UriInfo uriInfo,
-            final ExpandedData eData) 
-                    throws ODataApplicationException {
-        
-        try {
-            
-            ExpandedData expandedData = eData == null? new ExpandedData() : eData;
-            
-            Map<EdmEntityType, ExpandInformation> nestedExpandInformation = new LinkedHashMap<EdmEntityType, ExpandInformation>(); 
-    
-            LinkedHashMap<String, NumberOfExpandedEntities> numberOfExpandedEntitiesByNavProp = new LinkedHashMap<String, DenodoCommonProcessor.NumberOfExpandedEntities>(); 
-            
-            
-            if (entityCollection != null && expandOption != null) {
-                // retrieve the EdmNavigationProperty from the expand expression
-                EdmNavigationProperty edmNavigationProperty = null;
-                List<EdmNavigationProperty> edmNavigationPropertyList = new ArrayList<EdmNavigationProperty>();
-                List<ExpandItem> expandItems = expandOption.getExpandItems();
-                List<EdmNavigationProperty> partialEdmNavigationPropertyList;
-                
-                List<Map<String, Object>> keysAsList = null;
-    
-                for (ExpandItem expandItem : expandItems) {
-                    partialEdmNavigationPropertyList = new ArrayList<EdmNavigationProperty>();
-                    
-                    // Get the navigation properties to expand
-                    if (expandItem.isStar()) { // we have a "*" as an expand item
-                        partialEdmNavigationPropertyList = getAllNavigationProperties(startEdmEntitySet);
-                        edmNavigationPropertyList.addAll(partialEdmNavigationPropertyList);
-                        
-                    } else {
-                        UriResource ur = expandItem.getResourcePath().getUriResourceParts().get(0);
-    
-                        if (ur instanceof UriResourceNavigation) {
-                            edmNavigationProperty = ((UriResourceNavigation) ur).getProperty();
-                            if (edmNavigationProperty != null) {
-                                partialEdmNavigationPropertyList.add(edmNavigationProperty);
-                                if (!edmNavigationPropertyList.contains(edmNavigationProperty)) {
-                                    edmNavigationPropertyList.add(edmNavigationProperty);
-                                }
-                            }
-                        }
-                    }
-                    
-                    // There could be a nested expand
-                    if (edmNavigationProperty != null || (partialEdmNavigationPropertyList != null && !partialEdmNavigationPropertyList.isEmpty())) {
-                        EdmNavigationProperty navigationProperty = edmNavigationProperty != null ? edmNavigationProperty : partialEdmNavigationPropertyList.get(0);
-                        EdmEntitySet entitySet = ProcessorUtils.getNavigationTargetEntitySetByNavigationPropertyNames(startEdmEntitySet, Arrays.asList(navigationProperty.getName()));
-                        if (expandItem.getExpandOption() != null) {
-                            nestedExpandInformation.put(entitySet.getEntityType(), new ExpandInformation(entitySet, expandItem.getExpandOption()));
-                        }
-                    }
-                    
-                    if (!edmNavigationPropertyList.isEmpty()) {
-                        for (EdmNavigationProperty navigationProperty : edmNavigationPropertyList) {
-                            if (expandedData.getDataByEntityAndNavigationName(startEdmEntitySet.getName(), navigationProperty.getName()) == null) {
-    
-                                ExpandedData data = this.entityAccessor.getEntitySetExpandData(startEdmEntitySet.getEntityType(), navigationProperty.getType(),
-                                        navigationProperty, keysAsList, baseURI);
-     
-                                // The number of entities must be stored before applying filters
-                                NumberOfExpandedEntities numberOfEntities = null;
-                                if ((expandItem.getCountOption() != null && expandItem.getCountOption().getValue()) || expandItem.hasCountPath()) {
-                                    // Save the number of entities: by navigation property and by key of the entity that you are expanding
-                                    numberOfEntities = new NumberOfExpandedEntities();
-                                    numberOfExpandedEntitiesByNavProp.put(navigationProperty.getName(), numberOfEntities);
-                                }
-                                
-                                boolean count = (expandItem.getCountOption() != null && expandItem.getCountOption().getValue()) || expandItem.hasCountPath();
-                                
-                                ExpandedData modifiedData = applyFilterSkipTopCountQueryOptions(startEdmEntitySet.getName(), navigationProperty.getName(), 
-                                        data, expandItem.getFilterOption(), expandItem.getSkipOption(), expandItem.getTopOption(), count,
-                                        uriInfo, numberOfEntities);
-    
-                                expandedData.putAll(modifiedData);
-                            }
-                        }
-                    }
-                    
-                }
-                
-                setExpandData(edmNavigationPropertyList, nestedExpandInformation, expandedData, startEdmEntitySet, entityCollection, 
-                        keyProperties, baseURI, uriInfo, numberOfExpandedEntitiesByNavProp);
-            }
-        
-        } catch (UncategorizedSQLException e) {
-            // Exception that will throw VDP with versions before 6.0. These versions don't have support for EXPAND
-            if (!(e.getCause() instanceof SQLException && e.getMessage().contains("Syntax error: Exception parsing query near '*'"))) {
-                throw new ODataApplicationException(e.getLocalizedMessage(), HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), Locale.getDefault(), e);
-            }
-        }
-    }
-    
-    private static List<EdmNavigationProperty> getAllNavigationProperties(final EdmEntitySet startEdmEntitySet) {
+    public static List<EdmNavigationProperty> getAllNavigationProperties(final EdmEntitySet startEdmEntitySet) {
         List<EdmNavigationProperty> edmNavigationPropertyList = new ArrayList<EdmNavigationProperty>();
         
         EdmNavigationProperty edmNavigationProperty = null;
@@ -196,225 +96,340 @@ public class DenodoCommonProcessor {
         
         return edmNavigationPropertyList;
     }
-
     
-    private void setExpandData(final List<EdmNavigationProperty> edmNavigationPropertyList, final Map<EdmEntityType, ExpandInformation> nestedExpandInformation,
-            final ExpandedData expandedData, final EdmEntitySet startEdmEntitySet, final EntityCollection entityCollection, final List<String> keyProperties,
-            final String baseURI, final UriInfo uriInfo, final LinkedHashMap<String, NumberOfExpandedEntities> numberOfExpandedEntitiesByNavProp) 
-                    throws ODataApplicationException {
+    
+    /*
+     * Get the navigation data needed to expand entities
+     */
+    public static Map<String, ExpandNavigationData> getExpandData(final ExpandOption expandOption, final EdmEntitySet startEdmEntitySet) throws ODataApplicationException {
         
-        if (!edmNavigationPropertyList.isEmpty()) {
-            
-            for (EdmNavigationProperty edmNavProperty : edmNavigationPropertyList) {
-                
-                
-                String navPropName = edmNavProperty.getName();
-                
-                EdmEntityType navPropertyType = edmNavProperty.getType();
-                ExpandInformation expandInformation = nestedExpandInformation.get(navPropertyType);
-                
-                LinkedHashMap<LinkedHashMap<String, Object>, EntityCollection> data = expandedData.getDataByEntityAndNavigationName(startEdmEntitySet.getName(), navPropName);
-                
-                List<Entity> entityList = entityCollection.getEntities();
-                for (Entity entity : entityList) {
-                    Link link = new Link();
-                    link.setTitle(navPropName);
-                    link.setType(Constants.ENTITY_NAVIGATION_LINK_TYPE);
-                    link.setRel(Constants.NS_ASSOCIATION_LINK_REL + navPropName);
-
-                    LinkedHashMap<String, Object> entityKeys = new LinkedHashMap<String, Object>();
-                    for (String key : keyProperties) {
-                        Property keyProperty = entity.getProperty(key);
-                        entityKeys.put(keyProperty.getName(), keyProperty.getValue());
-                    }
-
-                    EntityCollection entityExpandedData = data.get(entityKeys);
-                    
-                    if (expandInformation != null) {
-                        handleExpandedData(expandInformation.getExpandOption(), expandInformation.getEdmEntitySet(), entityExpandedData, 
-                                navPropertyType.getKeyPredicateNames(), baseURI, uriInfo, expandedData);
-                    }
-                    
-
-                    if (edmNavProperty.isCollection()) {
-                        if (numberOfExpandedEntitiesByNavProp != null && numberOfExpandedEntitiesByNavProp.get(navPropName) != null &&
-                            numberOfExpandedEntitiesByNavProp.get(navPropName).getNumberOfEntitiesByKey(entityKeys) != null) {
-                            entityExpandedData.setCount(numberOfExpandedEntitiesByNavProp.get(navPropName).getNumberOfEntitiesByKey(entityKeys));
-                        }
-                        link.setInlineEntitySet(entityExpandedData);
-                        link.setHref(entityExpandedData.getId().toASCIIString());
-                    } else {
-                        if (!entityExpandedData.getEntities().isEmpty()) {
-                            Entity expandEntity = entityExpandedData.getEntities().get(0);
-                            link.setInlineEntity(expandEntity);
-                            link.setHref(expandEntity.getId().toASCIIString());
-                        }
-                    }
-
-                    // set the link - containing the expanded data - to the
-                    // current entity
-                    entity.getNavigationLinks().add(link);
-                    
-                }
-            }
-        }
-    }
-    
-    private static ExpandedData applyFilterSkipTopCountQueryOptions(final String edmEntityName, final String navigationPropertyName, 
-            final ExpandedData expandedData, final FilterOption filterOption, final SkipOption skipOption, final TopOption topOption, 
-            final boolean countOption, final UriInfo uriInfo, final NumberOfExpandedEntities numberOfExpandedEntities) 
-                    throws ODataApplicationException {
-
-        if (filterOption != null || skipOption != null || topOption != null || countOption) {
-            
-            LinkedHashMap<LinkedHashMap<String, Object>, EntityCollection> data = expandedData.getDataByEntityAndNavigationName(edmEntityName, navigationPropertyName);
-            
-            if (data != null) {
-                
-                Integer skip = skipOption != null ? Integer.valueOf(skipOption.getValue()) : null;
-                Integer top = topOption != null ? Integer.valueOf(topOption.getValue()) : null;
-                
-                for (Map.Entry<LinkedHashMap<String, Object>, EntityCollection> entry : data.entrySet()) {
-                    EntityCollection entityCollection = entry.getValue();
-                
-                    List<Entity> entityList = entityCollection.getEntities();
-                    
-                    LinkedHashMap<String, Object> keys = entry.getKey();
-                    
-                    if (filterOption == null && skipOption == null && topOption == null && numberOfExpandedEntities != null) {
-                        // We only need to count all the elements
-                        numberOfExpandedEntities.put(keys, Integer.valueOf(entityList.size()));
-                        continue;
-                    }
-                    
-                    // We must count the entities that should have the result 
-                    // disregarding the $top and $skip options
-                    int totalEntitiesAfterApplyingFilters = 0;
-                    
-                    int globalCount = 0;
-                    int entitiesToShow = 0;
-                    
-                    try {
-                        Iterator<Entity> entityIterator = entityList.iterator();
+        Map<String, ExpandNavigationData> expandData = new HashMap<String, ExpandNavigationData>();
+        
+        EdmNavigationProperty edmNavigationProperty = null;
+        
+        if (expandOption != null) {
+            List<ExpandItem> expandItems = expandOption.getExpandItems();
+            for (ExpandItem expandItem : expandItems) {
+                if (expandItem.isStar()) { // we have a "*" as an expand item
+                    List<EdmNavigationProperty> navProperyList = DenodoCommonProcessor.getAllNavigationProperties(startEdmEntitySet);
+                    for (EdmNavigationProperty navProperty : navProperyList) {
+                        EdmEntitySet entitySet = ProcessorUtils.getNavigationTargetEntitySetByNavigationPropertyNames(startEdmEntitySet, Arrays.asList(navProperty.getName()));
                         
-                        // First: evaluate skip and top options
-                        // Second: evaluate the expression for each entity
-                        // If the expression is evaluated to "true", keep the entity
-                        // otherwise remove it from the entityList
-                        while (entityIterator.hasNext()) {
-
-                            boolean isEntityToRemove = false;
-                            
-                            Entity currentEntity = entityIterator.next();
-                            
-                            if ((skip != null && totalEntitiesAfterApplyingFilters < skip.intValue() && skip != null && globalCount < skip.intValue()) 
-                                    || (top != null && entitiesToShow == top.intValue())) {
-                                if (countOption && numberOfExpandedEntities != null) {
-                                    // We have to know if matches the filter in order to give 
-                                    // the value to count ($count=true is in the query)
-                                    isEntityToRemove = true;
-                                } else {
-                                    // We can remove it without evaluating the filter
-                                    entityIterator.remove();
-                                    globalCount++;
-                                    continue;
-                                }
-                            }
-                            
-                            // To evaluate the the expression, create an instance of the
-                            // Filter Expression Visitor and pass
-                            // the current entity to the constructor
-                            Object visitorResult = null;
-                            
-                            if (filterOption != null) {
-                                Expression filterExpression = filterOption.getExpression();
-                                DenodoFilterExpressionVisitor expressionVisitor = new DenodoFilterExpressionVisitor(currentEntity, uriInfo);
-            
-                                // Start evaluating the expression
-                                visitorResult = filterExpression.accept(expressionVisitor);
-                                
-                                visitorResult = visitorResult == null ? Boolean.FALSE : visitorResult;
-                            }
-                            // The result of the filter expression must be of type
-                            // Edm.Boolean
-                            if (visitorResult != null) {
-                                if (visitorResult instanceof Boolean) {
-                                    if (!Boolean.TRUE.equals(visitorResult)) {
-                                        // The expression evaluated to false (or null), so
-                                        // we have to remove the currentEntity from
-                                        // entityList
-                                        entityIterator.remove();
-                                        continue;
-                                    } 
-                                } else {
-                                    throw new ODataApplicationException("A filter expression must evaulate to type Edm.Boolean",
-                                            HttpStatusCode.BAD_REQUEST.getStatusCode(), Locale.getDefault());
-                                }
-                            }
-                            
-                            // We have marked this entity to remove because of $skip or $top
-                            // and the entity matches the filter or the filter does not exist
-                            if (isEntityToRemove) {
-                                entityIterator.remove();
-                                totalEntitiesAfterApplyingFilters++;
-                                continue;
-                            }
-                            
-                            totalEntitiesAfterApplyingFilters++;
-                            entitiesToShow++;
-                            globalCount++;
-                        }
-        
-                    } catch (ExpressionVisitException e) {
-                        throw new ODataApplicationException("Exception in filter evaluation", HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(),
-                                Locale.getDefault());
+                        StringBuilder sb = new StringBuilder().append(startEdmEntitySet.getName()).append("-").append(navProperty.getName());
+                        expandData.put(sb.toString(), new ExpandNavigationData(navProperty, expandItem, entitySet));
                     }
-                    
-                    if (numberOfExpandedEntities != null) {
-                        numberOfExpandedEntities.put(keys, Integer.valueOf(totalEntitiesAfterApplyingFilters));
+                } else {
+                    UriResource ur = expandItem.getResourcePath().getUriResourceParts().get(0);
+
+                    if (ur instanceof UriResourceNavigation) {
+                        edmNavigationProperty = ((UriResourceNavigation) ur).getProperty();
+                        if (edmNavigationProperty != null) {
+                            EdmEntitySet entitySet = ProcessorUtils.getNavigationTargetEntitySetByNavigationPropertyNames(startEdmEntitySet, Arrays.asList(edmNavigationProperty.getName()));
+                            
+                            StringBuilder sb = new StringBuilder().append(startEdmEntitySet.getName()).append("-").append(edmNavigationProperty.getName());
+                            expandData.put(sb.toString(), new ExpandNavigationData(edmNavigationProperty, expandItem, entitySet));
+                            
+                            if (expandItem.getExpandOption() != null) {
+                                expandData.putAll(getExpandData(expandItem.getExpandOption(), entitySet));
+                            }
+                        }
                     }
                 }
             }
         }
-
-        return expandedData;
-    }
-
         
-    private class ExpandInformation {
-        
-        private EdmEntitySet edmEntitySet;
-        private ExpandOption expandOption;
-        
-        public ExpandInformation(EdmEntitySet edmEntitySet, ExpandOption expandOption) {
-            super();
-            this.edmEntitySet = edmEntitySet;
-            this.expandOption = expandOption;
-        }
-
-        public EdmEntitySet getEdmEntitySet() {
-            return this.edmEntitySet;
-        }
-
-        public ExpandOption getExpandOption() {
-            return this.expandOption;
-        }
-        
+        return expandData;
     }
     
-    private class NumberOfExpandedEntities extends LinkedHashMap<LinkedHashMap<String, Object>, Integer> {
+    
+    /*
+     * Set the expanded data to the given entity
+     */
+    public static void setExpandData(final String expandColumnKey, final Map<String, Object> entityKeys, final Entity entity, 
+            final Map<String, ExpandNavigationData> expandData, 
+            final Object value, final String baseURI, final UriInfo uriInfo) throws SQLException, ODataApplicationException {
 
-        private static final long serialVersionUID = -3862420045714392294L;
-
-        public NumberOfExpandedEntities() {
-            super();
+        ExpandNavigationData navigationData = expandData.get(expandColumnKey);
+        
+        if (expandData != null) {
+            EdmNavigationProperty navProperty = navigationData.getNavProperty();
+            ExpandItem expandItem = navigationData.getExpandItem();
+            ExpandOption newExpandOption = expandItem.getExpandOption();
+            EdmEntitySet entitySet = navigationData.getEntitySet();
+            
+            List<String> newExpandItemNames = DenodoCommonProcessor.getExpandItemNames(newExpandOption, entitySet);
+            
+            Link link = new Link();
+            link.setTitle(navProperty.getName());
+            link.setType(Constants.ENTITY_NAVIGATION_LINK_TYPE);
+            link.setRel(Constants.NS_ASSOCIATION_LINK_REL + navProperty.getName());
+    
+            EntityCollection entityCollection = new EntityCollection();
+            
+            EdmEntityType edmEntityTypeTarget = navProperty.getType();
+            
+            int count = addExpandedData(expandItem, entityCollection, value, edmEntityTypeTarget, newExpandItemNames, entitySet, expandData, baseURI, uriInfo);
+    
+            entityCollection.setId(URIUtils.createIdURI(baseURI, edmEntityTypeTarget, navProperty.getName(), entityKeys));
+            
+            if (navProperty.isCollection()) {
+                link.setInlineEntitySet(entityCollection);
+                link.setHref(entityCollection.getId().toASCIIString());
+                entityCollection.setCount(Integer.valueOf(count));
+            } else {
+                if (!entityCollection.getEntities().isEmpty()) {
+                    Entity expandEntity = entityCollection.getEntities().get(0);
+                    link.setInlineEntity(expandEntity);
+                    link.setHref(expandEntity.getId().toASCIIString());
+                }
+            }
+    
+            // set the link - containing the expanded data - to the current entity
+            entity.getNavigationLinks().add(link);
         }
+    }
+    
+    
+    private static int addExpandedData(final ExpandItem expandItem, final EntityCollection entityCollection, final Object value, 
+            final EdmEntityType edmEntityTypeTarget, final List<String> newExpandItemNames,
+            final EdmEntitySet entitySet, final Map<String, ExpandNavigationData> expandData,
+            final String baseURI, final UriInfo uriInfo) throws SQLException, ODataApplicationException {
+        
+        int count = 0;
+        int skip = 0;
+        int top = 0;
+        
+        if (value instanceof Array) {
+            List<Object> objList = new ArrayList<Object>(Arrays.asList((Object[])((Array) value).getArray()));
+            
+            boolean allNull = true;
+            
+            final List<String> expandColumnNames = edmEntityTypeTarget.getPropertyNames();
+            
+            Entity newEntity;
+            
+            // Each obj is a row of the array
+            for (Object obj : objList) {
+                
+                ValueType valueType = ValueType.PRIMITIVE;
+                
+                // It must be a struct because in VDP elements of arrays are structs
+                if (obj instanceof Struct) {
+                    List<Object> attributes = new ArrayList<Object>(Arrays.asList(((Struct) obj).getAttributes()));
+                    if (expandColumnNames.size() + (newExpandItemNames != null ? newExpandItemNames.size() : 0) == attributes.size()) {
+                        newEntity = new Entity();
+                        
+                        Map<String, Object> newEntityKeys = new  HashMap<String, Object>();
+                        List<String> entityKeyNames = entitySet.getEntityType().getKeyPredicateNames();
+                        
+                        int indexExpandItemColumn = 0;
+                        for (int j = 0; j < attributes.size(); j++) {
+                            Object expValue = attributes.get(j);
+                            if (j >= expandColumnNames.size() && newExpandItemNames != null && !newExpandItemNames.isEmpty()) {
+                                StringBuilder newExpandColumnKey = new StringBuilder().append(entitySet.getName()).append("-").append(newExpandItemNames.get(indexExpandItemColumn));
+                                setExpandData(newExpandColumnKey.toString(), newEntityKeys, newEntity, expandData, expValue, baseURI, uriInfo);
+                                indexExpandItemColumn++;
+                            } else {
+                                if (expValue instanceof Array) {
+                                    final Object[] arrayElements = (Object[]) ((Array) expValue).getArray();
 
-        public Integer getNumberOfEntitiesByKey(final LinkedHashMap<String, Object> key) {
-            return this.get(key);
+                                    try {
+                                        EdmTyped edmTyped = edmEntityTypeTarget.getProperty(expandColumnNames.get(j));
+
+                                        List<Object> arrayValues = new ArrayList<Object>();
+
+                                        for (final Object arrayElement : arrayElements) {
+                                            // Elements of arrays
+                                            // are Structs in VDP
+                                            if (arrayElement instanceof Struct) {
+                                                Object[] structValues = ((Struct) arrayElement).getAttributes();
+
+                                                arrayValues.add(getStructAsComplexValue(edmTyped, expandColumnNames.get(j), structValues));
+                                            }
+                                        }
+
+                                        expValue = arrayValues;
+
+                                        valueType = ValueType.COLLECTION_COMPLEX;
+                                    } catch (EdmException e1) {
+                                        logger.error("Error getting property data: " + expandColumnNames.get(j) + e1);
+                                        throw new SQLException("Error getting property data: " + expandColumnNames.get(j) + e1);
+                                    }
+                                } else if (expValue instanceof Struct) {
+
+                                    Object[] structValues = ((Struct) expValue).getAttributes();
+
+                                    try {
+                                        EdmTyped edmTyped = edmEntityTypeTarget.getProperty(expandColumnNames.get(j));
+                                        expValue = getStructAsComplexValue(edmTyped, expandColumnNames.get(j), structValues);
+
+                                        valueType = ValueType.COMPLEX;
+                                    } catch (EdmException e2) {
+                                        logger.error("Error getting property data: " + expandColumnNames.get(j) + e2);
+                                        throw new SQLException("Error getting property data: " + expandColumnNames.get(j) + e2);
+                                    }
+
+                                }
+
+                                Property newProperty = new Property(null, expandColumnNames.get(j), valueType, expValue);
+                                if (entityKeyNames.contains(expandColumnNames.get(j))) {
+                                    newEntityKeys.put(expandColumnNames.get(j), expValue);
+                                }
+                                newEntity.addProperty(newProperty);
+
+                                if (expValue != null) {
+                                    allNull = false;
+                                }
+                            }
+                        }
+                        
+                        newEntity.setId(URIUtils.createIdURI(baseURI, edmEntityTypeTarget, newEntity));
+                        
+                        // When there is no data to expand VDP returns an array with null values.
+                        // This will have to be changed for future releases because this solution is not valid
+                        // for OData v4.0 where you can select fields in the expand option.
+                        if (!allNull) {
+
+                            SkipOption skipOption = expandItem.getSkipOption();
+                            TopOption topOption = expandItem.getTopOption();
+                            FilterOption filterOption = expandItem.getFilterOption();
+
+                            // Evaluate filter expression
+                            boolean  addEntity = passesFilter(filterOption, newEntity, uriInfo);
+                            
+                            if (addEntity) {
+                                if (skipOption != null && skip < skipOption.getValue()) {
+                                    skip++;
+                                } else if (skipOption == null || (skipOption != null && skipOption.getValue() == skip)) {
+                                    if (topOption == null || (topOption != null && topOption.getValue() > top)) {
+                                        entityCollection.getEntities().add(newEntity);
+                                        top++;
+                                    }
+                                }
+                                count++;
+                            }
+                        }
+                    }
+                }
+            }
         }
         
+        return count;
+    }
+    
+    
+    private static boolean passesFilter(final FilterOption filterOption, final Entity newEntity, final UriInfo uriInfo) 
+            throws ODataApplicationException {
+        // To evaluate the the expression, create an
+        // instance of the
+        // Filter Expression Visitor and pass
+        // the current entity to the constructor
+        Object visitorResult = null;
+
+        boolean  addEntity = true;
         
+        if (filterOption != null) {
+            Expression filterExpression = filterOption.getExpression();
+            DenodoFilterExpressionVisitor expressionVisitor = new DenodoFilterExpressionVisitor(newEntity, uriInfo);
+
+            // Start evaluating the expression
+            try {
+                visitorResult = filterExpression.accept(expressionVisitor);
+            } catch (ExpressionVisitException e) {
+                throw new ODataApplicationException("Exception in filter evaluation",
+                        HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), Locale.getDefault());
+            }
+
+            visitorResult = visitorResult == null ? Boolean.FALSE : visitorResult;
+        
+            // The result of the filter expression must be of
+            // type
+            // Edm.Boolean
+            if (visitorResult != null) {
+                if (visitorResult instanceof Boolean) {
+                    if (!Boolean.TRUE.equals(visitorResult)) {
+                        addEntity = false;
+                        // The expression was evaluated to false
+                        // (or null), so we have to omit the
+                        // current entity
+                    }
+                } else {
+                    throw new ODataApplicationException("A filter expression must evaulate to type Edm.Boolean",
+                            HttpStatusCode.BAD_REQUEST.getStatusCode(), Locale.getDefault());
+                }
+            }
+        } 
+        
+        return addEntity;
+    }
+    
+    
+    // Structs data should be represented as maps where the key is the name of the property
+    static ComplexValue getStructAsComplexValue(final EdmTyped edmTyped, final String propertyName, 
+            final Object[] structValues) throws SQLException {
+        
+        ComplexValue complexValue = new ComplexValue();
+        
+        List<String> propertyNames = null;
+        
+        try {
+            
+            if (edmTyped.getType() instanceof EdmStructuredType) {
+                EdmStructuredType edmStructuralType = ((EdmStructuredType) edmTyped.getType());
+                propertyNames = edmStructuralType.getPropertyNames();
+
+                for (int i=0; i < structValues.length; i++) {
+                    
+                    ValueType valueType = ValueType.PRIMITIVE;
+                    
+                    Object value = structValues[i];
+                    if (value instanceof Struct) {
+                        Object[] newStructValues = ((Struct) value).getAttributes();
+                        value = getStructAsComplexValue(edmStructuralType.getProperty(propertyNames.get(i)), propertyNames.get(i), newStructValues);
+                        
+                        valueType = ValueType.COMPLEX;
+                    }
+                    complexValue.getValue().add(new Property(null, propertyNames.get(i), valueType, value));
+                }
+            }
+        } catch (EdmException e) {
+            logger.error("Error getting property data: " + propertyName + e);
+            throw new SQLException("Error getting property data: " + propertyName + e);
+        }
+        
+        return complexValue;
+    }
+    
+    
+    private static List<String> getExpandItemNames(final ExpandOption expandOption, final EdmEntitySet startEdmEntitySet) {
+        
+        List<String> expandItemNames = null;
+        
+        if (expandOption != null) {
+            expandItemNames = new ArrayList<String>();
+            
+            List<ExpandItem> expandItems = expandOption.getExpandItems();
+            for (ExpandItem expandItem : expandItems) {
+                // Getting the navigation properties to expand
+                if (expandItem.isStar()) { // we have a "*" as an expand item
+                    List<EdmNavigationProperty> list = DenodoCommonProcessor.getAllNavigationProperties(startEdmEntitySet);
+                    for (EdmNavigationProperty navProperty : list) {
+                        expandItemNames.add(navProperty.getName());
+                    }
+                } else {
+                    UriResource ur = expandItem.getResourcePath().getUriResourceParts().get(0);
+
+                    if (ur instanceof UriResourceNavigation) {
+                        EdmNavigationProperty navProperty = ((UriResourceNavigation) ur).getProperty();
+                        if (navProperty != null) {
+                            expandItemNames.add(navProperty.getName());
+                        }
+                    }
+                }
+            }
+        }
+        
+        return expandItemNames;
     }
     
 }

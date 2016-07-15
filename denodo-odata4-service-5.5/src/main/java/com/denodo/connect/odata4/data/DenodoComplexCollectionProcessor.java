@@ -111,12 +111,12 @@ public class DenodoComplexCollectionProcessor extends DenodoAbstractProcessor im
         if (uriResourceNavigationList.isEmpty()) { // no navigation
             responseEdmEntitySet = startEdmEntitySet; // since we have only one segment
             
-            responseEntity = this.entityAccessor.getEntity(startEdmEntitySet, keys, null, edmPropertyList, getServiceRoot(request), uriInfo);
+            responseEntity = this.entityAccessor.getEntity(startEdmEntitySet, keys, null, edmPropertyList, getServiceRoot(request), uriInfo, null);
         } else { // navigation
             responseEdmEntitySet = ProcessorUtils.getNavigationTargetEntitySet(startEdmEntitySet, uriResourceNavigationList);
 
             responseEntity = this.entityAccessor.getEntityByAssociation(startEdmEntitySet, keys, null, null,
-                    uriResourceNavigationList, responseEdmEntitySet, getServiceRoot(request), uriInfo);
+                    uriResourceNavigationList, responseEdmEntitySet, getServiceRoot(request), uriInfo, null);
         }
         
         if (responseEntity == null) {

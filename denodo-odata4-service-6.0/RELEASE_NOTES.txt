@@ -1,3 +1,8 @@
+Current
+-------
+- Fixed #28215 - Missing filter when you expand data
+- Fixed #28224 - Problems logging with apostrophes on passwords
+
 20160523
 --------
 - Fixed #27519 - OData Service goes down after several failed login attempts.

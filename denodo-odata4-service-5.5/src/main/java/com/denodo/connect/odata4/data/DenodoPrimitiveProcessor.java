@@ -115,12 +115,12 @@ public class DenodoPrimitiveProcessor extends DenodoAbstractProcessor implements
 
         if (uriResourceNavigationList.isEmpty()) { // no navigation
             Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
-            responseEntity = this.entityAccessor.getEntity(edmEntitySet, keys, null, propertyPath, getServiceRoot(request), uriInfo);
+            responseEntity = this.entityAccessor.getEntity(edmEntitySet, keys, null, propertyPath, getServiceRoot(request), uriInfo, null);
         } else { // navigation
             EdmEntitySet responseEdmEntitySet = ProcessorUtils.getNavigationTargetEntitySet(edmEntitySet, uriResourceNavigationList);
             Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
             responseEntity = this.entityAccessor.getEntityByAssociation(edmEntitySet, keys, null, null,
-                    uriResourceNavigationList, responseEdmEntitySet, getServiceRoot(request), uriInfo);
+                    uriResourceNavigationList, responseEdmEntitySet, getServiceRoot(request), uriInfo, null);
         }
 
 
@@ -196,12 +196,12 @@ public class DenodoPrimitiveProcessor extends DenodoAbstractProcessor implements
 
         if (uriResourceNavigationList.isEmpty()) { // no navigation
             Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
-            responseEntity = this.entityAccessor.getEntity(edmEntitySet, keys, null, edmPropertyList, getServiceRoot(request), uriInfo);
+            responseEntity = this.entityAccessor.getEntity(edmEntitySet, keys, null, edmPropertyList, getServiceRoot(request), uriInfo, null);
         } else { // navigation
             EdmEntitySet responseEdmEntitySet = ProcessorUtils.getNavigationTargetEntitySet(edmEntitySet, uriResourceNavigationList);
             Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
             responseEntity = this.entityAccessor.getEntityByAssociation(edmEntitySet, keys, null, null,
-                    uriResourceNavigationList, responseEdmEntitySet, getServiceRoot(request), uriInfo);
+                    uriResourceNavigationList, responseEdmEntitySet, getServiceRoot(request), uriInfo, null);
         }
 
         if (responseEntity == null) {

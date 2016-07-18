@@ -36,6 +36,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.apache.olingo.client.api.ODataClient;
+import org.apache.olingo.client.api.communication.ODataServerErrorException;
 import org.apache.olingo.client.api.communication.request.cud.ODataEntityCreateRequest;
 import org.apache.olingo.client.api.communication.request.cud.ODataEntityUpdateRequest;
 import org.apache.olingo.client.api.communication.request.cud.UpdateType;
@@ -398,7 +399,13 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 ODataRetrieveRequest<ClientEntitySetIterator<ClientEntitySet, ClientEntity>> request = 
                         client.getRetrieveRequestFactory().getEntitySetIteratorRequest(nextLink);
 
-                ODataRetrieveResponse<ClientEntitySetIterator <ClientEntitySet, ClientEntity>> response = request.execute();
+                ODataRetrieveResponse<ClientEntitySetIterator <ClientEntitySet, ClientEntity>> response;
+                try{
+                    response= request.execute();
+                }catch (ODataServerErrorException oe){
+                    logger.info(" This operation is not allowed in the odata server: "+oe);
+                    throw new CustomWrapperException(" This operation is not allowed in the odata server: "+oe);
+                }
                 ClientEntitySetIterator<ClientEntitySet, ClientEntity> iterator = response.getBody();
     
                 while (iterator.hasNext()) {
@@ -446,9 +453,11 @@ public class ODataWrapper extends AbstractCustomWrapper {
                             if (index != -1) {
                                 final URI uriMedia= client.newURIBuilder(product.getId().toString()).appendValueSegment().build();
                                 final ODataMediaRequest streamRequest = client.getRetrieveRequestFactory().getMediaEntityRequest(uriMedia);
-                                logger.debug("Obtaining media content entity :" +uriMedia.toString()+". Media COntent type:"+product.getMediaContentType());
+                                logger.debug("Obtaining media content entity :" +uriMedia.toString()+". Media Content type:"+product.getMediaContentType());
                                 if (StringUtils.isNotBlank(product.getMediaContentType())) {
-                                    streamRequest.setFormat(ContentType.APPLICATION_HTTP);//ContentType.parse(product.getMediaContentType()));
+                                    
+                                    //MediaContentType has to be specified by the service odata. In other case the client will obtain Unsupported Media Type Exception
+                                    streamRequest.setFormat(ContentType.parse(product.getMediaContentType()));
                                   }
     
                                 final ODataRetrieveResponse<InputStream> streamResponse = streamRequest.execute();

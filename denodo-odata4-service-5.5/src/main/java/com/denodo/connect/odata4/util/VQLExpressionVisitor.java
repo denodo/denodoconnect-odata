@@ -34,6 +34,8 @@ import org.apache.olingo.commons.api.edm.EdmException;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveType;
 import org.apache.olingo.commons.api.edm.EdmType;
 import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.commons.core.edm.primitivetype.EdmDate;
+import org.apache.olingo.commons.core.edm.primitivetype.EdmDateTimeOffset;
 import org.apache.olingo.server.api.ODataApplicationException;
 import org.apache.olingo.server.api.uri.UriInfo;
 import org.apache.olingo.server.api.uri.UriInfoResource;
@@ -331,6 +333,9 @@ public class VQLExpressionVisitor implements ExpressionVisitor<String> {
 
     @Override
     public String visitLiteral(Literal literal) throws ExpressionVisitException, ODataApplicationException {
+        if (literal.getType() instanceof EdmDateTimeOffset || literal.getType() instanceof EdmDate) {
+            return getLiteralSurroundedBySingleQuotes(literal.getText());
+        }
         return literal.getText();
     }
 
@@ -406,6 +411,11 @@ public class VQLExpressionVisitor implements ExpressionVisitor<String> {
             }
         }
 
+        return sb.toString();
+    }
+    
+    private static String getLiteralSurroundedBySingleQuotes(final String s) {
+        StringBuilder sb = new StringBuilder().append("'").append(s).append("'");
         return sb.toString();
     }
 

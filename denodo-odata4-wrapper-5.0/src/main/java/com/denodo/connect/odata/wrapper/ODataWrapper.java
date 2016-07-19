@@ -530,6 +530,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
             }
 
             if(baseViewMetadata.getStreamEntity()){
+                logger.error("The update of Stream entities is not supported");
                 throw new CustomWrapperException("The update of Stream entities is not supported");
             }
 
@@ -620,6 +621,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
             return 0;
         } catch (URISyntaxException e) {
+            logger.error("Error: Insert syntax is not correct");
             throw new CustomWrapperException("Error: Insert syntax is not correct");
         }
     }
@@ -696,6 +698,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                 EdmType edmType = edmProperties.get(schemaParameterName).getType();
     
                                 if(edmType!=null && edmType.toString().equals(EDM_STREAM_TYPE)){
+                                    logger.error("The update of stream properties is not supported. "+field.getStringRepresentation()+" is a stream property in the source ");
                                     throw new CustomWrapperException("The update of stream properties is not supported. "+field.getStringRepresentation()+" is a stream property in the source ");
                                 }
     
@@ -745,7 +748,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 }
                 printProxyData();
                 return updated;
-            }
+            }            
             throw new CustomWrapperException("A condition must be added to update elements.");
 
         } catch (final Exception e) {

@@ -1,17 +1,3 @@
-20151026
-=======
-Add timeout to HttpClient in OdataCxfClient
-Added RELEASE_NOTES in the distribution
-Thrown an exception explaining that the operation (insertion/update of complex fields) is not supported.
-
-20150325
+20160719
 ========
--Improved logging
-
-20141125
-========
--Added NTLM authentication. 
-
-20140926
-========
-- Created first version of this component for Denodo 5.5
+First version of odata4 wrapper

@@ -1174,7 +1174,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 params = getSchemaParameterColumns(fieldName, schemaParameters);
             }
             
-            Map<String, EdmProperty> newEdmProperties = new HashMap<>();
+            Map<String, EdmProperty> newEdmProperties = new HashMap<String, EdmProperty>();
             EdmStructuredType edmStructuralType = ((EdmStructuredType) edmProperty.getType());
             List<String> propertyNames = edmStructuralType.getPropertyNames();
             for (String p : propertyNames) {

@@ -1,7 +1,8 @@
-20160715
+20160719
 --------
 - Fixed #28215 - Missing filter when you expand data
 - Fixed #28224 - Problems logging with apostrophes on CONNECT statements
+- Fixed #28280 - OData, parsing exception using a date filter condition
 
 20160523
 --------

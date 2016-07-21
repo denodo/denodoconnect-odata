@@ -1,3 +1,7 @@
+Current
+-------
+- Added #27723 - Add CORS Support to OData Service
+
 20160719
 --------
 - Fixed #28215 - Missing filter when you expand data

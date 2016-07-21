@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- This file contains the filter definition that provides CORS support in the Denodo OData service. -->
+
+
+<!-- 
+<filter>
+    <filter-name>CORSFilter</filter-name>
+    <filter-class>org.apache.catalina.filters.CorsFilter</filter-class>
+   
+         Comma-separated list of origins that the CORS filter must allow. Requests from origins not included here
+         will be refused with an HTTP 403 "Forbidden" response. If set to * (asterisk) any origin will be allowed.
+    <init-param>
+        <param-name>cors.allowed.origins</param-name>
+        <param-value>*</param-value>
+    </init-param>
+   
+         Comma-separated list of the supported HTTP methods. These are advertised through the Access-Control-Allow-Methods
+         header and must also be implemented by the actual CORS web service. Requests for methods not included here will be
+         refused by the CORS filter with the HTTP code 405 "Method not allowed" response.
+    <init-param>
+        <param-name>cors.allowed.methods</param-name>
+        <param-value>GET, POST, PUT, DELETE, HEAD, OPTIONS</param-value>
+    </init-param>
+   
+         Comma-separated list of the supported author request headers. These are advertised through the
+         Access-Control-Allow-Headers header.  What is an author request header? This is any custom header set by the
+         browser JavaScript application through the XMLHttpRequest.setRequestHeader() method.
+    <init-param>
+        <param-name>cors.allowed.headers</param-name>
+        <param-value>Accept, Accept-Language, Authorization, Cache-Control, Content-Language, Content-Type, X-Requested-With</param-value>
+    </init-param>
+   
+         Comma-separated list of the response headers other than simple response headers that the browser should expose to the author of
+         the cross-domain request through the XMLHttpRequest.getResponseHeader() method. The CORS filter supplies this
+         information through the Access-Control-Expose-Headers header.
+    <init-param>
+        <param-name>cors.exposed.headers</param-name>
+        <param-value>Accept-Ranges, Access-Control-Allow-Credentials, Access-Control-Allow-Origin, Cache-Control,
+        Content-Language, Content-Length, Content-Type, Date, ETag, Expires, Last-Modified, Location, Pragma, Server,
+        Transfer-Encoding, Vary, WWW-Authenticate
+        </param-value>
+    </init-param>
+
+         Indicates whether user credentials such as cookies, HTTP authentication or client-side certificates are
+         supported. The CORS filter uses this value to build the Access-Control-Allow-Credentials header.
+    <init-param>
+        <param-name>cors.support.credentials</param-name>
+        <param-value>true</param-value>
+    </init-param>
+
+         Indicates how long the results of a preflight request can be cached by the web browser, in seconds. If -1
+         unspecified. This information is passed to the browser via the Access-Control-Max-Age header.
+    <init-param>
+        <param-name>cors.preflight.maxage</param-name>
+        <param-value>1800</param-value>
+    </init-param>
+</filter>
+
+<filter-mapping>
+    <filter-name>CORSFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+</filter-mapping> 
+-->

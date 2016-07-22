@@ -48,7 +48,7 @@ public final class SQLMetadataUtils {
             case Types.TINYINT:
                 return EdmPrimitiveTypeKind.SByte;
             case Types.DATE:
-                return EdmPrimitiveTypeKind.DateTimeOffset;
+                return EdmPrimitiveTypeKind.Date;
             case Types.DECIMAL:
                 return EdmPrimitiveTypeKind.Decimal;
             case Types.NUMERIC:

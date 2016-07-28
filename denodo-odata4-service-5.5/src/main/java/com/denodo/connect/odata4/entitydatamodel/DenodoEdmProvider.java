@@ -149,7 +149,7 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
              */
             final List<CsdlEntitySet> entitySets = new ArrayList<CsdlEntitySet>(allEntityTypes.size());
             for (final CsdlEntityType entityType : allEntityTypes) {
-                entitySets.add(computeEntitySet(entityType, navPropFullMap));
+                entitySets.add(computeEntitySet(entityType, navPropFullMap, null));
             }
             denodoEntityContainer.setEntitySets(entitySets);
 
@@ -192,28 +192,23 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
                 
 
                 /*
-                 * FIRST STEP: Check if table exists
+                 * If table does not exist the "FIRST STEP" will throw an SQLException and then this method
+                 * will return null (This method should return an CsdlEntityType or null if nothing is found)
                  */
-                boolean existsTable = this.metadataAccessor.existsTable(entityName);
-               
 
-                if(!existsTable){
-                    logger.error("Table with name '" + entityName.getName() + "' does not exist");
-                    return null;
-                } 
 
                 /*
-                 * SECOND STEP: Obtain the properties of the entity
+                 * FIRST STEP: Obtain the properties of the entity
                  */
                 final List<CsdlProperty> properties = this.metadataAccessor.getEntityProperties(entityName);
 
                 /*
-                 * THIRD STEP: Obtain the primary key
+                 * SECOND STEP: Obtain the primary key
                  */
                 final List<CsdlPropertyRef> primaryKey = this.metadataAccessor.getEntityPrimaryKey(entityName);
 
                 /*
-                 * FOURTH STEP: Obtain the navigation properties for the entity
+                 * THIRD STEP: Obtain the navigation properties for the entity
                  */
                 final List<CsdlNavigationProperty> navigationProperties =
                         (allAssociations == null ?
@@ -241,6 +236,9 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
             throw new ODataApplicationException(e.getLocalizedMessage(), HttpStatusCode.FORBIDDEN.getStatusCode(), Locale.getDefault(), e);
         } catch (final DenodoODataResourceNotFoundException e) {
             throw new ODataException(e.getLocalizedMessage(), e);
+        } catch (final SQLException e) {
+            logger.error("An exception was raised while obtaining entity type " + entityName, e);
+            return null;
         } catch (final Exception e) {
             logger.error("An exception was raised while obtaining entity type " + entityName, e);
             throw new ODataRuntimeException(e.getLocalizedMessage(), e);
@@ -358,7 +356,9 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
             FullQualifiedName entityName = new FullQualifiedName(NAMESPACE_DENODO, name);
             final CsdlEntityType entityType = this.getEntityType(entityName);
             if (entityType != null) {
-                return computeEntitySet(entityType, null);
+                List<CsdlNavigationPropertyBinding> navigationPropertyBindingList = 
+                        this.metadataAccessor.getEntityNavigationPropertiesBindingFromNavigationProperties(entityType.getNavigationProperties());
+                return computeEntitySet(entityType, null, navigationPropertyBindingList);
             }
 
         }
@@ -368,7 +368,8 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
     }
 
 
-    private CsdlEntitySet computeEntitySet(final CsdlEntityType entityType, final Map<FullQualifiedName, List<NavigationProperty>> allAssociations) throws ODataException {
+    private CsdlEntitySet computeEntitySet(final CsdlEntityType entityType, final Map<FullQualifiedName, List<NavigationProperty>> allAssociations,
+            final List<CsdlNavigationPropertyBinding> navigationPropertyBindingList) throws ODataException {
 
         final CsdlEntitySet entitySet = new CsdlEntitySet();
 
@@ -385,7 +386,8 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
         try {
             
 
-            final List<CsdlNavigationPropertyBinding> navigationPropertyBindings =
+            final List<CsdlNavigationPropertyBinding> navigationPropertyBindings = 
+                    navigationPropertyBindingList != null ? navigationPropertyBindingList :
                     (allAssociations == null ?
                             this.metadataAccessor.getEntityNavigationPropertiesBinding(entityNameFqn) :
                             this.metadataAccessor.getEntityNavigationPropertiesBinding(entityNameFqn, allAssociations));

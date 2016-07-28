@@ -2,6 +2,7 @@ Current
 -------
 - Added #27723 - Add CORS Support to OData Service
 - Fixed #28322 - Error mapping SQL Date types to OData types
+- Added #27435 - Evaluate possible performance improvements
 
 20160719
 --------

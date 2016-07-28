@@ -349,6 +349,24 @@ public class MetadataAccessor {
     }
 
 
+    public List<CsdlNavigationPropertyBinding> getEntityNavigationPropertiesBindingFromNavigationProperties(final List<CsdlNavigationProperty> csdlNavigationProperties) {
+        
+        if (csdlNavigationProperties != null) {
+            
+            List<CsdlNavigationPropertyBinding> csdlNavigationPropertiesBinding = new ArrayList<CsdlNavigationPropertyBinding>();
+            
+            for (CsdlNavigationProperty csdlNavProperty : csdlNavigationProperties) {
+                String path = csdlNavProperty.getName();
+                String target = csdlNavProperty.getTypeFQN().getName();
+                csdlNavigationPropertiesBinding.add(new CsdlNavigationPropertyBinding().setPath(path).setTarget(target));
+            }
+            
+            return csdlNavigationPropertiesBinding;
+        }
+        
+        return null;
+    }
+
     public Map<FullQualifiedName, List<NavigationProperty>> getAllAssociations(final String namespace) throws SQLException {
 
         /*
@@ -551,6 +569,12 @@ public class MetadataAccessor {
                             
                             navigationPropertyLeft.setReferentialConstraints(rightMappedFields);
                             
+                            /*
+                             * There is a method in this class (#getEntityNavigationPropertiesBindingFromNavigationProperties(List<CsdlNavigationProperty>)) 
+                             * that allows you to get the CsdlNavigationPropertyBinding list of an entity set using the CsdlNavigationProperty 
+                             * list of its type. Therefore, if you change the way you build CsdlNavigationPropertyBinding you have to change 
+                             * this method too.
+                             */
                             final CsdlNavigationPropertyBinding navigationPropertyBindingLeft = new CsdlNavigationPropertyBinding();
                             navigationPropertyBindingLeft.setPath(leftRole);
                             navigationPropertyBindingLeft.setTarget(leftViewName);
@@ -577,6 +601,12 @@ public class MetadataAccessor {
                             
                             navigationPropertyRight.setReferentialConstraints(leftMappedFields);
                             
+                            /*
+                             * There is a method in this class (#getEntityNavigationPropertiesBindingFromNavigationProperties(List<CsdlNavigationProperty>)) 
+                             * that allows you to get the CsdlNavigationPropertyBinding list of an entity set using the CsdlNavigationProperty 
+                             * list of its type. Therefore, if you change the way you build CsdlNavigationPropertyBinding you have to change 
+                             * this method too.
+                             */
                             final CsdlNavigationPropertyBinding navigationPropertyBindingRight = new CsdlNavigationPropertyBinding();
                             navigationPropertyBindingRight.setPath(rightRole);
                             navigationPropertyBindingRight.setTarget(rightViewName);
@@ -854,37 +884,7 @@ public class MetadataAccessor {
         });
         return complexTypes;
     }
-    
-    
-    public boolean existsTable (final FullQualifiedName entityName) throws SQLException {
 
-        Connection connection = null;
-        ResultSet tablesRs = null;
-
-        try {
-            // We obtain the connection in the most integrated possible way with the Spring infrastructure
-            connection = DataSourceUtils.getConnection(this.denodoTemplate.getDataSource());
-    
-    
-            final DatabaseMetaData metadata = connection.getMetaData();
-    
-    
-            // Check if table exists
-            tablesRs = metadata.getTables(connection.getCatalog(), null, entityName.getName(), (String []) null);
-            boolean existsTable = false;
-            while(tablesRs.next()){
-                if(tablesRs.getString("TABLE_NAME").equalsIgnoreCase(entityName.getName())){
-                    existsTable = true;
-                    break;
-                }
-            }
-         
-            return existsTable;
-        } finally {
-            JdbcUtils.closeResultSet(tablesRs);
-            DataSourceUtils.releaseConnection(connection, this.denodoTemplate.getDataSource());
-        }
-    }
 
 }
 

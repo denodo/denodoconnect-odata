@@ -121,10 +121,6 @@ public class DenodoEntityProcessor extends DenodoAbstractProcessor implements En
         
         keyProperties = startEdmEntitySet.getEntityType().getKeyPredicateNames();
 
-
-        // $select
-        List<String> selectedItemsAsString = ProcessorUtils.getSelectedItems(uriInfo, keyProperties, responseEdmEntitySet);
-
         
         List<UriResourceNavigation> uriResourceNavigationList = ProcessorUtils.getNavigationSegments(uriInfo);
         
@@ -140,6 +136,10 @@ public class DenodoEntityProcessor extends DenodoAbstractProcessor implements En
                                                       // segment
 
             responseEdmEntityType = startEdmEntitySet.getEntityType();
+            
+            // $select
+            List<String> selectedItemsAsString = ProcessorUtils.getSelectedItems(uriInfo, keyProperties, responseEdmEntitySet);
+            
             // 2. step: retrieve the data from backend
             List<UriParameter> keyPredicates = uriResourceEntitySet.getKeyPredicates();
             Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
@@ -151,6 +151,9 @@ public class DenodoEntityProcessor extends DenodoAbstractProcessor implements En
 
             responseEdmEntityType = responseEdmEntitySet.getEntityType();
 
+            // $select
+            List<String> selectedItemsAsString = ProcessorUtils.getSelectedItems(uriInfo, keyProperties, responseEdmEntitySet);
+            
             List<UriParameter> keyPredicates = uriResourceEntitySet.getKeyPredicates();
             Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
 

@@ -3,6 +3,7 @@ Current
 - Added #27723 - Add CORS Support to OData Service
 - Fixed #28322 - Error mapping SQL Date types to OData types
 - Added #27435 - Evaluate possible performance improvements
+- Fixed #28393 - Error projecting properties when you are using a key to select a single entity
 
 20160719
 --------

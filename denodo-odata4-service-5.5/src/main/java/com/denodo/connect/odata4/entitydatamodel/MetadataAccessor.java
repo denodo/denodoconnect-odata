@@ -33,9 +33,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.StringTokenizer;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.apache.olingo.commons.api.edm.provider.CsdlNavigationProperty;
@@ -66,8 +66,6 @@ public class MetadataAccessor {
     private static final String ASSOCIATIONS_LIST_QUERY_FORMAT = "LIST ASSOCIATIONS `%s`;";
     private static final String ASSOCIATION_DESC_QUERY_FORMAT = "DESC ASSOCIATION `%s`;";
 
-    private static final String REGISTER_TYPES_LIST_ALL_QUERY_FORMAT = "LIST TYPES REGISTER;";
-    private static final String ARRAY_TYPES_LIST_ALL_QUERY_FORMAT = "LIST TYPES ARRAY;";
     private static final String COMPLEX_TYPE_DESC_QUERY_FORMAT = "DESC TYPE `%s`;";
 
     @Autowired
@@ -83,7 +81,7 @@ public class MetadataAccessor {
 
 
 
-    public List<CsdlProperty> getEntityProperties(final FullQualifiedName entityName) throws SQLException {
+    public List<CsdlProperty> getEntityProperties(final FullQualifiedName entityName, final Set<String> complexTypeNames) throws SQLException {
 
         final List<CsdlProperty> entityProperties = new ArrayList<CsdlProperty>(5);
 
@@ -135,13 +133,18 @@ public class MetadataAccessor {
                 final EdmPrimitiveTypeKind type = SQLMetadataUtils.sqlTypeToODataType(sqlType);
 
                 CsdlProperty property = new CsdlProperty();
-
+                
+                // If type is null it means that it is a complex type, array or struct.
                 if (type == null) {
                     if (SQLMetadataUtils.isArrayType(sqlType)) {
                         // Arrays are collections and we have to mark this fact in the property 
                         property.setCollection(true);
                     }
-                    property.setType(new FullQualifiedName(entityName.getNamespace(), columnsRs.getString("TYPE_NAME")));
+                    final String typeName = columnsRs.getString("TYPE_NAME");
+                    property.setType(new FullQualifiedName(entityName.getNamespace(), typeName));
+                    if (complexTypeNames != null) {
+                        complexTypeNames.add(typeName);
+                    }
                 } else {
                     property.setType(type.getFullQualifiedName());
                 }
@@ -156,15 +159,6 @@ public class MetadataAccessor {
                 }
                 // Size of VARCHAR (String) columns and precision of DECIMAL columns
                 if (type == EdmPrimitiveTypeKind.String) {
-                    /*
-                     * OData 2.0 does not support Collections/Bags/Lists that
-                     * will allow us to give support to arrays as complex objects.
-                     * Now we consider them as strings and show them using the
-                     * toString method. In order to be able to show this information
-                     * we avoid to set an incorrect MaxLength value.
-                     * The support to Collections/Bags/Lists appears in OData 3.0.
-                     * This should be changed if we introduce OData on a version 3.0 or higher.
-                     */
                     if (!SQLMetadataUtils.isArrayType(sqlType)) {
                         final int maxLength = columnsRs.getInt("COLUMN_SIZE");
                         if (maxLength != Integer.MAX_VALUE && !columnsRs.wasNull()) {
@@ -770,74 +764,7 @@ public class MetadataAccessor {
     }
 
 
-    public List<String> getAllComplexTypeNames() {
-
-        /*
-         * FIRST STEP: Obtain the list of names of all registers (without restricting to a specific entity)
-         */
-
-        final List<String> registerNames =
-                this.denodoTemplate.query(REGISTER_TYPES_LIST_ALL_QUERY_FORMAT, new RowMapper<String>() {
-
-                    @Override
-                    public String mapRow(final ResultSet rs, final int rowNum) throws SQLException {
-                        String registerName = rs.getString(1);
-                        if ("relation_link".equals(registerName)) {
-                            /*
-                             *  This is an internal type of VDP. It is necessary in VDP but
-                             *  it is  not useful data for the user
-                             */
-                            return StringUtils.EMPTY;
-                        }
-                        return rs.getString(1);
-                    }}
-
-                );
-        
-
-        // Remove empty strings. They are unnecessary.
-        registerNames.removeAll(Collections.singleton(StringUtils.EMPTY));
-        
-
-        /*
-         * SECOND STEP: Obtain the list of names of all arrays (without restricting to a specific entity)
-         */
-
-        final List<String> arrayNames =
-                this.denodoTemplate.query(ARRAY_TYPES_LIST_ALL_QUERY_FORMAT, new RowMapper<String>() {
-
-                    @Override
-                    public String mapRow(final ResultSet rs, final int rowNum) throws SQLException {
-                        String registerName = rs.getString(1);
-                        if ("relation_link".equals(registerName)) {
-                            /*
-                             *  This is an internal type of VDP. It is necessary in VDP but
-                             *  it is  not useful data for the user
-                             */
-                            return StringUtils.EMPTY;
-                        }
-                        return rs.getString(1);
-                    }}
-
-                );
-        
-        // Remove empty strings. They are unnecessary.
-        arrayNames.removeAll(Collections.singleton(StringUtils.EMPTY));
-
-        final List<String> complexTypeNames = new ArrayList<String>(registerNames.size() + arrayNames.size());
-        
-        complexTypeNames.addAll(registerNames);
-        complexTypeNames.addAll(arrayNames);
-        
-        if (complexTypeNames == null || complexTypeNames.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        return complexTypeNames;
-
-    }
-
-    public List<CsdlProperty> getComplexType(final FullQualifiedName edmFQName) {
+    public List<CsdlProperty> getComplexType(final FullQualifiedName edmFQName, final Set<String> complexTypeInUse) {
 
         final String descComplexTypeQuery = String.format(COMPLEX_TYPE_DESC_QUERY_FORMAT, edmFQName.getName());
 
@@ -858,9 +785,14 @@ public class MetadataAccessor {
                     // information about the type
                     type = SQLMetadataUtils.sqlTypeToODataType(typeCode);
                 }
-
+                    
+                // If type is null it means that it is a complex type, array or struct.
                 if (type == null) {
-                    property.setType(new FullQualifiedName(edmFQName.getNamespace(), rs.getString("TYPE")));
+                    final String typeName = rs.getString("TYPE");
+                    property.setType(new FullQualifiedName(edmFQName.getNamespace(), typeName));
+                    if (complexTypeInUse != null) {
+                        complexTypeInUse.add(typeName);
+                    }
                 } else {
                     property.setType(type.getFullQualifiedName());
                 }

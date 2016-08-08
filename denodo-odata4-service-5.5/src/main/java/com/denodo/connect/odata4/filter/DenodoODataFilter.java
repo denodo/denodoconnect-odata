@@ -172,8 +172,8 @@ public class DenodoODataFilter implements Filter {
                         return;
                     }
                     
-                    login = credentials[0];
-                    password = credentials[1];
+                    login = escapeLiteral(credentials[0]);
+                    password = escapeLiteral(credentials[1]);
                     
                     // Disable access to the service using 'admin' user if this option is established in the configuration
                     if (!this.allowAdminUser && adminUser.equals(login)) {
@@ -187,6 +187,7 @@ public class DenodoODataFilter implements Filter {
                 } else if (StringUtils.startsWithIgnoreCase(authorizationHeader, NEGOTIATE)) {
                     kerberosClientToken = authorizationHeader.substring(NEGOTIATE.length()).trim();
                 }
+
             }
 
 
@@ -305,6 +306,10 @@ public class DenodoODataFilter implements Filter {
         parameters.put(DenodoODataAuthDataSource.DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION, developmentModeDangerousBypassAuthentication);
 
         return parameters;
+    }
+    
+    private static String escapeLiteral(final String literal) {
+        return  literal.replaceAll("'", "''");
     }
 
 }

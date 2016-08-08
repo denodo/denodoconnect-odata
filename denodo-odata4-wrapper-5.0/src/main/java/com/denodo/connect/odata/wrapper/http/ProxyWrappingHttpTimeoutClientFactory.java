@@ -11,8 +11,8 @@ import org.apache.olingo.commons.api.http.HttpMethod;
 public class ProxyWrappingHttpTimeoutClientFactory extends ProxyWrappingHttpClientFactory {
     private final Integer timeout;
 
-    public ProxyWrappingHttpTimeoutClientFactory(URI proxy, String proxyUsername, String proxyPassword, DefaultHttpClientFactory wrapped, Integer timeout) {
-        super(proxy, proxyUsername, proxyPassword, wrapped);
+    public ProxyWrappingHttpTimeoutClientFactory(URI proxy, String proxyUsername, String proxyPassword, Integer timeout) {
+        super(proxy, proxyUsername, proxyPassword);
        this.timeout = timeout;
     }
  

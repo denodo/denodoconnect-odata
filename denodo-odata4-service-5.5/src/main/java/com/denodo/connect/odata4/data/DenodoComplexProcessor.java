@@ -119,7 +119,7 @@ public class DenodoComplexProcessor extends DenodoAbstractProcessor implements C
             List<UriParameter> keyPredicates = uriResourceEntitySet.getKeyPredicates();
             
             Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
-            responseEntity = this.entityAccessor.getEntity(startEdmEntitySet, keys, null, edmPropertyList, getServiceRoot(request), uriInfo);
+            responseEntity = this.entityAccessor.getEntity(startEdmEntitySet, keys, null, edmPropertyList, getServiceRoot(request), uriInfo, null);
         } else { // navigation
 
             responseEdmEntitySet = ProcessorUtils.getNavigationTargetEntitySet(startEdmEntitySet, uriResourceNavigationList);
@@ -128,7 +128,7 @@ public class DenodoComplexProcessor extends DenodoAbstractProcessor implements C
             
             Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
             responseEntity = this.entityAccessor.getEntityByAssociation(startEdmEntitySet, keys, null, null,
-                    uriResourceNavigationList, responseEdmEntitySet, getServiceRoot(request), uriInfo);
+                    uriResourceNavigationList, responseEdmEntitySet, getServiceRoot(request), uriInfo, null);
             
             
         }

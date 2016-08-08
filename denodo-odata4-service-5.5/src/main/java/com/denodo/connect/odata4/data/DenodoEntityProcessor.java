@@ -121,49 +121,49 @@ public class DenodoEntityProcessor extends DenodoAbstractProcessor implements En
         
         keyProperties = startEdmEntitySet.getEntityType().getKeyPredicateNames();
 
-
-        // $select
-        List<String> selectedItemsAsString = ProcessorUtils.getSelectedItems(uriInfo, keyProperties, responseEdmEntitySet);
-
         
         List<UriResourceNavigation> uriResourceNavigationList = ProcessorUtils.getNavigationSegments(uriInfo);
         
         EdmEntityType responseEdmEntityType = null;
         Entity responseEntity = null; 
+        
+        
+        // $expand
+        final ExpandOption expandOption = uriInfo.getExpandOption();
+        
         if (uriResourceNavigationList.isEmpty()) { // no navigation
             responseEdmEntitySet = startEdmEntitySet; // since we have only one
                                                       // segment
 
             responseEdmEntityType = startEdmEntitySet.getEntityType();
+            
+            // $select
+            List<String> selectedItemsAsString = ProcessorUtils.getSelectedItems(uriInfo, keyProperties, responseEdmEntitySet);
+            
             // 2. step: retrieve the data from backend
             List<UriParameter> keyPredicates = uriResourceEntitySet.getKeyPredicates();
             Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
             
-            responseEntity = this.entityAccessor.getEntity(responseEdmEntitySet, keys, selectedItemsAsString, null, getServiceRoot(request), uriInfo);
+            responseEntity = this.entityAccessor.getEntity(responseEdmEntitySet, keys, selectedItemsAsString, null, getServiceRoot(request), uriInfo, expandOption);
         } else { // navigation
 
             responseEdmEntitySet = ProcessorUtils.getNavigationTargetEntitySet(startEdmEntitySet, uriResourceNavigationList);
 
             responseEdmEntityType = responseEdmEntitySet.getEntityType();
 
+            // $select
+            List<String> selectedItemsAsString = ProcessorUtils.getSelectedItems(uriInfo, keyProperties, responseEdmEntitySet);
+            
             List<UriParameter> keyPredicates = uriResourceEntitySet.getKeyPredicates();
             Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
 
             responseEntity = this.entityAccessor.getEntityByAssociation(startEdmEntitySet, keys, selectedItemsAsString, null,
-                    uriResourceNavigationList, responseEdmEntitySet, getServiceRoot(request), uriInfo);
+                    uriResourceNavigationList, responseEdmEntitySet, getServiceRoot(request), uriInfo, expandOption);
         }
 
         if (responseEntity == null) {
             throw new ODataApplicationException("Nothing found.", HttpStatusCode.NOT_FOUND.getStatusCode(), Locale.getDefault());
         }
-        
-        
-        // $expand
-        ExpandOption expandOption = uriInfo.getExpandOption();
-        
-        // handle $expand
-        this.denodoCommonProcessor.handleExpandedData(expandOption, responseEdmEntitySet, responseEntity, 
-                responseEdmEntitySet.getEntityType().getKeyPredicateNames(), getServiceRoot(request), uriInfo);
         
         SelectOption selectOption = uriInfo.getSelectOption();
         
@@ -218,7 +218,7 @@ public class DenodoEntityProcessor extends DenodoAbstractProcessor implements En
         Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
 
         Entity responseEntity = this.entityAccessor.getEntityByAssociation(startEdmEntitySet, keys, null, null,
-                uriResourceNavigationList, responseEdmEntitySet, getServiceRoot(request), uriInfo);
+                uriResourceNavigationList, responseEdmEntitySet, getServiceRoot(request), uriInfo, null);
         
         // Serialize
         ContextURL contextUrl = null;

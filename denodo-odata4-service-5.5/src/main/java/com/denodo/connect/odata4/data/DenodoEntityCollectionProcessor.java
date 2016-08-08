@@ -167,6 +167,10 @@ public class DenodoEntityCollectionProcessor extends DenodoAbstractProcessor imp
         
         EntityCollection entityCollection = null;
         EdmEntitySet responseEdmEntitySet = null;
+        
+        // $expand
+        ExpandOption expandOption = uriInfo.getExpandOption();
+        
         if (uriResourceNavigationList.isEmpty()) { // no navigation
 
             responseEdmEntitySet = startEdmEntitySet; // the response body is built from
@@ -178,7 +182,7 @@ public class DenodoEntityCollectionProcessor extends DenodoAbstractProcessor imp
             // 2nd: fetch the data from backend for this requested EntitySetName
             // and deliver as EntitySet
             entityCollection = this.entityAccessor.getEntityCollection(responseEdmEntitySet, pageElements, startPagination,
-                    uriInfo, selectedItemsAsString, getServiceRoot(request));
+                    uriInfo, selectedItemsAsString, getServiceRoot(request), expandOption);
             
             if (countOption!=null && countOption.getValue()) {
                 count = this.entityAccessor.getCountEntitySet(startEdmEntitySet, null, uriInfo, null);
@@ -195,7 +199,7 @@ public class DenodoEntityCollectionProcessor extends DenodoAbstractProcessor imp
             Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
 
             entityCollection = this.entityAccessor.getEntityCollectionByAssociation(startEdmEntitySet, keys, pageElements, startPagination,
-                    uriInfo, selectedItemsAsString, null, uriResourceNavigationList, getServiceRoot(request), responseEdmEntitySet);
+                    uriInfo, selectedItemsAsString, null, uriResourceNavigationList, getServiceRoot(request), responseEdmEntitySet, expandOption);
 
             if (countOption != null && countOption.getValue()) {
                 count = this.entityAccessor.getCountEntitySet(startEdmEntitySet, keys, uriInfo, uriResourceNavigationList);
@@ -231,12 +235,6 @@ public class DenodoEntityCollectionProcessor extends DenodoAbstractProcessor imp
         
         // $select
         SelectOption selectOption = uriInfo.getSelectOption();
-        // $expand
-        ExpandOption expandOption = uriInfo.getExpandOption();
-        
-        
-        // handle $expand
-        this.denodoCommonProcessor.handleExpandedData(expandOption, responseEdmEntitySet, entityCollection, keyProperties, getServiceRoot(request), uriInfo);
 
         
         // we need the property names of the $select, in order to build the
@@ -382,7 +380,7 @@ public class DenodoEntityCollectionProcessor extends DenodoAbstractProcessor imp
         Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
 
         entityCollection = this.entityAccessor.getEntityCollectionByAssociation(startEdmEntitySet, keys, top, skip, uriInfo, null, null,
-                uriResourceNavigationList, getServiceRoot(request), responseEdmEntitySet);
+                uriResourceNavigationList, getServiceRoot(request), responseEdmEntitySet, null);
 
         ContextURL contextUrl = null;
         try {

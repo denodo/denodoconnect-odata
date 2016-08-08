@@ -4,20 +4,25 @@
 
 This custom wrapper has the following known limitations:
 
- - Only works with versions 1.0 or 2.0 of oData. oData version 3.0 is partially support interpreting it as a lower version. May not work.
-  
-   More information:   http://code.google.com/p/odata4j/wiki/Roadmap
-                       https://groups.google.com/forum/#!topic/odata4j-discuss/ozUuCASqGL8
+	-This custom data source currently only works with OData version 4.0. The previous versions of Odata are not supported by this wrapper. There is other custom wrapper to access to old versions of OData. 
  
- - You can't filter elements specified obtained through "expand" items. VDP must filter these items using ROW sintax in the query.
-   
-   More information:   http://msdn.microsoft.com/en-us/library/fp142385%28v=office.15%29.aspx
+	-Filtering of elements by array properties is not supported. OData does not allow this kind of searches.
+
+	-Filtering by media read links properties is not supported.
+
+	-The insertion of arrays is not supported.
+
+	-The authentication using NTLM through a proxy is not supported.
+
+	-The insertion or update of  media file properties is not supported.
+
+	-Addressing derived types properties is not available. When you have entities with a type derived from the declared type of the requested collection, their properties will be added to the schema of the base view but you can't project these properties separately.
 
 
  OTHER PROPERTIES
 ===================
 
-Other configurable properties are stored into the file ‚Äúcustomwrapper.properties‚Äù. 
+Other configurable properties are stored into the file ‚Äúcustomwrapper.propertiesÄù. 
 
 If the OData specification changes in the future, you can change it easily:
  - timeformat : is the format used by OData to represents a date.

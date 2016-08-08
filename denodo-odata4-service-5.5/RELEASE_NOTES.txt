@@ -1,3 +1,17 @@
+20160729
+--------
+- Added #27723 - Add CORS Support to OData Service
+- Fixed #28322 - Error mapping SQL Date types to OData types
+- Added #27435 - Performance improvements in metadata retrieval
+- Fixed #28393 - Error projecting properties when you are using a key to select a single entity
+- Fixed #25587 - OData Service exposes too many complex types not used by the exposed entities
+
+20160719
+--------
+- Fixed #28215 - Missing filter when you expand data
+- Fixed #28224 - Problems logging with apostrophes on CONNECT statements
+- Fixed #28280 - Parsing exception using a date $filter condition
+
 20160523
 --------
 - Fixed #27519 - OData Service goes down after several failed login attempts.

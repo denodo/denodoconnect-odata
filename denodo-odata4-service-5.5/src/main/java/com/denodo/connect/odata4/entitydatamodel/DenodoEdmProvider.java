@@ -24,9 +24,11 @@ package com.denodo.connect.odata4.entitydatamodel;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.apache.olingo.commons.api.edm.EdmException;
@@ -149,7 +151,7 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
              */
             final List<CsdlEntitySet> entitySets = new ArrayList<CsdlEntitySet>(allEntityTypes.size());
             for (final CsdlEntityType entityType : allEntityTypes) {
-                entitySets.add(computeEntitySet(entityType, navPropFullMap));
+                entitySets.add(computeEntitySet(entityType, navPropFullMap, null));
             }
             denodoEntityContainer.setEntitySets(entitySets);
 
@@ -180,10 +182,21 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
     }
 
 
-
-
+    private CsdlEntityType getEntityType(
+            final Set<String> complexTypeNames, final FullQualifiedName entityName)
+            throws ODataException {
+        return this.getEntityType(entityName, null, complexTypeNames);
+    }
+    
     private CsdlEntityType getEntityType(
             final FullQualifiedName entityName, final Map<FullQualifiedName, List<NavigationProperty>> allAssociations)
+            throws ODataException {
+        return this.getEntityType(entityName, allAssociations, null);
+    }
+
+    
+    private CsdlEntityType getEntityType(
+            final FullQualifiedName entityName, final Map<FullQualifiedName, List<NavigationProperty>> allAssociations, final Set<String> complexTypeNames)
             throws ODataException {
 
         try {
@@ -192,28 +205,23 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
                 
 
                 /*
-                 * FIRST STEP: Check if table exists
+                 * If table does not exist the "FIRST STEP" will throw an SQLException and then this method
+                 * will return null (This method should return an CsdlEntityType or null if nothing is found)
                  */
-                boolean existsTable = this.metadataAccessor.existsTable(entityName);
-               
 
-                if(!existsTable){
-                    logger.error("Table with name '" + entityName.getName() + "' does not exist");
-                    return null;
-                } 
 
                 /*
-                 * SECOND STEP: Obtain the properties of the entity
+                 * FIRST STEP: Obtain the properties of the entity
                  */
-                final List<CsdlProperty> properties = this.metadataAccessor.getEntityProperties(entityName);
+                final List<CsdlProperty> properties = this.metadataAccessor.getEntityProperties(entityName, complexTypeNames);
 
                 /*
-                 * THIRD STEP: Obtain the primary key
+                 * SECOND STEP: Obtain the primary key
                  */
                 final List<CsdlPropertyRef> primaryKey = this.metadataAccessor.getEntityPrimaryKey(entityName);
 
                 /*
-                 * FOURTH STEP: Obtain the navigation properties for the entity
+                 * THIRD STEP: Obtain the navigation properties for the entity
                  */
                 final List<CsdlNavigationProperty> navigationProperties =
                         (allAssociations == null ?
@@ -241,6 +249,9 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
             throw new ODataApplicationException(e.getLocalizedMessage(), HttpStatusCode.FORBIDDEN.getStatusCode(), Locale.getDefault(), e);
         } catch (final DenodoODataResourceNotFoundException e) {
             throw new ODataException(e.getLocalizedMessage(), e);
+        } catch (final SQLException e) {
+            logger.error("An exception was raised while obtaining entity type " + entityName, e);
+            return null;
         } catch (final Exception e) {
             logger.error("An exception was raised while obtaining entity type " + entityName, e);
             throw new ODataRuntimeException(e.getLocalizedMessage(), e);
@@ -271,14 +282,20 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
              * Namespace is fixed: just the DENODO one
              */
             schema.setNamespace(NAMESPACE_DENODO);
-
+            
+            
+            /*
+             * Set to keep complex type names actually in use
+             */
+            final Set<String> complexTypeNamesInUse = new HashSet<String>();
+            
             
             /*
              * Obtaining the names of all the tables (views, in VDP) is needed in order to query for the metadata
              * of each of these tables. These will be our entities.
              */
             final List<String> allEntityNames = this.metadataAccessor.getAllEntityNames();
-            
+
             
             /*
              * Now let's obtain all the entity types (metadata for each of the entities)...
@@ -288,33 +305,18 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
              */
             final List<CsdlEntityType> allEntityTypes = new ArrayList<CsdlEntityType>(allEntityNames.size());
             for (final String entityName : allEntityNames) {
-                allEntityTypes.add(this.getEntityType(new FullQualifiedName(NAMESPACE_DENODO, entityName)/*, allAssociations*/));
+                allEntityTypes.add(this.getEntityType(complexTypeNamesInUse, new FullQualifiedName(NAMESPACE_DENODO, entityName)));
             }
-            schema.setEntityTypes(allEntityTypes);
-
-            /*
-             * Obtaining complex types names (registers and arrays).
-             * OData 2.0 does not support Collections/Bags/Lists that
-             * will allow us to give support to arrays as complex objects.
-             *  This support appears in OData 3.0. This should be changed if we
-             * introduce OData on a version 3.0 or higher and in this
-             * situation we should taking into account also arrays.
-             */
-            final List<String> allComplexTypeNames = this.metadataAccessor.getAllComplexTypeNames();
-            final List<FullQualifiedName> complexTypeNames = new ArrayList<FullQualifiedName>(allComplexTypeNames.size());
-            for (final String complexTypeName : allComplexTypeNames) {
-                complexTypeNames.add(new FullQualifiedName(NAMESPACE_DENODO, complexTypeName));
-            }
+            schema.setEntityTypes(allEntityTypes);            
 
             /*
              * Now let's obtain all the complex entity types
-             */
-            final List<CsdlComplexType> complexTypes = new ArrayList<CsdlComplexType>(complexTypeNames.size());
-            for (final FullQualifiedName complexTypeName : complexTypeNames) {
-                complexTypes.add(this.getComplexType(complexTypeName));
-            }
-            schema.setComplexTypes(complexTypes);            
+             */            
+            List<CsdlComplexType> complexTypesInUse = getComplexTypes(complexTypeNamesInUse);
+            
+            schema.setComplexTypes(complexTypesInUse);            
 
+            
             /*
              * Function Imports list will be empty
              */    
@@ -358,7 +360,9 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
             FullQualifiedName entityName = new FullQualifiedName(NAMESPACE_DENODO, name);
             final CsdlEntityType entityType = this.getEntityType(entityName);
             if (entityType != null) {
-                return computeEntitySet(entityType, null);
+                List<CsdlNavigationPropertyBinding> navigationPropertyBindingList = 
+                        this.metadataAccessor.getEntityNavigationPropertiesBindingFromNavigationProperties(entityType.getNavigationProperties());
+                return computeEntitySet(entityType, null, navigationPropertyBindingList);
             }
 
         }
@@ -368,7 +372,8 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
     }
 
 
-    private CsdlEntitySet computeEntitySet(final CsdlEntityType entityType, final Map<FullQualifiedName, List<NavigationProperty>> allAssociations) throws ODataException {
+    private CsdlEntitySet computeEntitySet(final CsdlEntityType entityType, final Map<FullQualifiedName, List<NavigationProperty>> allAssociations,
+            final List<CsdlNavigationPropertyBinding> navigationPropertyBindingList) throws ODataException {
 
         final CsdlEntitySet entitySet = new CsdlEntitySet();
 
@@ -385,7 +390,8 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
         try {
             
 
-            final List<CsdlNavigationPropertyBinding> navigationPropertyBindings =
+            final List<CsdlNavigationPropertyBinding> navigationPropertyBindings = 
+                    navigationPropertyBindingList != null ? navigationPropertyBindingList :
                     (allAssociations == null ?
                             this.metadataAccessor.getEntityNavigationPropertiesBinding(entityNameFqn) :
                             this.metadataAccessor.getEntityNavigationPropertiesBinding(entityNameFqn, allAssociations));
@@ -403,15 +409,75 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
     @Override
     public CsdlComplexType getComplexType(final FullQualifiedName edmFQName) throws ODataException {
 
+        return getComplexType(edmFQName, null);
+
+    }
+    
+    private CsdlComplexType getComplexType(final FullQualifiedName edmFQName, final Set<String> complexTypeInUse) throws ODataException {
         if (NAMESPACE_DENODO.equals(edmFQName.getNamespace())) {
 
-            final List<CsdlProperty> properties = this.metadataAccessor.getComplexType(edmFQName);
+            final List<CsdlProperty> properties = this.metadataAccessor.getComplexType(edmFQName, complexTypeInUse);
             return new CsdlComplexType().setName(edmFQName.getName()).setProperties(properties);
 
         }
 
         throw new EdmException("COMMON");
-
     }
+    
+    
+    private static Set<FullQualifiedName> getFullQualifiedNameSet(final Set<String> nameList) {
+        final Set<FullQualifiedName> fullQualifiedNameList = new HashSet<FullQualifiedName>();
+        
+        for (final String name : nameList) {
+            fullQualifiedNameList.add(new FullQualifiedName(NAMESPACE_DENODO, name));
+        }
+        
+        return fullQualifiedNameList;
+        
+    }
+    
+    
+    private static Set<String> getTypeNamesNotRetrieved(final Set<String> complexTypeNamesInUse, final Set<String> globalComplexTypeNames) {
+        
+        Set<String> typeNamesNotRetrieved = new HashSet<String>();
+        
+        for (String s : complexTypeNamesInUse) {
+            if (!globalComplexTypeNames.contains(s)) {
+                typeNamesNotRetrieved.add(s);
+            }
+        }
+        
+        return typeNamesNotRetrieved;
+    }
+    
+    
+    private List<CsdlComplexType> getComplexTypes(final Set<String> complexTypeNamesInUse) throws ODataException {
+        return getComplexTypes(complexTypeNamesInUse, new HashSet<String>());
+    }
+    
+    
+    private List<CsdlComplexType> getComplexTypes(final Set<String> complexTypeNamesInUse, final Set<String> globalComplexTypeNames) throws ODataException {
+        
+        final List<CsdlComplexType> complexTypes = new ArrayList<CsdlComplexType>();
+        
+        if (!complexTypeNamesInUse.isEmpty()) {
+            globalComplexTypeNames.addAll(complexTypeNamesInUse);
+            
+            final Set<FullQualifiedName> complexTypeFQNInUse = getFullQualifiedNameSet(complexTypeNamesInUse);
+            
+            final Set<String> newComplexTypeNames = new HashSet<String>();
+            
+            for (final FullQualifiedName complexTypeName : complexTypeFQNInUse) {
+                complexTypes.add(this.getComplexType(complexTypeName, newComplexTypeNames));
+                
+                final Set<String> complexTypeNamesNotRetrieved = getTypeNamesNotRetrieved(complexTypeNamesInUse, globalComplexTypeNames);
+                if (!complexTypeNamesNotRetrieved.isEmpty()) {
+                    complexTypes.addAll(getComplexTypes(complexTypeNamesNotRetrieved, globalComplexTypeNames));
+                }
+            }
+        }
+        return complexTypes;
+    }
+    
 
 }

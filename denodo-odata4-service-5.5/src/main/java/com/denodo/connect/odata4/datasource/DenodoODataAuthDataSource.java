@@ -166,10 +166,10 @@ public class DenodoODataAuthDataSource implements DataSource {
                             .append(getParameter(DATA_BASE_NAME));
                 }
 
+                this.authenticatedConnection.set(connection);
+                
                 stmt = connection.createStatement();
                 stmt.execute(command.toString());
-                
-                this.authenticatedConnection.set(connection);
 
             }
             return connection;

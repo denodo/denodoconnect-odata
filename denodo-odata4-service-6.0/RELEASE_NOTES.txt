@@ -1,3 +1,7 @@
+Current
+-------
+- Fixed #28507 - Change web.xml to give a default version without CORS configuration
+
 20160729
 --------
 - Added #27723 - Add CORS Support to OData Service

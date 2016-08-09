@@ -1,3 +1,7 @@
+20160809-update-20160726-beta
+-----------------------------
+- Added #25785 - Add Kerberos auth support to the Denodo OData Service
+
 20160729
 --------
 - Added #27723 - Add CORS Support to OData Service

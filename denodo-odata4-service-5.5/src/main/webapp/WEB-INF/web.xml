@@ -19,22 +19,6 @@
 <!--                                                                               -->
 <!-- ============================================================================= -->
 
-<!--     
-    To enable Cross-origin resource sharing (CORS) mechanism, modify the values of the environment entries of the 
-    file "cors_settings". 
-    After changing these values, restart the service.
-    
-    If you are deploying this war in an external Web container, before you do it, do the following: 
-
-    a) Configure the container to allow external entities to be loaded.
-
-    b) Or, manually replace the reference "&cors_settings" with the content of the file "cors_settings.xml". 
-       Then, remove the elements "DOCTYPE" and "ENTITY" above the root element "web-app".
--->
-
-<!DOCTYPE doc [
-<!ENTITY cors_settings SYSTEM "cors_settings.xml">
-]>
 
 <web-app xmlns="http://java.sun.com/xml/ns/j2ee"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -51,8 +35,7 @@
   <!-- ******************* -->
   <!-- Filters             -->
   <!-- ******************* -->
-  
-  &cors_settings;
+
   
   <filter>
     <filter-name>DenodoODataFilter</filter-name>

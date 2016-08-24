@@ -1,6 +1,7 @@
 Current
 -------
 - Fixed #28507 - Change web.xml to give a default version without CORS configuration
+- Fixed #28595 - 'eq' and 'ne' functions are not working when the variable name contains 'eq' or 'ne' respectively
 
 20160729
 --------

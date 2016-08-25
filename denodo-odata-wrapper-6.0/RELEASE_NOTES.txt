@@ -1,3 +1,6 @@
+20160825
+========
+#20168 - Sharepoint integration: limit the number of relationships to expand
 
 20160120
 ========

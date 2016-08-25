@@ -1,3 +1,7 @@
+20160825
+========
+#20168 - Sharepoint integration: limit the number of relationships to expand
+
 20151026
 =======
 Add timeout to HttpClient in OdataCxfClient

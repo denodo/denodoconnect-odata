@@ -245,7 +245,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 entitySets = getEntitySetMap(consumer);
                 for (final EdmNavigationProperty nav : entitySets.get(entityCollection).getType()
                         .getDeclaredNavigationProperties()) {
-                    rels.add(nav.getName());
+                    if (projectedFields.contains(new CustomWrapperFieldExpression(nav.getName()))) {
+                        rels.add(nav.getName());
+                    }
                 }
             }
 
@@ -570,11 +572,11 @@ public class ODataWrapper extends AbstractCustomWrapper {
             }
         }
 
-        logger.info("Setting query: " + odataQuery);
+        logger.info("Setting query: " + request.toString());
 
         // Adds specific OData URL to the execution trace
         getCustomWrapperPlan().addPlanEntry("OData query", odataQuery);
-
+     
         // Executes the request
         final Enumerable<OEntity> requestUpdated = request.execute();
         return requestUpdated.toList();

@@ -27,6 +27,7 @@ import java.net.URISyntaxException;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -361,10 +362,16 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 }
                 
                 List<String> navigationProperties = edmType.getNavigationPropertyNames();
-                rels = new String[navigationProperties.size()];
+                List<String> usedNavigationProperties = new ArrayList<String>();
+                for (String navigationProperty : navigationProperties){
+                    if(projectedFields.contains(new CustomWrapperFieldExpression(navigationProperty))){
+                        usedNavigationProperties.add(navigationProperty);
+                    }
+                }
+                rels = new String[usedNavigationProperties.size()];
                
                 int index = 0;
-                for (final String nav : navigationProperties) {                   
+                for (final String nav : usedNavigationProperties) {                   
                     rels[index]= edmType.getNavigationProperty(nav).getName();//Obtain navigation properties of the entity
                     logger.debug("Expand collections: "+edmType.getNavigationProperty(nav).getName());
                     index++;
@@ -480,7 +487,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                         for (final ClientLink link : product.getNavigationLinks()) {
                             final int index = projectedFields.indexOf(new CustomWrapperFieldExpression(link.getName()));
                             // When the index is lower than zero means that the related entity is not projected
-                            if (index > 0) {
+                            if (index >= 0) {
                                 logger.debug("name collection  " + link.getName());
                                 
                                 // 1 to 1 relantionships

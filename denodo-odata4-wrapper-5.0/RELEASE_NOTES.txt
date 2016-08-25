@@ -1,3 +1,8 @@
+20160825
+========
+#20168 - Sharepoint integration: limit the number of relationships to expand
+#28661 - In a projection is the first element is a related entity returns null
+
 20160719
 ========
 First version of odata4 wrapper

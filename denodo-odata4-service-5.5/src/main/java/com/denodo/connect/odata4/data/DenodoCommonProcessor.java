@@ -55,6 +55,7 @@ import org.apache.olingo.server.api.uri.UriResourceNavigation;
 import org.apache.olingo.server.api.uri.queryoption.ExpandItem;
 import org.apache.olingo.server.api.uri.queryoption.ExpandOption;
 import org.apache.olingo.server.api.uri.queryoption.FilterOption;
+import org.apache.olingo.server.api.uri.queryoption.SelectItem;
 import org.apache.olingo.server.api.uri.queryoption.SkipOption;
 import org.apache.olingo.server.api.uri.queryoption.TopOption;
 import org.apache.olingo.server.api.uri.queryoption.expression.Expression;
@@ -204,10 +205,17 @@ public class DenodoCommonProcessor {
             
             boolean allNull = true;
             
-            final List<String> expandColumnNames = edmEntityTypeTarget.getPropertyNames();
             
+            List<String> expandColumnNames= new ArrayList<String>();
+            if(expandItem.getSelectOption()!=null){
+                for (SelectItem selectItem : expandItem.getSelectOption().getSelectItems()) {
+
+                    expandColumnNames.add(selectItem.getResourcePath().getUriResourceParts().get(0).getSegmentValue()); 
+                }
+            }else{
+                expandColumnNames= edmEntityTypeTarget.getPropertyNames();
+            }
             Entity newEntity;
-            
             // Each obj is a row of the array
             for (Object obj : objList) {
                 

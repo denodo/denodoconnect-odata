@@ -469,10 +469,10 @@ public class EntityAccessor {
             }
             
             //vdp not accepts "eq null", so it is changed 'eq' by 'is'
-            if ( filterExpression.matches(".*? eq .*?null.*?")) {
-                sb.append(filterExpression.replaceAll(" eq .*?null", "is null"));
-            } else if (filterExpression.matches(".*? ne .*?null.*?")) {
-                sb.append(filterExpression.replaceAll(" ne .*?null", "is not null"));
+            if ( filterExpression.matches(".*? eq\\s+?null.*?")) {
+                sb.append(filterExpression.replaceAll(" eq\\s+?null", "is null"));
+            } else if (filterExpression.matches(".*? ne\\s+?null.*?")) {
+                sb.append(filterExpression.replaceAll(" ne\\s+?null", "is not null"));
             } else {
                 sb.append(filterExpression);
             }

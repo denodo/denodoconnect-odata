@@ -1,4 +1,4 @@
-Current
+20160902
 -------
 - Fixed #28748 - Exception using a logical condition with null inside parentheses in a $filter expression-
 - Fixed #28792 - Modify documentation about "Deploying into the Denodo embedded web container" for denodo 5.5

@@ -7,10 +7,10 @@
   <!-- *************************** -->
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.denodo.connect.odata</groupId>
-  <artifactId>denodo-odata-wrapper-5.0</artifactId>
-  <version>20160825</version>
+  <artifactId>denodo-odata2-wrapper-5.0</artifactId>
+  <version>20160902</version>
   <packaging>jar</packaging>
-  <name>denodo-odata-wrapper</name>
+  <name>denodo-odata2-wrapper</name>
 
   <!-- *************************** -->
   <!-- BUILD INFO -->

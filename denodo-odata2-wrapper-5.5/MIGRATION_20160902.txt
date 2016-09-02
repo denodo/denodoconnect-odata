@@ -1,0 +1,16 @@
+MIGRATION NOTES FOR VERSION 20160902
+====================================
+
+
+* 	Steps to maintain the affected databases:
+   
+	-Import new .jar into VDP using Tools -> Jar Management
+	-Export VQL of the affected databases
+	-Manually change the wrapper references at the VQL
+	-Import the modified VQL into VDP
+ 	-Remove the old .jar from VDP using Tools -> Jar Management, which should now have no dependencies
+
+
+
+
+

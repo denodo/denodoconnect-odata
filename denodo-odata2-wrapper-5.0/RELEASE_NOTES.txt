@@ -1,5 +1,6 @@
-20160825
+20160902
 ========
+#28771 - Modify artifact name of Denodo OData2 Wrapper to "denodo-odata2-wrapper"
 #20168 - Sharepoint integration: limit the number of relationships to expand
 
 20151026

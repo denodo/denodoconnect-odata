@@ -1,3 +1,7 @@
+20160902
+--------
+- Fixed #28748 - Exception using a logical condition with null inside parentheses in a $filter expression
+
 20160523
 --------
 - Fixed #27519 - OData Service goes down after several failed login attempts.

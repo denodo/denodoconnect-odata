@@ -57,6 +57,7 @@ import org.apache.olingo.server.api.uri.queryoption.ExpandOption;
 import org.apache.olingo.server.api.uri.queryoption.FilterOption;
 import org.apache.olingo.server.api.uri.queryoption.OrderByItem;
 import org.apache.olingo.server.api.uri.queryoption.OrderByOption;
+import org.apache.olingo.server.api.uri.queryoption.SelectItem;
 import org.apache.olingo.server.api.uri.queryoption.expression.Expression;
 import org.apache.olingo.server.api.uri.queryoption.expression.ExpressionVisitException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -274,9 +275,11 @@ public class EntityAccessor {
             }
         }
         
-        String expandDataText = null;
+        String expandDataFromText = null;
+        String expandDataSelectText= null;
         if (expandOption != null) {
-            expandDataText = getNavigationPropertiesString(expandOption, entitySet);
+            expandDataFromText = getNavigationPropertiesString(expandOption, entitySet,true);
+            expandDataSelectText = getNavigationPropertiesString(expandOption, entitySet, false);
         }
         
         // If there is navigation or expand option, we have to use the SELECT_NAVIGATIONAL statement
@@ -295,9 +298,11 @@ public class EntityAccessor {
             sb.append("* ");
         }
         
-        if (expandDataText != null) {
-            String selectExpandData = expandDataText.replaceAll(", ", " / *,") + " / * ";
-            sb.append(", ").append(selectExpandData);
+        if (expandDataFromText != null) {
+          
+         
+            sb.append(", ").append(expandDataSelectText);
+            
         }
         
         sb.append("FROM ");
@@ -306,8 +311,8 @@ public class EntityAccessor {
         // If there is navigation, the keys are implicit in the query (e.g. SELECT_NAVIGATIONAL * FROM film/1;)
         sb.append(getSelectNavigation(keys, uriResourceNavigationList));
         
-        if (expandDataText != null) {
-            sb.append(" EXPAND ").append(expandDataText);
+        if (expandDataFromText != null) {
+            sb.append(" EXPAND ").append(expandDataFromText);
         }
         
         return sb.toString();
@@ -351,11 +356,11 @@ public class EntityAccessor {
     }
     
     
-    private static String getNavigationPropertiesString(final ExpandOption expandOption, final EdmEntitySet startEdmEntitySet) throws ODataApplicationException {
-        return getNavigationPropertiesString(expandOption, startEdmEntitySet, null);
+    private static String getNavigationPropertiesString(final ExpandOption expandOption, final EdmEntitySet startEdmEntitySet, final boolean expand) throws ODataApplicationException {
+        return getNavigationPropertiesString(expandOption, startEdmEntitySet, expand, null);
     }
     
-    private static String getNavigationPropertiesString(final ExpandOption expandOption, final EdmEntitySet startEdmEntitySet, final String nestedNavProperties) throws ODataApplicationException {
+    private static String getNavigationPropertiesString(final ExpandOption expandOption, final EdmEntitySet startEdmEntitySet,boolean expand, final String nestedNavProperties) throws ODataApplicationException {
         
         EdmNavigationProperty edmNavigationProperty = null;
         
@@ -390,14 +395,32 @@ public class EntityAccessor {
                         if (edmNavigationProperty != null) {
                             expandItemList.add(edmNavigationProperty);
                             String navPropertyString = SQLMetadataUtils.getStringSurroundedByFrenchQuotes(edmNavigationProperty.getName());
-                            navigationPropertiesToExpand.append(localNavigationPropertiesToExpand.toString())
+
+                            if(expand){//String for expand of the query
+                                navigationPropertiesToExpand.append(localNavigationPropertiesToExpand.toString())
                                 .append(navPropertyString);
-                            
+                            }
+                            else{//String for select of the query
+                                if(expandItem.getSelectOption()!=null){
+                                    boolean firstExpand=true;
+                                    for(SelectItem item: expandItem.getSelectOption().getSelectItems()){
+                                        if(!firstExpand){
+                                            navigationPropertiesToExpand.append(" , ");
+
+                                        }
+                                        firstExpand=false;
+                                        navigationPropertiesToExpand.append(localNavigationPropertiesToExpand.toString())
+                                        .append(navPropertyString+" / "+item.getResourcePath().getUriResourceParts().get(0).getSegmentValue()+" " );}
+                                }else{
+                                    navigationPropertiesToExpand.append(localNavigationPropertiesToExpand.toString())
+                                    .append(navPropertyString+" / * " );
+                            }
+                            }
                             if (expandItem.getExpandOption() != null) {
                                 EdmEntitySet entitySet = ProcessorUtils.getNavigationTargetEntitySetByNavigationPropertyNames(startEdmEntitySet, Arrays.asList(edmNavigationProperty.getName()));
                                 expandItemList.add(getNavigationProperties(expandItem.getExpandOption(), entitySet));
                                 StringBuilder newLocalNavigationPropertiesToExpand = new StringBuilder(localNavigationPropertiesToExpand.toString()).append(navPropertyString).append(" / ");
-                                navigationPropertiesToExpand.append(", ").append(getNavigationPropertiesString(expandItem.getExpandOption(), entitySet, newLocalNavigationPropertiesToExpand.toString()));
+                                navigationPropertiesToExpand.append(", ").append(getNavigationPropertiesString(expandItem.getExpandOption(), entitySet, expand, newLocalNavigationPropertiesToExpand.toString()));
                             }
                         }
                     }
@@ -446,10 +469,10 @@ public class EntityAccessor {
             }
             
             //vdp not accepts "eq null", so it is changed 'eq' by 'is'
-            if ( filterExpression.matches(".*?eq.*?null.*?")) {
-                sb.append(filterExpression.replaceAll("eq.*?null", "is null"));
-            } else if (filterExpression.matches(".*?ne.*?null.*?")) {
-                sb.append(filterExpression.replaceAll("ne.*?null", "is not null"));
+            if ( filterExpression.matches(".*? eq\\s+?null.*?")) {
+                sb.append(filterExpression.replaceAll(" eq\\s+?null", "is null"));
+            } else if (filterExpression.matches(".*? ne\\s+?null.*?")) {
+                sb.append(filterExpression.replaceAll(" ne\\s+?null", "is not null"));
             } else {
                 sb.append(filterExpression);
             }

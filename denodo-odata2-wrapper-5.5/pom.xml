@@ -26,10 +26,10 @@
   <!-- *************************** -->
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.denodo.connect.odata</groupId>
-  <artifactId>denodo-odata-wrapper-5.5</artifactId>
-  <version>20151026</version>
+  <artifactId>denodo-odata2-wrapper-5.5</artifactId>
+  <version>20160902</version>
   <packaging>jar</packaging>
-  <name>denodo-odata-wrapper-5.5</name>
+  <name>denodo-odata2-wrapper-5.5</name>
 
   <!-- *************************** -->
   <!-- BUILD INFO -->
@@ -38,13 +38,13 @@
 
     <resources>
       <resource>
-        <directory>../denodo-odata-wrapper-5.0/src/main/resources</directory>
+        <directory>../denodo-odata2-wrapper-5.0/src/main/resources</directory>
         <includes>
           <include>**/*.properties</include>
         </includes>
       </resource>
       <resource>
-        <directory>../denodo-odata-wrapper-5.0/src/main/java</directory>
+        <directory>../denodo-odata2-wrapper-5.0/src/main/java</directory>
         <includes>
           <include>**/*.properties</include>
           <include>**/*.xml</include>
@@ -61,17 +61,17 @@
     </resources>
 
 
-    <sourceDirectory>../denodo-odata-wrapper-5.0/src/main/java</sourceDirectory>
+    <sourceDirectory>../denodo-odata2-wrapper-5.0/src/main/java</sourceDirectory>
     <!-- ============================================================== -->
     <!-- Test-related directory locations -->
     <!-- ============================================================== -->
 
-    <testSourceDirectory>../denodo-odata-wrapper-5.0/src/test/java</testSourceDirectory>
-    <testOutputDirectory>../denodo-odata-wrapper-5.0/target/test-classes</testOutputDirectory>
+    <testSourceDirectory>../denodo-odata2-wrapper-5.0/src/test/java</testSourceDirectory>
+    <testOutputDirectory>../denodo-odata2-wrapper-5.0/target/test-classes</testOutputDirectory>
 
     <testResources>
       <testResource>
-        <directory>../denodo-odata-wrapper-5.0/src/test/resources</directory>
+        <directory>../denodo-odata2-wrapper-5.0/src/test/resources</directory>
       </testResource>
     </testResources>
 

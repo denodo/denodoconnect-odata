@@ -2,8 +2,8 @@ MIGRATION NOTES FOR VERSION 20160902
 ====================================
 
 Version 20160902 of this wrapper modified its artifact name as referenced in
-the Virtual DataPort metadata, from "denodo-odata-wrapper" to
-"denodo-odata2-wrapper".
+the Virtual DataPort metadata, from "denodo-odata-wrapper-5.0" to
+"denodo-odata2-wrapper-5.0".
 
 This provokes that the standard, automatic metadata-based wrapper update
 mechanism cannot be applied for updating to a version equal or newer than

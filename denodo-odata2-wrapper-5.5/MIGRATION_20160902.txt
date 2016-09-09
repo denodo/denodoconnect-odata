@@ -1,14 +1,25 @@
 MIGRATION NOTES FOR VERSION 20160902
 ====================================
 
+Version 20160902 of this wrapper modified its artifact name as referenced in
+the Virtual DataPort metadata, from "denodo-odata-wrapper" to
+"denodo-odata2-wrapper".
 
-* 	Steps to maintain the affected databases:
-   
-	-Import new .jar into VDP using Tools -> Jar Management
-	-Export VQL of the affected databases
-	-Manually change the wrapper references at the VQL
-	-Import the modified VQL into VDP
- 	-Remove the old .jar from VDP using Tools -> Jar Management, which should now have no dependencies
+This provokes that the standard, automatic metadata-based wrapper update
+mechanism cannot be applied for updating to a version equal or newer than
+20160902 from a previous version, and some steps need to be taken to
+adequately keep the metadata for the affected databases (i.e. databases that
+contain base or derived views that make use of the custom wrapper).
+
+Steps to update the affected databases:
+
+	1. Import new wrapper .jar into VDP using Tools -> Jar Management.
+	2. Export VQL of the affected databases (at least all artifacts related
+	   directly or indirectly with this wrapper).
+	3. Manually change the wrapper references at the VQL file.
+	4. Import the modified VQL into VDP.
+ 	5. Remove the old wrapper .jar from VDP using Tools -> Jar Management,
+ 	   which should now have no dependencies (and raise no warning).
 
 
 

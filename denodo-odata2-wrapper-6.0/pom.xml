@@ -27,7 +27,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.denodo.connect.odata</groupId>
   <artifactId>denodo-odata2-wrapper-6.0</artifactId>
-  <version>20160902</version>
+  <version>20160909</version>
   <packaging>jar</packaging>
   <name>denodo-odata2-wrapper-6.0</name>
 

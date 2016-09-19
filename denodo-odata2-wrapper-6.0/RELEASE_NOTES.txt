@@ -1,3 +1,7 @@
+20160919
+========
+#28979 - Update httpclient version and improve tracing log
+
 20160909
 ========
 #28771 - Modify artifact name of Denodo OData2 Wrapper to "denodo-odata2-wrapper"

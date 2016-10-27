@@ -54,6 +54,8 @@
   
   <util:properties id="authconfig">
     <prop key="allowadminuser">${enable.adminUser}</prop>
+    <prop key="disabledkerberosauth">${disable.kerberosAuthentication}</prop>
+    <prop key="disabledbasicauth">${disable.basicAuthentication}</prop>
   </util:properties>
 
 

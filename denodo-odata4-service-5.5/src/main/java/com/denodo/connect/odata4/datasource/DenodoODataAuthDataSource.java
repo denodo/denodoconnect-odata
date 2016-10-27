@@ -56,6 +56,8 @@ public class DenodoODataAuthDataSource implements DataSource {
     private static final String DATABASE_NOT_FOUND_ERROR = ".*Database .* not found";
     private static final String CONNECT_TOKEN_UNSUPPORTED = ".*parsing query near 'CONNECT'";
     private static final String KERBEROS_ERROR = ".*[K|k]erberos.*";
+    private static final String KERBEROS_DISABLED = ".*not allow [K|k]erberos authentication.*";
+    private static final String KERBEROS_INVALID_USER = ".*No valid [K|k]erberos authentication for user.*";
 
     private final ThreadLocal<Map<String,String>> parameters = new ThreadLocal<Map<String,String>>();
     
@@ -192,7 +194,15 @@ public class DenodoODataAuthDataSource implements DataSource {
                     logger.error("Database not found", e);
                     throw new DenodoODataResourceNotFoundException(e);
                 }
-                if (e.getMessage().matches(KERBEROS_ERROR)) { // Check Kerberos authentication disabled
+                if (e.getMessage().matches(KERBEROS_DISABLED)) { // Check Kerberos availability
+                    logger.error(e);
+                    throw new DenodoODataKerberosDisabledException(e);
+                }
+                if (e.getMessage().matches(KERBEROS_INVALID_USER)) { // Check Kerberos authentication for the user
+                    logger.error(e);
+                    throw new DenodoODataKerberosInvalidUserException(e);
+                }
+                if (e.getMessage().matches(KERBEROS_ERROR)) { // Check Kerberos authentication
                     logger.error(e);
                     throw new DenodoODataKerberosUnsupportedException(e);
                 }                

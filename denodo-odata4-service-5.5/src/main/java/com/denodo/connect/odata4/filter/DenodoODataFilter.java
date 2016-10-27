@@ -45,6 +45,7 @@ import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 
 import com.denodo.connect.odata4.datasource.DenodoODataAuthDataSource;
+import com.denodo.connect.odata4.datasource.DenodoODataKerberosDisabledException;
 
 public class DenodoODataFilter implements Filter {
 
@@ -59,16 +60,19 @@ public class DenodoODataFilter implements Filter {
     // OData AUTH convenience constants
     private static final String AUTHORIZATION_CHALLENGE_ATTRIBUTE = "WWW-AUTHENTICATE";
     private static final String NEGOTIATE = "Negotiate";
+    private static final String BASIC = "Basic";
     private static final String AUTHORIZATION_CHALLENGE_REALM = "Denodo_OData_Service";
     private static final String AUTHORIZATION_CHALLENGE_BASIC = SecurityContext.BASIC_AUTH + " realm=\""
             + AUTHORIZATION_CHALLENGE_REALM + "\", accept-charset=\"" + CHARACTER_ENCODING + "\"";
-
-
+    
     private ServletContext servletContext = null;
     private String serviceRoot = null;
     private String serviceAddress = null;
     private DenodoODataAuthDataSource authDataSource = null;
     private boolean allowAdminUser;
+    private boolean disabledKerberosAuth = false;
+    private boolean disabledBasicAuth = false;
+    private boolean checkedAvailabiltyKerberos = false;
     
     
     public DenodoODataFilter() {
@@ -115,6 +119,20 @@ public class DenodoODataFilter implements Filter {
                         throw new ServletException("Denodo OData service user not properly configured: check the 'enable.adminUser' property at the configuration file");
                     }
                     this.allowAdminUser = Boolean.parseBoolean(allowAdminUserAsString);
+                    
+                    String disabledKerberosAuthAsString = authconfig.getProperty("disabledkerberosauth");
+                    if (disabledKerberosAuthAsString != null && disabledKerberosAuthAsString.trim().length() != 0) {
+                        this.disabledKerberosAuth = Boolean.parseBoolean(disabledKerberosAuthAsString);
+                    }
+                    String disabledBasicAuthAsString = authconfig.getProperty("disabledbasicauth");
+                    if (disabledBasicAuthAsString != null && disabledBasicAuthAsString.trim().length() != 0) {
+                        this.disabledBasicAuth = Boolean.parseBoolean(disabledBasicAuthAsString);
+                    }
+                    
+                    if (this.disabledKerberosAuth && this.disabledBasicAuth) {
+                        throw new ServletException("Denodo OData service authentication not properly configured: check 'disable.kerberosAuthentication' "
+                                + "and 'disable.basicAuthentication' properties at the configuration file");
+                    }
                 }
             }
         }
@@ -132,12 +150,18 @@ public class DenodoODataFilter implements Filter {
             logger.trace("AuthenticationFilter.doFilter(...) starts");
 
             this.ensureInitialized();
-
+                    
             final String adminUser = "admin";
 
             final HttpServletRequest request = (HttpServletRequest) req;
             final HttpServletResponse response = (HttpServletResponse) res;
 
+            if (this.disabledKerberosAuth && this.disabledBasicAuth) {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authentication required: Basic authentication disabled and Kerberos authentication disabled or unavailable.");
+                logger.trace("Authentication required: Basic authentication disabled and Kerberos authentication disabled or unavailable.");
+                return;
+            }
+            
             String login = null;
             String password = null;
             String kerberosClientToken = null;
@@ -155,15 +179,28 @@ public class DenodoODataFilter implements Filter {
 
             if (!Boolean.parseBoolean(developmentModeDangerousBypassAuthentication)) {
                 final String authorizationHeader = request.getHeader(AUTH_KEYWORD);
-                if (authorizationHeader == null) {
+                if (!this.disabledKerberosAuth && authorizationHeader == null) {
                     response.setHeader(AUTHORIZATION_CHALLENGE_ATTRIBUTE, NEGOTIATE);
+                    if (!this.disabledBasicAuth) {
+                        response.addHeader(AUTHORIZATION_CHALLENGE_ATTRIBUTE, BASIC);
+                    }
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     logger.trace("SPNEGO starts");
                     return;
                 }
+                
+                // There are not BASIC credentials but BASIC authentication is the option available
+                if (this.checkedAvailabiltyKerberos && !StringUtils.startsWithIgnoreCase(authorizationHeader, BASIC_AUTH_KEYWORD) 
+                        && this.disabledKerberosAuth && !this.disabledBasicAuth) {
+                    clearRequestAuthentication();
+                    logger.trace("Basic authentication is the authentication mechanism available");
+                    response.setHeader(AUTHORIZATION_CHALLENGE_ATTRIBUTE, BASIC);
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
+                }
 
                 // Retrieve BASIC credentials
-                if (StringUtils.startsWithIgnoreCase(authorizationHeader, BASIC_AUTH_KEYWORD)) {
+                if (!this.disabledBasicAuth && StringUtils.startsWithIgnoreCase(authorizationHeader, BASIC_AUTH_KEYWORD)) {
                     String[] credentials = retrieveCredentials(authorizationHeader);
                     if (credentials == null) {
                         String reason = "Invalid credentials";
@@ -184,9 +221,9 @@ public class DenodoODataFilter implements Filter {
                     }
                     
                 // Retrieve SPNEGO credentials
-                } else if (StringUtils.startsWithIgnoreCase(authorizationHeader, NEGOTIATE)) {
+                } else if (!this.disabledKerberosAuth && StringUtils.startsWithIgnoreCase(authorizationHeader, NEGOTIATE)) {
                     kerberosClientToken = authorizationHeader.substring(NEGOTIATE.length()).trim();
-                }
+                } 
 
             }
 
@@ -211,6 +248,30 @@ public class DenodoODataFilter implements Filter {
 
             logger.trace("Acquired data source: " + this.authDataSource);
 
+            if (!this.checkedAvailabiltyKerberos && userAuthInfo.getKerberosClientToken() != null && !this.disabledKerberosAuth) {
+                try {
+                    logger.trace("Checking Kerberos in VDP server");
+                    final WebApplicationContext appCtx = WebApplicationContextUtils.getWebApplicationContext(this.servletContext);
+                    DenodoODataAuthDataSource dataSource = appCtx.getBean(DenodoODataAuthDataSource.class);
+                    
+                    dataSource.getConnection();
+                } catch (DenodoODataKerberosDisabledException e) {
+                    logger.trace("Kerberos authentication is not enabled in VDP");
+                    this.disabledKerberosAuth = true;
+                    clearRequestAuthentication();
+                    if (!this.disabledBasicAuth) {
+                        response.setHeader(AUTHORIZATION_CHALLENGE_ATTRIBUTE, BASIC);
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        logger.trace("Basic authentication starts");
+                        return;
+                    }
+                } catch (Exception e) {
+                    logger.error("An exception was raised while obtaining connection in order to check Kerberos availability " + e.getLocalizedMessage());
+                    clearRequestAuthentication();
+                } finally {
+                    this.checkedAvailabiltyKerberos = true;
+                }
+            }
 
             final DenodoODataRequestWrapper wrappedRequest = new DenodoODataRequestWrapper(request, dataBaseName);
             final DenodoODataResponseWrapper wrappedResponse = new DenodoODataResponseWrapper(response, getServiceRoot(request), dataBaseName);

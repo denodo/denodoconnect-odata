@@ -1,3 +1,7 @@
+Current
+-------
+- Fixed #29309 - Strange authentication behaviour
+
 20160902
 --------
 - Fixed #28748 - Exception using a logical condition with null inside parentheses in a $filter expression-

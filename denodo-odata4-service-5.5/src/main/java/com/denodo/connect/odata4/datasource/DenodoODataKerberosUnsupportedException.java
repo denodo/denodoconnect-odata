@@ -32,6 +32,6 @@ public class DenodoODataKerberosUnsupportedException extends RuntimeException {
     @Override
     public String getMessage() {
         return "VDP supports Kerberos authentication from 'VDP 6.0 update 3'. You are probably using a previous VDP version or Kerberos authentication is not enabled in VDP."
-                + " Please fix it or use HTTP Basic authentication instead.";
+                + " Please fix it, revise your Denodo OData Service configuration or use HTTP Basic authentication instead.";
     }
 }

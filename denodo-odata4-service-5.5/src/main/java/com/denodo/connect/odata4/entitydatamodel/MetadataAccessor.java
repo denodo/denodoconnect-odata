@@ -179,7 +179,7 @@ public class MetadataAccessor {
                     if (!columnsRs.wasNull()) {
                         property.setMaxLength(Integer.valueOf(maxLength));
                     }
-                } else if (type == EdmPrimitiveTypeKind.Date || type == EdmPrimitiveTypeKind.DateTimeOffset || type == EdmPrimitiveTypeKind.TimeOfDay) {
+                } else if (type == EdmPrimitiveTypeKind.DateTimeOffset || type == EdmPrimitiveTypeKind.TimeOfDay) {
                     final int precision = columnsRs.getInt("COLUMN_SIZE");
                     if (!columnsRs.wasNull()) {
                         property.setPrecision(Integer.valueOf(precision));

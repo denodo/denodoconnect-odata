@@ -1,6 +1,7 @@
 Current
 -------
 - Fixed #29309 - Strange authentication behaviour
+- Fixed #29553 - OData4 Service is adding "Precision" attribute to metadata for "Date", which is contrary to spec
 
 20160907
 --------

@@ -272,34 +272,54 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
             final List<OEntity> response = getEntities(entityCollection, rels, consumer, condition, projectedFields,
                     inputValues);
-
+            if(logger.isDebugEnabled()){
+                logger.debug("ProjectedFields:  "+ projectedFields.toString());
+            }
             for (final OEntity item : response) {
                 // Build the output object
+
                 final Object[] params = new Object[projectedFields.size()];
                 for (final OProperty<?> p : item.getProperties()) {
-                    final int index = projectedFields.indexOf(new CustomWrapperFieldExpression(p.getName()));
-                    logger.info("==> " + p);
-                    params[index] = ODataEntityUtil.getOutputValue(p);
+                    if(logger.isDebugEnabled()){
+                        logger.debug("Oproperty returned by odata :  "+p.toString());
+                    }
+                    int index = projectedFields.indexOf(new CustomWrapperFieldExpression(p.getName()));
+                    if(index==-1){
+                        if(logger.isDebugEnabled()){
+                            logger.debug("The property "+p.getName()+" is not among the projected fields. It was not added in the output object.");
+                        }
+                    }else{
+                        params[index] = ODataEntityUtil.getOutputValue(p);
+                    }
                 }
 
                 // If expansion, add related entities
                 if (rels.size() > 0) {
                     for (final OLink links : item.getLinks()) {
+                        if(logger.isDebugEnabled()){
+                            logger.debug("Relation returned by odata :  "+links);
+                        }
                         final int index = projectedFields.indexOf(new CustomWrapperFieldExpression(links.getTitle()));
                         // 1 to 1 relantionships
-                        final OEntity realtedEntity = links.getRelatedEntity();
-                        if (realtedEntity != null) {
-                            final EdmEntityType type = ODataEntityUtil.getEdmEntityType(realtedEntity.getEntityType()
-                                    .getName(), entitySets);
-                            params[index] = ODataEntityUtil.getOutputValueForRelatedEntity(realtedEntity, type);
-                        }
+                        if(index==-1){
+                            if(logger.isDebugEnabled()){
+                                logger.debug("The relation "+links.getTitle()+" is not among the projected fields. It was not added in the output object.");
+                            }
+                        }else{
+                            final OEntity realtedEntity = links.getRelatedEntity();
+                            if (realtedEntity != null) {
+                                final EdmEntityType type = ODataEntityUtil.getEdmEntityType(realtedEntity.getEntityType()
+                                        .getName(), entitySets);
+                                params[index] = ODataEntityUtil.getOutputValueForRelatedEntity(realtedEntity, type);
+                            }
 
-                        // 1 to many relationship
-                        final List<OEntity> realtedEntities = links.getRelatedEntities();
-                        if ((realtedEntities != null) && (realtedEntities.size() > 0)) {
-                            final EdmEntityType type = ODataEntityUtil.getEdmEntityType(realtedEntities.get(0)
-                                    .getEntityType().getName(), entitySets);
-                            params[index] = ODataEntityUtil.getOutputValueForRelatedEntityList(realtedEntities, type);
+                            // 1 to many relationship
+                            final List<OEntity> relatedEntities = links.getRelatedEntities();
+                            if ((relatedEntities != null) && (relatedEntities.size() > 0)) {
+                                final EdmEntityType type = ODataEntityUtil.getEdmEntityType(relatedEntities.get(0)
+                                        .getEntityType().getName(), entitySets);
+                                params[index] = ODataEntityUtil.getOutputValueForRelatedEntityList(relatedEntities, type);
+                            }
                         }
                     }
                 }

@@ -1,3 +1,7 @@
+20161222
+========
+#30519 - It could be propertues in the odata response that are not in the projected fields.
+
 20160922
 ========
 #28979 - Update httpclient version and improve tracing log

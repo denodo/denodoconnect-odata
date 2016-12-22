@@ -1,6 +1,6 @@
 20161222
 ========
-#30519 - It could be propertues in the odata response that are not in the projected fields.
+#30519 - Improved reaction at response fields that don't match the projected fields.
 
 20160922
 ========

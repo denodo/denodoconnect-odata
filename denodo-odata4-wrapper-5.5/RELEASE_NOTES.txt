@@ -1,3 +1,7 @@
+20161222
+========
+#30519 - It could be properties in the odata response that are not in the projected fields.
+
 20160825
 ========
 #20168 - Sharepoint integration: limit the number of relationships to expand

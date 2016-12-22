@@ -414,7 +414,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     throw new CustomWrapperException(" This operation is not allowed in the odata server: "+oe);
                 }
                 ClientEntitySetIterator<ClientEntitySet, ClientEntity> iterator = response.getBody();
-    
+                if(logger.isDebugEnabled()){
+                    logger.debug("ProjectedFields:  "+ projectedFields.toString());
+                }
                 while (iterator.hasNext()) {
                   final Object[] params = new Object[projectedFields.size()];
                     ClientEntity product = iterator.next();
@@ -427,10 +429,15 @@ public class ODataWrapper extends AbstractCustomWrapper {
                             //  EdmNavigationProperty has a method containsTarget, but it is not useful in this situation. This property Containstarget -->Gets whether this navigation property is a containment,
                             //default to false
                             final int index = projectedFields.indexOf(new CustomWrapperFieldExpression(property.getName()));
-    
-                            Object value = ODataEntityUtil.getOutputValue(property);
-                            logger.debug("==> " + property.toString()+"||"+value);
-                            params[index] = value;                   
+                            if(index==-1){
+                                if(logger.isDebugEnabled()){
+                                    logger.debug("The property "+property.getName()+" is not among the projected fields. It was not added in the output object.");
+                                }
+                            }else{
+                                Object value = ODataEntityUtil.getOutputValue(property);
+                                logger.debug("==> " + property.toString()+"||"+value);
+                                params[index] = value;    
+                            }
                         }
                     }
                     for (ClientLink clientLink : mediaEditLinks) {
@@ -450,6 +457,12 @@ public class ODataWrapper extends AbstractCustomWrapper {
                             }
                             logger.debug("==> " + clientLink.getName()+"||"+value);
                             params[index] = value;
+                        }else{
+                       
+                                if(logger.isDebugEnabled()){
+                                    logger.debug("The client link "+clientLink.getName()+" is not among the projected fields. It was not added in the output object.");
+                                }
+                          
                         }
                     }
                     if(product.isMediaEntity()){
@@ -465,17 +478,21 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                     
                                     //MediaContentType has to be specified by the service odata. In other case the client will obtain Unsupported Media Type Exception
                                     streamRequest.setFormat(ContentType.parse(product.getMediaContentType()));
-                                  }
-    
+                                }
+
                                 final ODataRetrieveResponse<InputStream> streamResponse = streamRequest.execute();
                                 value = IOUtils.toByteArray(streamResponse.getBody());
                                 params[index] = value;
+                            }else{
+                                logger.debug("The media entity is not among the projected fields. It was not added in the output object.");
                             }
                         }else{
                             final int index = projectedFields.indexOf(new CustomWrapperFieldExpression(ODataEntityUtil.STREAM_LINK_PROPERTY));
                             if (index != -1) {
                                 value =   uri +"/"+ product.getMediaContentSource();
                                 params[index] = value;
+                            }else{
+                                    logger.debug("The media read link is not among the projected fields. It was not added in the output object.");
                             }
                         }
                      
@@ -502,6 +519,10 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                     if (realtedEntities.size() > 0) {
                                         params[index] = ODataEntityUtil.getOutputValueForRelatedEntityList(realtedEntities, client, uri, loadBlobObjects);
                                     }
+                                }
+                            }else{
+                                if(logger.isDebugEnabled()){
+                                    logger.debug("The relation "+link.getName()+" is not among the projected fields. It was not added in the output object.");
                                 }
                             }
                         }

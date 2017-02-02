@@ -190,8 +190,9 @@ public class DenodoODataFilter implements Filter {
                 }
                 
                 // There are not BASIC credentials but BASIC authentication is the option available
-                if (this.checkedAvailabiltyKerberos && !StringUtils.startsWithIgnoreCase(authorizationHeader, BASIC_AUTH_KEYWORD) 
-                        && this.disabledKerberosAuth && !this.disabledBasicAuth) {
+                if ((this.checkedAvailabiltyKerberos && !StringUtils.startsWithIgnoreCase(authorizationHeader, BASIC_AUTH_KEYWORD) 
+                        && this.disabledKerberosAuth && !this.disabledBasicAuth) || 
+                        (authorizationHeader == null && !this.disabledBasicAuth && this.disabledKerberosAuth)) {
                     clearRequestAuthentication();
                     logger.trace("Basic authentication is the authentication mechanism available");
                     response.setHeader(AUTHORIZATION_CHALLENGE_ATTRIBUTE, BASIC);

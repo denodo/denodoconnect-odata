@@ -1,3 +1,7 @@
+20170202
+--------
+- Fixed #31047 - Authentication error when you disable Kerberos authentication
+
 20161102
 --------
 - Fixed #29309 - Strange authentication behaviour

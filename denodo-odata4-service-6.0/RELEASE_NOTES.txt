@@ -1,3 +1,7 @@
+Current
+-------
+- Fixed #31232 - Error adding a key to project in a SELECT_NAVIGATIONAL sentence
+
 20170202
 --------
 - Fixed #31047 - Authentication error when you disable Kerberos authentication

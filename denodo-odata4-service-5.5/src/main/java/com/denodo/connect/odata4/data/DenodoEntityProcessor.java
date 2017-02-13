@@ -151,6 +151,7 @@ public class DenodoEntityProcessor extends DenodoAbstractProcessor implements En
 
             responseEdmEntityType = responseEdmEntitySet.getEntityType();
 
+            keyProperties = responseEdmEntitySet.getEntityType().getKeyPredicateNames();
             // $select
             List<String> selectedItemsAsString = ProcessorUtils.getSelectedItems(uriInfo, keyProperties, responseEdmEntitySet);
             

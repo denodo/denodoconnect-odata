@@ -384,7 +384,12 @@ public class EntityAccessor {
                     List<EdmNavigationProperty> list = DenodoCommonProcessor.getAllNavigationProperties(startEdmEntitySet);
                     for (EdmNavigationProperty navProperty : list) {
                         navigationPropertiesToExpand.append(localNavigationPropertiesToExpand.toString())
-                            .append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(navProperty.getName())).append(", ");
+                        .append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(navProperty.getName()));
+                        if (!expand) { //String for select of the query
+                            navigationPropertiesToExpand.append(" / * ");
+                        }
+                        
+                        navigationPropertiesToExpand.append(", ");
                     }
                     navigationPropertiesToExpand.delete(navigationPropertiesToExpand.length()-2, navigationPropertiesToExpand.length());
                 } else {
@@ -396,11 +401,10 @@ public class EntityAccessor {
                             expandItemList.add(edmNavigationProperty);
                             String navPropertyString = SQLMetadataUtils.getStringSurroundedByFrenchQuotes(edmNavigationProperty.getName());
 
-                            if(expand){//String for expand of the query
+                            if (expand) { //String for expand of the query
                                 navigationPropertiesToExpand.append(localNavigationPropertiesToExpand.toString())
                                 .append(navPropertyString);
-                            }
-                            else{//String for select of the query
+                            } else { //String for select of the query
                                 if(expandItem.getSelectOption()!=null){
                                     boolean firstExpand=true;
                                     for(SelectItem item: expandItem.getSelectOption().getSelectItems()){
@@ -411,11 +415,12 @@ public class EntityAccessor {
                                         firstExpand=false;
                                         navigationPropertiesToExpand.append(localNavigationPropertiesToExpand.toString())
                                         .append(navPropertyString+" / "+item.getResourcePath().getUriResourceParts().get(0).getSegmentValue()+" " );}
-                                }else{
+                                } else {
                                     navigationPropertiesToExpand.append(localNavigationPropertiesToExpand.toString())
                                     .append(navPropertyString+" / * " );
+                                }
                             }
-                            }
+                            
                             if (expandItem.getExpandOption() != null) {
                                 EdmEntitySet entitySet = ProcessorUtils.getNavigationTargetEntitySetByNavigationPropertyNames(startEdmEntitySet, Arrays.asList(edmNavigationProperty.getName()));
                                 expandItemList.add(getNavigationProperties(expandItem.getExpandOption(), entitySet));

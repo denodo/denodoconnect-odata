@@ -1,6 +1,7 @@
 Current
 -------
 - Fixed #31232 - Error adding a key to project in a SELECT_NAVIGATIONAL sentence
+- Fixed #31233 - Error using $expand=*
 
 20161102
 --------

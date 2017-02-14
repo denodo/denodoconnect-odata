@@ -116,8 +116,10 @@ public class DenodoCommonProcessor {
                     for (EdmNavigationProperty navProperty : navProperyList) {
                         EdmEntitySet entitySet = ProcessorUtils.getNavigationTargetEntitySetByNavigationPropertyNames(startEdmEntitySet, Arrays.asList(navProperty.getName()));
                         
+                        EdmEntityType edmEntityTypeTarget = navProperty.getType();
+                        
                         StringBuilder sb = new StringBuilder().append(startEdmEntitySet.getName()).append("-").append(navProperty.getName());
-                        expandData.put(sb.toString(), new ExpandNavigationData(navProperty, expandItem, entitySet));
+                        expandData.put(sb.toString(), new ExpandNavigationData(navProperty, expandItem, entitySet, edmEntityTypeTarget));
                     }
                 } else {
                     UriResource ur = expandItem.getResourcePath().getUriResourceParts().get(0);
@@ -127,8 +129,10 @@ public class DenodoCommonProcessor {
                         if (edmNavigationProperty != null) {
                             EdmEntitySet entitySet = ProcessorUtils.getNavigationTargetEntitySetByNavigationPropertyNames(startEdmEntitySet, Arrays.asList(edmNavigationProperty.getName()));
                             
+                            EdmEntityType edmEntityTypeTarget = edmNavigationProperty.getType();
+                            
                             StringBuilder sb = new StringBuilder().append(startEdmEntitySet.getName()).append("-").append(edmNavigationProperty.getName());
-                            expandData.put(sb.toString(), new ExpandNavigationData(edmNavigationProperty, expandItem, entitySet));
+                            expandData.put(sb.toString(), new ExpandNavigationData(edmNavigationProperty, expandItem, entitySet, edmEntityTypeTarget));
                             
                             if (expandItem.getExpandOption() != null) {
                                 expandData.putAll(getExpandData(expandItem.getExpandOption(), entitySet));
@@ -167,7 +171,7 @@ public class DenodoCommonProcessor {
     
             EntityCollection entityCollection = new EntityCollection();
             
-            EdmEntityType edmEntityTypeTarget = navProperty.getType();
+            EdmEntityType edmEntityTypeTarget = navigationData.getNavPropertyType();
             
             int count = addExpandedData(expandItem, entityCollection, value, edmEntityTypeTarget, newExpandItemNames, entitySet, expandData, baseURI, uriInfo);
     

@@ -139,12 +139,12 @@ public class DenodoEntityCollectionProcessor extends DenodoAbstractProcessor imp
         final Integer preferredPageSize = this.odata.createPreferences(request.getHeaders(HttpHeader.PREFER)).getMaxPageSize();
         final Integer pageSize = getPageSize(preferredPageSize, this.serverPageSize);
 
-        String stringSkipToken = "1"; 
+        String stringSkipToken = String.valueOf(pageSize); 
         Integer startPagination = skip;
         Integer pageElements = pageSize;
         if (skiptoken != null) {
-            stringSkipToken = String.valueOf(Integer.valueOf(skiptoken.getValue()) + 1);
-            startPagination += pageSize * Integer.valueOf(skiptoken.getValue());
+            stringSkipToken = String.valueOf(Integer.valueOf(skiptoken.getValue()).intValue() + pageSize.intValue());
+            startPagination += Integer.valueOf(skiptoken.getValue()).intValue();
         }
         
         int endPagination = startPagination + pageSize;
@@ -279,8 +279,7 @@ public class DenodoEntityCollectionProcessor extends DenodoAbstractProcessor imp
     }
 
     private static Integer getPageSize(Integer preferredPageSize, Integer maxPageSize) {
-        return preferredPageSize == null || preferredPageSize.intValue() >= maxPageSize.intValue() ?
-                maxPageSize : preferredPageSize;
+        return preferredPageSize == null ? maxPageSize : preferredPageSize;
     }
 
     private static Integer getTopValue(final UriInfo uriInfo) {

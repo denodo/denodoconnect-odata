@@ -1,5 +1,5 @@
-Current
--------
+20170307
+--------
 - Fixed #31232 - Error adding a key to project in a SELECT_NAVIGATIONAL sentence
 - Fixed #31233 - Error using $expand=*
 - Fixed #31264 - Avoid queries inside a rowMap method (e.g. DESC COMMANDS)

@@ -23,10 +23,39 @@ package com.denodo.connect.odata.wrapper;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
+import org.core4j.Enumerable;
+import org.odata4j.consumer.ODataClientRequest;
+import org.odata4j.consumer.ODataConsumer;
+import org.odata4j.consumer.ODataConsumer.Builder;
+import org.odata4j.consumer.behaviors.OClientBehavior;
+import org.odata4j.consumer.behaviors.OClientBehaviors;
+import org.odata4j.core.EntitySetInfo;
+import org.odata4j.core.OCreateRequest;
+import org.odata4j.core.ODataVersion;
+import org.odata4j.core.OEntity;
+import org.odata4j.core.OEntityDeleteRequest;
+import org.odata4j.core.OLink;
+import org.odata4j.core.OModifyRequest;
+import org.odata4j.core.OProperties;
+import org.odata4j.core.OProperty;
+import org.odata4j.core.OQueryRequest;
+import org.odata4j.cxf.consumer.ODataCxfConsumer;
+import org.odata4j.edm.EdmEntityContainer;
+import org.odata4j.edm.EdmEntitySet;
+import org.odata4j.edm.EdmEntityType;
+import org.odata4j.edm.EdmNavigationProperty;
+import org.odata4j.edm.EdmProperty;
+import org.odata4j.edm.EdmSchema;
+import org.odata4j.format.FormatType;
 
 import com.denodo.connect.odata.wrapper.util.DataTableColumnType;
 import com.denodo.connect.odata.wrapper.util.ODataEntityUtil;
@@ -42,32 +71,6 @@ import com.denodo.vdb.engine.customwrapper.condition.CustomWrapperCondition;
 import com.denodo.vdb.engine.customwrapper.condition.CustomWrapperConditionHolder;
 import com.denodo.vdb.engine.customwrapper.expression.CustomWrapperFieldExpression;
 import com.denodo.vdb.engine.customwrapper.input.type.CustomWrapperInputParameterTypeFactory;
-import org.apache.commons.lang.StringUtils;
-import org.apache.log4j.Logger;
-import org.core4j.Enumerable;
-import org.odata4j.consumer.ODataClientRequest;
-import org.odata4j.consumer.ODataConsumer;
-import org.odata4j.consumer.ODataConsumer.Builder;
-import org.odata4j.consumer.behaviors.OClientBehavior;
-import org.odata4j.consumer.behaviors.OClientBehaviors;
-import org.odata4j.core.OCreateRequest;
-import org.odata4j.core.ODataVersion;
-import org.odata4j.core.OEntity;
-import org.odata4j.core.OEntityDeleteRequest;
-import org.odata4j.core.OEntityKey;
-import org.odata4j.core.OLink;
-import org.odata4j.core.OModifyRequest;
-import org.odata4j.core.OProperties;
-import org.odata4j.core.OProperty;
-import org.odata4j.core.OQueryRequest;
-import org.odata4j.cxf.consumer.ODataCxfConsumer;
-import org.odata4j.edm.EdmEntityContainer;
-import org.odata4j.edm.EdmEntitySet;
-import org.odata4j.edm.EdmEntityType;
-import org.odata4j.edm.EdmNavigationProperty;
-import org.odata4j.edm.EdmProperty;
-import org.odata4j.edm.EdmSchema;
-import org.odata4j.format.FormatType;
 
 public class ODataWrapper extends AbstractCustomWrapper {
 
@@ -102,6 +105,31 @@ public class ODataWrapper extends AbstractCustomWrapper {
     public final static String NTLM_PASS = "ntlm.pass";
     public final static String NTLM_DOMAIN = "ntlm.domain";
     public final static String TIMEOUT= "http.timeout";
+    
+    /*
+     * A static variable keeps its value between executions but it is shared between all views
+     * of the same data source. This map is used to keep the name of an entity in the metadata
+     * document for a given entity collection name. These two values are usually the same but
+     * they can be different.
+     * 
+     * E.g.
+     * 
+     * Service document:
+     *  <collection href="ic3t-wcy2">
+     *      <atom:title>DOB Job Application Filings</atom:title>
+     *  </collection>
+     *  
+     * Metadata document:
+     * 
+     *  <EntitySet Name="DOB Job Application Filings" EntityType="data.cityofnewyork.us.ic3t-wcy2"/> 
+     *  
+     * The map should be:
+     * 
+     *  Key: "<service_root>/<entity_collection_href>"            Value: "<Collection name in the metadata document>"
+     *  
+     *  Key: "http://data.cityofnewyork.us/OData.svc/ic3t-wcy2"   Value: "DOB Job Application Filings"
+     */
+    private static Map<String, String> entityNameMetadataMap = new ConcurrentHashMap<String, String>();
 
     private static final Logger logger = Logger.getLogger(ODataWrapper.class);
 
@@ -171,6 +199,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
         return configuration;
     }
 
+    @Override
     public CustomWrapperSchemaParameter[] getSchemaParameters(
             final Map<String, String> inputValues) throws CustomWrapperException {
         try {
@@ -183,11 +212,14 @@ public class ODataWrapper extends AbstractCustomWrapper {
             }
 
             final ODataConsumer consumer = getConsumer();
-            final Map<String, EdmEntitySet> entitySets = getEntitySetMap(consumer);
-
-            final String entity = (String) getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION).getValue();
-
-            final EdmEntitySet edmEntity = entitySets.get(entity);
+            addEntityNameMetadata(consumer);
+            final Map<String, EdmEntitySet> entitySets = getEntitySetByName(consumer);
+            
+            String entityNameMetadata = entityNameMetadataMap.get(getEntityNameMetadataKey());
+            final String collectionMetadataName = entityNameMetadata != null ? entityNameMetadata : 
+                (String) getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION).getValue(); 
+            
+            final EdmEntitySet edmEntity = entitySets.get(collectionMetadataName);
 
             if (edmEntity != null) {
                 final List<CustomWrapperSchemaParameter> schemaParams = new ArrayList<CustomWrapperSchemaParameter>();
@@ -233,17 +265,24 @@ public class ODataWrapper extends AbstractCustomWrapper {
         try {
             final String entityCollection = (String) getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION)
                     .getValue();
-
+             
             final ODataConsumer consumer = getConsumer();
+            
+            String entityNameMetadata = entityNameMetadataMap.get(getEntityNameMetadataKey());
+            if (entityNameMetadata == null) {
+                entityNameMetadata = addEntityNameMetadata(consumer);
+            }
+            final String collectionMetadataName = entityNameMetadata != null ? entityNameMetadata : entityCollection; 
 
             logger.info("Selecting entity: " + entityCollection);
+            logger.info("Name of the entity in the metadata document: " + collectionMetadataName);
 
             final List<String> rels = new ArrayList<String>();
             Map<String, EdmEntitySet> entitySets = null;
             if (inputValues.containsKey(INPUT_PARAMETER_EXPAND) &&
                     ((Boolean) getInputParameterValue(INPUT_PARAMETER_EXPAND).getValue()).booleanValue()) {
-                entitySets = getEntitySetMap(consumer);
-                for (final EdmNavigationProperty nav : entitySets.get(entityCollection).getType()
+                entitySets = getEntitySetByName(consumer);
+                for (final EdmNavigationProperty nav : entitySets.get(collectionMetadataName).getType()
                         .getDeclaredNavigationProperties()) {
                     if (projectedFields.contains(new CustomWrapperFieldExpression(nav.getName()))) {
                         rels.add(nav.getName());
@@ -339,13 +378,22 @@ public class ODataWrapper extends AbstractCustomWrapper {
             throws CustomWrapperException {
         final String entityCollection = (String) getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION).getValue();
 
-        logger.info("Inserting entity: " + entityCollection);
+        logger.info("Inserting entity (href): " + entityCollection);
 
         final ODataConsumer consumer = getConsumer();
         if (logger.isDebugEnabled()) {
             ODataConsumer.dump.all(true);
         }
-        final OCreateRequest<OEntity> request = consumer.createEntity(entityCollection);
+        
+        String entityNameMetadata = entityNameMetadataMap.get(getEntityNameMetadataKey());
+        if (entityNameMetadata == null) {
+            entityNameMetadata = addEntityNameMetadata(consumer);
+        }
+        final String collectionMetadataName = entityNameMetadata != null ? entityNameMetadata : entityCollection; 
+        
+        logger.info("Inserting entity (metadata document): " + collectionMetadataName);
+        
+        final OCreateRequest<OEntity> request = consumer.createEntity(collectionMetadataName);
 
         final CustomWrapperSchemaParameter[] schemaParameters = getSchemaParameters(inputValues);
 
@@ -714,8 +762,31 @@ public class ODataWrapper extends AbstractCustomWrapper {
         return builder.build();
     }
 
-    private static Map<String, EdmEntitySet> getEntitySetMap(final ODataConsumer consumer) {
+    
+    private String addEntityNameMetadata(final ODataConsumer consumer) {
+        
+        final String collectionName = (String) getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION).getValue();
+        
+        Iterator<EntitySetInfo> it = consumer.getEntitySets().iterator();
+        while (it.hasNext()) {
+            EntitySetInfo element = it.next();
+            if (collectionName.equals(element.getHref())) {
+                entityNameMetadataMap.put(getEntityNameMetadataKey(), element.getTitle());
+                return element.getTitle();
+            }
+        }
+        
+        return null;
+    }
+    
+    // The key is the name used in the metadata document (<EntityContainer> element) and 
+    // in the service document (<atom:title> element). We have this name in the static 
+    // variable entityNameMetadataMap in order to avoid an extra http request in every 
+    // execution of a view. The href value used to retrieve a collection can be different
+    // from this name.
+    private static  Map<String, EdmEntitySet> getEntitySetByName(final ODataConsumer consumer) {
         final Map<String, EdmEntitySet> entitySets = new HashMap<String, EdmEntitySet>();
+        
         for (final EdmSchema schema : consumer.getMetadata().getSchemas()) {
             for (final EdmEntityContainer ec : schema.getEntityContainers()) {
                 for (final EdmEntitySet es : ec.getEntitySets()) {
@@ -723,6 +794,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 }
             }
         }
+        
         return entitySets;
     }
 
@@ -766,4 +838,21 @@ public class ODataWrapper extends AbstractCustomWrapper {
         logger.info("PROXY DATA->  HTTP_PROXY_HOST: " + proxyHost + ", HTTP_PROXY_HOST: " + proxyPort);
     }
 
+    
+    private String getEntityNameMetadataKey () {
+        final String endPoint = (String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT).getValue();
+        final String collectionName = (String) getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION)
+                .getValue();
+        
+        StringBuilder key = new StringBuilder(); 
+        
+        if(!endPoint.endsWith("/")){
+            key.append("/");
+        }
+        
+        key.append(collectionName);
+        
+        return key.toString();
+    }
+    
 }

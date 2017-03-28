@@ -1,3 +1,7 @@
+Current
+=======
+#31788 - Entity name and url can be different
+
 20161222
 ========
 #30519 - Improved reaction at response fields that don't match the projected fields.

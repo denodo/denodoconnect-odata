@@ -11,17 +11,23 @@ public class BaseViewMetadata {
     Map<String, EdmProperty > properties;
     Map<String, CustomNavigationProperty > navigationProperties;
     
+    // This variable is used to keep the name of an entity in the metadata document for a given 
+    // entity collection name. This last value appears in the url field of the service document. 
+    // These two values are usually the same but they can be different.
+    String entityNameMetadata;
+    
     public BaseViewMetadata() {
     }
     
    
     public BaseViewMetadata(Boolean openType, Boolean streamEntity, Map<String, EdmProperty> properties,
-            Map<String, CustomNavigationProperty> navigationProperties) {
+            Map<String, CustomNavigationProperty> navigationProperties, String entityNameMetadata) {
         super();
         this.openType = openType;
         this.streamEntity = streamEntity;
         this.properties = properties;
         this.navigationProperties = navigationProperties;
+        this.entityNameMetadata = entityNameMetadata;
     }
 
 
@@ -45,16 +51,27 @@ public class BaseViewMetadata {
     }
 
     public Map<String, CustomNavigationProperty> getNavigationProperties() {
-        return navigationProperties;
+        return this.navigationProperties;
     }
 
     public void setNavigationProperties(Map<String, CustomNavigationProperty> navigationProperties) {
         this.navigationProperties = navigationProperties;
     }
+    
+    public String getEntityNameMetadata() {
+        return this.entityNameMetadata;
+    }
+    
+    public void setEntityNameMetadata(String entityNameMetadata) {
+        this.entityNameMetadata = entityNameMetadata;
+    }
+
 
     @Override
     public String toString() {
-        return "BaseViewMetadata [openType=" + openType + ", streamEntity=" + streamEntity + ", properties=" + properties.keySet() + ", navigationproperties="+navigationProperties.keySet()+"]";
+        return "BaseViewMetadata [openType=" + this.openType + ", streamEntity=" + this.streamEntity + ", properties=" + 
+                this.properties.keySet() + ", navigationproperties=" + this.navigationProperties.keySet() +
+                ", entityNameMetadata=" + this.entityNameMetadata + "]";
     }
     
 }

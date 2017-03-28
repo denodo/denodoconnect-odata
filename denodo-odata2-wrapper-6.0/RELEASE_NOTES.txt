@@ -1,6 +1,7 @@
 Current
 =======
 #31779 - Entity name and href can be different
+#31775 - Error updating an entry
 
 20161222
 ========

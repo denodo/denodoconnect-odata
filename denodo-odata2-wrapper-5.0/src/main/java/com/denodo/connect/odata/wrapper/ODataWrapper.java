@@ -404,7 +404,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
                 logger.info("Class: " + insertValues.get(field).getClass());
                 logger.info("Field/Value/Type: " + field.getStringRepresentation() + "/"
-                        + ODataQueryUtils.prepareValueForInsert(insertValues.get(field)) + "/" + type);
+                        + ODataQueryUtils.prepareValueForInsertOrUpdate(insertValues.get(field)) + "/" + type);
                 logger.info("register/array/contains/condition/field/function/simple/subfield: "
                         + field.isRegisterExpression() + "/"
                         + field.isArrayExpression() + "/" + field.isContainsExpression() + "/"
@@ -416,7 +416,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     prop = OProperties.parseSimple(
                             field.getStringRepresentation(),
                             DataTableColumnType.fromJDBCType(type).getEdmSimpleType(),
-                            ODataQueryUtils.prepareValueForInsert(insertValues.get(field)));
+                            ODataQueryUtils.prepareValueForInsertOrUpdate(insertValues.get(field)));
                 } else {
                     prop = ODataQueryUtils.prepareComplexValueForInsert(
                             getSchemaParameterName(field.getStringRepresentation(), schemaParameters),
@@ -453,11 +453,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
             }
 
             final Map<CustomWrapperFieldExpression, Object> conditionsMap = conditions.getConditionMap(true);
-            final List<CustomWrapperFieldExpression> conditionsList = new ArrayList<CustomWrapperFieldExpression>();
-            conditionsList.addAll(conditionsMap.keySet());
 
             final List<OEntity> response = getEntities(entityCollection, new ArrayList<String>(), null, conditions,
-                    conditionsList, inputValues);
+                    new ArrayList<CustomWrapperFieldExpression>(), inputValues);
 
             final ODataConsumer consumer = getConsumer();
             for (final OEntity oEntity : response) {
@@ -481,7 +479,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                             prop = OProperties.parseSimple(
                                     field.getStringRepresentation(),
                                     DataTableColumnType.fromJDBCType(type).getEdmSimpleType(),
-                                    String.valueOf(updateValues.get(field)));
+                                    ODataQueryUtils.prepareValueForInsertOrUpdate(updateValues.get(field)));
                         } else {
                             prop = ODataQueryUtils.prepareComplexValueForInsert(
                                     getSchemaParameterName(field.getStringRepresentation(), schemaParameters),
@@ -569,12 +567,11 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 fields.add(projectedField.getName());
             }
         }
-        final String projectionQuery = StringUtils.join(fields, ",");
+        String projectionQuery = StringUtils.join(fields, ",");
         if (StringUtils.isEmpty(projectionQuery)) {
-            odataQuery += "*";
-        } else {
-            odataQuery += projectionQuery;
-        }
+            projectionQuery = "*";
+        } 
+        odataQuery += projectionQuery;
         request.select(projectionQuery);
 
         // Expand relationships

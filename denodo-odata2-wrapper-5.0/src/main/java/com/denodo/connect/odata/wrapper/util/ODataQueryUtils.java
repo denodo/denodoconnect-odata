@@ -143,7 +143,7 @@ public class ODataQueryUtils {
         return value.toString();
     }
     
-    public static String prepareValueForInsert(Object value) {
+    public static String prepareValueForInsertOrUpdate(Object value) {
         if (value == null){
             return null;
         } else if (value instanceof String) {

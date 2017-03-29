@@ -90,7 +90,9 @@ public class ODataEntityUtil {
                 
         if (property.isCollection()) {
             //array with primitive types
-            if (property.getType().getKind().equals(EdmTypeKind.PRIMITIVE)) {
+            if (property.getType().getKind().equals(EdmTypeKind.PRIMITIVE) || 
+                    property.getType().getKind().equals(EdmTypeKind.ENUM)) { 
+                //ENUM type always is a string
                 CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[]{new CustomWrapperSchemaParameter(property.getName(), 
                         mapODataSimpleType((EdmType) property.getType(), loadBlobObjects), null,  true /* isSearchable */, 
                         CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
@@ -115,7 +117,7 @@ public class ODataEntityUtil {
                 return new CustomWrapperSchemaParameter(property.getName(), Types.ARRAY, complexParams, true /* isSearchable */, 
                         CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                         isNullable /*isNullable*/, false /*isMandatory*/);
-                }
+            }
         }
         if (property.getType().getKind().equals(EdmTypeKind.PRIMITIVE)) {
             return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType((EdmType) property.getType(), loadBlobObjects), null,  true /* isSearchable */, 

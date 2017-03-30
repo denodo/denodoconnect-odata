@@ -1,3 +1,7 @@
+Current
+-------
+- Fixed #29848 - Use Date/Timestamp literals instead of String
+
 20170307
 --------
 - Fixed #31232 - Error adding a key to project in a SELECT_NAVIGATIONAL sentence

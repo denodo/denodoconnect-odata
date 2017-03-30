@@ -333,8 +333,10 @@ public class VQLExpressionVisitor implements ExpressionVisitor<String> {
 
     @Override
     public String visitLiteral(Literal literal) throws ExpressionVisitException, ODataApplicationException {
-        if (literal.getType() instanceof EdmDateTimeOffset || literal.getType() instanceof EdmDate) {
-            return getLiteralSurroundedBySingleQuotes(literal.getText());
+        if (literal.getType() instanceof EdmDateTimeOffset) {
+            return " TIMESTAMP " + getLiteralSurroundedBySingleQuotes(getTimestampAsSQLStandard(literal.getText()));
+        } else if (literal.getType() instanceof EdmDate) {
+            return " DATE " + getLiteralSurroundedBySingleQuotes(literal.getText());
         }
         return literal.getText();
     }
@@ -417,6 +419,18 @@ public class VQLExpressionVisitor implements ExpressionVisitor<String> {
     private static String getLiteralSurroundedBySingleQuotes(final String s) {
         StringBuilder sb = new StringBuilder().append("'").append(s).append("'");
         return sb.toString();
+    }
+    
+    /*
+     * The SQL standard defines the following syntax for specifying timestamp literals:
+     * <timestamp literal> ::= TIMESTAMP 'date value <space> time value'
+     * TIMESTAMP 'yyyy-mm-dd hh:mm:ss[.[nnn]][ <time zone interval> ]'
+     * 
+     * VDP uses the same standard.
+     */
+    private static String getTimestampAsSQLStandard(final String date) {
+        String standardizedDate = date.replace("T", " ");
+        return standardizedDate;
     }
 
     @Override

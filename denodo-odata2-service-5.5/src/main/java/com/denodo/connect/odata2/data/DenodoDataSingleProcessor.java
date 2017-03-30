@@ -58,6 +58,10 @@ import org.apache.olingo.odata2.api.processor.ODataContext;
 import org.apache.olingo.odata2.api.processor.ODataResponse;
 import org.apache.olingo.odata2.api.processor.ODataResponse.ODataResponseBuilder;
 import org.apache.olingo.odata2.api.processor.ODataSingleProcessor;
+import org.apache.olingo.odata2.api.processor.part.EntityComplexPropertyProcessor;
+import org.apache.olingo.odata2.api.processor.part.EntitySetProcessor;
+import org.apache.olingo.odata2.api.processor.part.EntitySimplePropertyProcessor;
+import org.apache.olingo.odata2.api.processor.part.EntitySimplePropertyValueProcessor;
 import org.apache.olingo.odata2.api.uri.ExpandSelectTreeNode;
 import org.apache.olingo.odata2.api.uri.KeyPredicate;
 import org.apache.olingo.odata2.api.uri.NavigationPropertySegment;
@@ -82,6 +86,7 @@ import org.apache.olingo.odata2.api.uri.info.GetEntitySetUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntityUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetServiceDocumentUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetSimplePropertyUriInfo;
+import org.apache.olingo.odata2.core.edm.EdmDateTimeOffset;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.UncategorizedSQLException;
@@ -895,6 +900,9 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                     sb.append(" (");
                     sb.append(processExpressionToComplexRepresentation(((UnaryExpression)operand).getOperand(), view));
                     sb.append(")");
+                } else if (operand.getEdmType() instanceof EdmDateTimeOffset) {
+                    // All our dates are Edm.DateTimeOffset
+                    sb.append(" TIMESTAMP ").append(getTimestampAsSQLStandard(operand.getUriLiteral()));
                 } else {
                     sb.append(operand.getUriLiteral());
                 }
@@ -1056,4 +1064,16 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         }
     }
     
+    /*
+     * The SQL standard defines the following syntax for specifying timestamp literals:
+     * <timestamp literal> ::= TIMESTAMP 'date value <space> time value'
+     * TIMESTAMP 'yyyy-mm-dd hh:mm:ss[.[nnn]][ <time zone interval> ]'
+     * 
+     * VDP uses the same standard.
+     */
+    private static String getTimestampAsSQLStandard(final String date) {
+        String standardizedDate = date.replace("T", " ");
+        standardizedDate = standardizedDate.toUpperCase().replace("DATETIMEOFFSET", "");
+        return standardizedDate;
+    }
 }

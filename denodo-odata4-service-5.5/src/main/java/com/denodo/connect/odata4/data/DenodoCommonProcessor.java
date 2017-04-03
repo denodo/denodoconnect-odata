@@ -21,6 +21,7 @@
  */
 package com.denodo.connect.odata4.data;
 
+import java.net.URI;
 import java.sql.Array;
 import java.sql.SQLException;
 import java.sql.Struct;
@@ -295,7 +296,21 @@ public class DenodoCommonProcessor {
                             }
                         }
                         
-                        newEntity.setId(URIUtils.createIdURI(baseURI, edmEntityTypeTarget, newEntity));
+                        URI entityURI = URIUtils.createIdURI(baseURI, edmEntityTypeTarget, newEntity);
+                        
+                        newEntity.setId(entityURI);
+                        
+                        // @odata.navigationLink and @odata.associationLink
+                        setLinks(newEntity, entitySet);
+                        
+                        // @odata.readLink
+                        Link link = new Link();
+                        link.setHref(entityURI.toString());
+                        link.setRel(Constants.SELF_LINK_REL); 
+                        newEntity.setSelfLink(link);
+                        
+                        // @odata.type
+                        newEntity.setType(edmEntityTypeTarget.getFullQualifiedName().getFullQualifiedNameAsString());
                         
                         // When there is no data to expand VDP returns an array with null values.
                         // This will have to be changed for future releases because this solution is not valid
@@ -444,4 +459,39 @@ public class DenodoCommonProcessor {
         return expandItemNames;
     }
     
+    public static void setLinks(final Entity entity, final EdmEntitySet edmEntitySetActual) {
+        
+        List<EdmNavigationProperty> navigationProperties = DenodoCommonProcessor.getAllNavigationProperties(edmEntitySetActual);
+        
+        for (EdmNavigationProperty navigationProperty : navigationProperties) {
+            String navigationPropertyName = navigationProperty.getName();
+            Link navigationLink = entity.getNavigationLink(navigationPropertyName);
+            Link associationLink = entity.getAssociationLink(navigationPropertyName);
+            
+            if (navigationLink == null) {
+                entity.getNavigationLinks().add(getLink(navigationPropertyName, entity.getId().toASCIIString(), Boolean.FALSE));
+            }
+            
+            if (associationLink == null) {                
+                entity.getAssociationLinks().add(getLink(navigationPropertyName, entity.getId().toASCIIString(), Boolean.TRUE));
+            }
+        }
+    }
+    
+    private static Link getLink(final String navigationPropertyName, final String entityId, final Boolean isAssociation) {
+        Link link = new Link();
+        link.setRel(Constants.NS_NAVIGATION_LINK_REL + navigationPropertyName);
+        link.setTitle(navigationPropertyName);
+
+        StringBuilder sb = new StringBuilder().append(entityId).append("/").append(navigationPropertyName);
+        if (isAssociation != null && isAssociation.booleanValue()) {
+            sb.append("/$ref");
+            link.setType(Constants.ASSOCIATION_LINK_TYPE);
+        } else {
+            link.setType(Constants.ENTITY_SET_NAVIGATION_LINK_TYPE);
+        }
+        link.setHref(sb.toString());
+
+        return link;
+    }
 }

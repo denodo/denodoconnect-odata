@@ -1,6 +1,7 @@
 Current
 -------
 - Fixed #29848 - Use Date/Timestamp literals instead of String
+- Added #29840 - Adding support for the MIME type application/json;odata.metadata=full
 
 20170307
 --------

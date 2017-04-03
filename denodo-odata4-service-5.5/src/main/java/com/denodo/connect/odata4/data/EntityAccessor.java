@@ -21,6 +21,7 @@
  */
 package com.denodo.connect.odata4.data;
 
+import java.net.URI;
 import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -36,8 +37,10 @@ import java.util.Map.Entry;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+import org.apache.olingo.commons.api.Constants;
 import org.apache.olingo.commons.api.data.Entity;
 import org.apache.olingo.commons.api.data.EntityCollection;
+import org.apache.olingo.commons.api.data.Link;
 import org.apache.olingo.commons.api.data.Property;
 import org.apache.olingo.commons.api.data.ValueType;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
@@ -244,9 +247,21 @@ public class EntityAccessor {
                         }
                     }
                 }
+                
+            URI entityURI = URIUtils.createIdURI(baseURI, edmEntityTypeActual, entity);
+            entity.setId(entityURI);
             
+            // @odata.navigationLink and @odata.associationLink
+            DenodoCommonProcessor.setLinks(entity, edmEntitySetActual);
             
-            entity.setId(URIUtils.createIdURI(baseURI, edmEntityTypeActual, entity));
+            // @odata.readLink
+            Link link = new Link();
+            link.setHref(entityURI.toString());
+            link.setRel(Constants.SELF_LINK_REL); 
+            entity.setSelfLink(link);
+            
+            // @odata.type
+            entity.setType(edmEntityTypeActual.getFullQualifiedName().getFullQualifiedNameAsString());
             
             return entity;
         }

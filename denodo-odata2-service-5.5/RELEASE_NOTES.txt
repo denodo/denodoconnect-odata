@@ -1,6 +1,7 @@
 Current
 -------
 - Fixed #28998 - Use Date/Timestamp literals instead of String
+- Added #31696 - Review semantics of $top and $skip and how they are used for pagination
 
 20160902
 --------

@@ -2,6 +2,7 @@ Current
 -------
 - Fixed #29848 - Use Date/Timestamp literals instead of String
 - Added #29840 - Adding support for the MIME type application/json;odata.metadata=full
+- Added #31695 - Review semantics of $top and $skip and how they are used for pagination
 
 20170307
 --------

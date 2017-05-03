@@ -41,6 +41,7 @@ import org.apache.olingo.client.api.communication.request.cud.ODataEntityCreateR
 import org.apache.olingo.client.api.communication.request.cud.ODataEntityUpdateRequest;
 import org.apache.olingo.client.api.communication.request.cud.UpdateType;
 import org.apache.olingo.client.api.communication.request.retrieve.EdmMetadataRequest;
+import org.apache.olingo.client.api.communication.request.retrieve.ODataEntityRequest;
 import org.apache.olingo.client.api.communication.request.retrieve.ODataMediaRequest;
 import org.apache.olingo.client.api.communication.request.retrieve.ODataRetrieveRequest;
 import org.apache.olingo.client.api.communication.request.retrieve.ODataServiceDocumentRequest;
@@ -73,7 +74,7 @@ import org.apache.olingo.commons.api.edm.EdmStructuredType;
 import org.apache.olingo.commons.api.edm.EdmType;
 import org.apache.olingo.commons.api.format.ContentType;
 
-import com.denodo.connect.odata.wrapper.http.BasicAuthHttpTimeoutClientFactory;
+import com.denodo.connect.odata.wrapper.http.BasicAuthHttpPreemptiveTimeoutClientFactory;
 import com.denodo.connect.odata.wrapper.http.HttpTimeoutClientFactory;
 import com.denodo.connect.odata.wrapper.http.NTLMAuthHttpTimeoutClientFactory;
 import com.denodo.connect.odata.wrapper.http.ProxyWrappingHttpTimeoutClientFactory;
@@ -1083,11 +1084,11 @@ public class ODataWrapper extends AbstractCustomWrapper {
             }else{
                 if (getInputParameterValue(INPUT_PARAMETER_TIMEOUT) != null) {
                     client.getConfiguration().
-                    setHttpClientFactory( new BasicAuthHttpTimeoutClientFactory(user, password,(Integer) getInputParameterValue(INPUT_PARAMETER_TIMEOUT).getValue()));
+                    setHttpClientFactory( new BasicAuthHttpPreemptiveTimeoutClientFactory(user, password,(Integer) getInputParameterValue(INPUT_PARAMETER_TIMEOUT).getValue()));
                 }else{
 
                     client.getConfiguration().
-                    setHttpClientFactory( new BasicAuthHttpClientFactory(user, password));
+                    setHttpClientFactory( new BasicAuthHttpPreemptiveTimeoutClientFactory(user, password,null));
                 }
             }
           

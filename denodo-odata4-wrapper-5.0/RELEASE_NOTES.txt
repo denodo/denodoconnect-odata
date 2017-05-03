@@ -1,3 +1,7 @@
+20170503
+========
+#31630 - Connection against the Odata 4 service does not work
+
 20170404
 ========
 #31788 - Entity name and url can be different

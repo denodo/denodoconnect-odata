@@ -1,3 +1,7 @@
+20170516
+--------
+-   Added #32416 - Create scripts to manage the Odata2 service as Windows service.
+-   Fixed#32392 - Password issue in OData
 20170404
 --------
 - Fixed #28998 - Use Date/Timestamp literals instead of String

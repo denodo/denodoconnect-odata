@@ -338,8 +338,11 @@ public class DenodoODataFilter implements Filter {
     private static final String[] retrieveCredentials(final String authHeader) throws UnsupportedEncodingException {
         final String credentialsString = authHeader.substring(BASIC_AUTH_KEYWORD.length());
         final String decoded = new String(Base64.decodeBase64(credentialsString), CHARACTER_ENCODING);
-        final String[] credentials = StringUtils.split(decoded, ':');
-        return (credentials.length == 2) ? credentials : null;
+       
+        String[] credentials =new String[2];
+        credentials[0]= decoded.substring(0, decoded.indexOf(':'));
+        credentials[1]= decoded.substring(decoded.indexOf(':') + 1);
+        return credentials;
     }
 
 

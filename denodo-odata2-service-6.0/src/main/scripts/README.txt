@@ -1,4 +1,9 @@
-Steps for configuring Denodo Odata Service inside Denodo internal web container:
+Steps for configuring Denodo Odata Service inside Denodo internal web container, there are two options, with the option A , you can execute manually the scripts.
+And with the option B, you can run the start and the stop of the application as a Service in Windows NT/2000/2003/XP/Vista.
+
+
+OPTION A
+=========
 
 (1) Copy the denodo-odata2-service-6.0.war into the following location: 
      <DENODOHOME>/resources/apache-tomcat/webapps/
@@ -8,16 +13,36 @@ Steps for configuring Denodo Odata Service inside Denodo internal web container:
 (3) Copy the denodo-odata2-service-6.0.xml file into the following location:
      <DENODOHOME>/resources/apache-tomcat/conf/DenodoPlatform-6.0/localhost
      
-(4) Create launch scripts for the Denodo Odata Service.  You can use the attached templates. 
+(4) Create launch scripts for the Denodo Odata Service(odata2_service_startup and odata2_service_shutdown). You can use the attached templates.
      Make sure to modify the DENODO_HOME variable in the script templates to point to your Denodo installation.
 
 (5) Copy the launch scripts into <DENODOHOME>/bin
 
 (6) Check that in <DENODOHOME>/resources/apache-tomcat/conf/catalina.properties in the property common.loader there is a reference to the vdp-jdbcdriver. In 
-tomcat 5.5 the reference could be in the property shared.loader. If there isn´t this reference, you should add ${catalina.base}/../../tools/client-drivers/jdbc/denodo-vdp-jdbcdriver.jar
+tomcat 6.0 the reference could be in the property shared.loader. If there isn´t this reference, you should add ${catalina.base}/../../lib/vdp-jdbcdriver-core/denodo-vdp-jdbcdriver.jar
 
 
-After copying all the necessary files into the correct directories, run the odata_service_startup.bat (or odata_service_startup-sh)  launch script. 
+After copying all the necessary files into the correct directories, run the odata2_service_startup.bat (or odata2_service_startup-sh)  launch script. 
 Then navigate to http://localhost:9090/denodo-odata2-service-6.0/denodo-odata.svc/<DBNAME>.  
 
-You can stop the service executing odata_service_shutdown and restarting executing again the script odata-service-startup 
+You can stop the service executing odata2_service_shutdown and restarting executing again the script odata2-service-startup
+
+OPTION B
+========
+This option is only for Windows Systems.
+
+(1-3) Same as in the option A
+
+(4)   Create service script for the Denodo Odata Service(odata2_service_service). You can use the attached template.
+      Make sure to modify the DENODO_HOME variable in the script templates to point to your Denodo installation.
+
+(5)   Create the file service.conf and copy in the folder <DENODO_HOME>/conf/denodo_odata2-service-service/, you can use the attached template.
+Make sure to modify the DENODO_HOME variable in the script templates to point to your Denodo installation. 
+
+(6)   Install as a Windows service. Execute "odata2-service-service.bat install"
+
+(7)   You can manage the installed service from the application of Windows: Services. 
+
+
+
+

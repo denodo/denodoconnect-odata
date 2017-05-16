@@ -26,7 +26,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.denodo.connect.odata4</groupId>
-  <artifactId>denodo-odata4-service-6.0</artifactId>
+  <artifactId>denodo-odata4-service-5.5</artifactId>
   <name>${project.artifactId}</name>
   <version>20170516</version>
 

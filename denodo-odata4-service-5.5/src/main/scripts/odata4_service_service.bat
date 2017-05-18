@@ -50,7 +50,7 @@ goto :end
 goto :end
 
 :doInstall
-"%JAVA_BIN%" -DverboseMode=false -classpath "%LIB%\denodo-commons-launcher-util.jar" com.denodo.util.launcher.Launcher com.denodo.util.services.WindowsServiceChecker --lib "%LIB%\contrib" --arg "%JAVA_BIN%" --arg "%LIB%/service-wrapper/wrapper.jar" --arg "%DENODO_HOME%/conf/denodo-odata4-service-service/service.conf" --arg "%DENODO_HOME%/conf/denodo-odata4-service-service/service.conf" 
+"%JAVA_BIN%" -DverboseMode=false -classpath "%LIB%\denodo-launcher-util.jar" com.denodo.util.launcher.Launcher com.denodo.util.services.WindowsServiceChecker --lib "%LIB%\contrib" --arg "%JAVA_BIN%" --arg "%LIB%/service-wrapper/wrapper.jar" --arg "%DENODO_HOME%/conf/denodo-odata4-service-service/service.conf" --arg "%DENODO_HOME%/conf/denodo-odata4-service-service/service.conf" 
 "%JAVA_BIN%" -jar "%DENODO_HOME%/lib/service-wrapper/wrapper.jar" -i "%DENODO_HOME%/conf/denodo-odata4-service-service/service.conf"
 goto :end
 

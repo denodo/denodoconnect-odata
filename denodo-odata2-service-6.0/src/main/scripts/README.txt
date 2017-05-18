@@ -12,14 +12,15 @@ OPTION A
 
 (3) Copy the denodo-odata2-service-6.0.xml file into the following location:
      <DENODO_HOME>/resources/apache-tomcat/conf/DenodoPlatform-6.0/localhost
+
+(4) Check that in <DENODO_HOME>/resources/apache-tomcat/conf/catalina.properties in the property common.loader there is a reference to the vdp-jdbcdriver. In 
+tomcat 6.0 the reference could be in the property shared.loader. If there isn´t this reference, you should add ${catalina.base}/../../lib/vdp-jdbcdriver-core/denodo-vdp-jdbcdriver.jar
      
-(4) Create launch scripts for the Denodo Odata Service(odata2_service_startup and odata2_service_shutdown). You can use the attached templates.
+(5) Create launch scripts for the Denodo Odata Service(odata2_service_startup and odata2_service_shutdown). You can use the attached templates.
      Make sure to modify the DENODO_HOME variable in the script templates to point to your Denodo installation.
 
-(5) Copy the launch scripts into <DENODO_HOME>/bin
+(6) Copy the launch scripts into <DENODO_HOME>/bin
 
-(6) Check that in <DENODO_HOME>/resources/apache-tomcat/conf/catalina.properties in the property common.loader there is a reference to the vdp-jdbcdriver. In 
-tomcat 6.0 the reference could be in the property shared.loader. If there isn´t this reference, you should add ${catalina.base}/../../lib/vdp-jdbcdriver-core/denodo-vdp-jdbcdriver.jar
 
 
 After copying all the necessary files into the correct directories, run the odata2_service_startup.bat (or odata2_service_startup-sh)  launch script. 
@@ -31,17 +32,17 @@ OPTION B
 ========
 This option is only for Windows Systems.
 
-(1-3) Same as in the option A
+(1-4) Same as in the option A
 
-(4)   Create service script for the Denodo Odata Service(odata2_service_service). You can use the attached template.
+(5)   Create service script for the Denodo Odata Service(odata2_service_service). You can use the attached template.
       Make sure to modify the DENODO_HOME variable in the script templates to point to your Denodo installation.
 
-(5)   Create the file service.conf and copy in the folder <DENODO_HOME>/conf/denodo_odata2-service-service/, you can use the attached template.
+(6)   Create the file service.conf and copy in the folder <DENODO_HOME>/conf/denodo_odata2-service-service/, you can use the attached template.
 Make sure to modify the <DENODO_HOME> variable in the script templates to point to your Denodo installation. 
 
-(6)   Install as a Windows service. Execute "odata2-service-service.bat install"
+(7)   Install as a Windows service. Execute "odata2-service-service.bat install"
 
-(7)   You can manage the installed service from the application of Windows: Services. 
+(8)   You can manage the installed service from the application of Windows: Services. 
 
 
 

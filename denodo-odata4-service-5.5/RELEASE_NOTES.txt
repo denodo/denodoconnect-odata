@@ -1,5 +1,5 @@
-Current
--------
+20170620
+--------
 -Fixed #32942 - The odata.serviceRoot property does not affect "@odata.context" for the Service Document
 
 20170518

@@ -46,6 +46,7 @@ import com.denodo.connect.odata4.data.DenodoComplexProcessor;
 import com.denodo.connect.odata4.data.DenodoEntityCollectionProcessor;
 import com.denodo.connect.odata4.data.DenodoEntityProcessor;
 import com.denodo.connect.odata4.data.DenodoPrimitiveProcessor;
+import com.denodo.connect.odata4.data.DenodoServiceDocumentProcessor;
 import com.denodo.connect.odata4.data.EntityAccessor;
 import com.denodo.connect.odata4.entitydatamodel.DenodoEdmProvider;
 
@@ -68,6 +69,8 @@ public class DenodoServlet extends HttpServlet {
     /*
      * DATA PROCESSOR, in charge of retrieving data, querying, etc.
      */
+    @Autowired
+    private DenodoServiceDocumentProcessor denodoServiceDocumentProcessor;
     @Autowired
     private DenodoEntityCollectionProcessor denodoEntityCollectionProcessor;
     @Autowired
@@ -102,6 +105,7 @@ public class DenodoServlet extends HttpServlet {
                 handler.setSplit(1);
             }
             
+            handler.register(this.denodoServiceDocumentProcessor);
             handler.register(this.denodoEntityCollectionProcessor);
             handler.register(this.denodoEntityProcessor);
             handler.register(this.denodoPrimitiveProcessor);

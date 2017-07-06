@@ -1,3 +1,9 @@
+20170706
+========
+#33141 - entity sets not being correctly identified at EdmDataServices.findEdmEntitySet(...) when the
+         entity set's HREF does not correspond to the entity set name.
+#33142 - odata4j wrongly building request URL for pages 2 and further.
+
 20170404
 ========
 #31779 - Entity name and href can be different

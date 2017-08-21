@@ -57,6 +57,10 @@
     <prop key="disabledkerberosauth">${disable.kerberosAuthentication}</prop>
     <prop key="disabledbasicauth">${disable.basicAuthentication}</prop>
   </util:properties>
+  
+  <util:properties id="debugconfig">
+    <prop key="debugenabled">${debug.enabled}</prop>
+  </util:properties>  
 
 
   <!-- ******************************************************************* -->

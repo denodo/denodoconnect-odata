@@ -1,3 +1,7 @@
+20170821
+--------
+- Added #33444 - Debug support
+
 20170620
 --------
 -Fixed #32942 - The odata.serviceRoot property does not affect "@odata.context" for the Service Document

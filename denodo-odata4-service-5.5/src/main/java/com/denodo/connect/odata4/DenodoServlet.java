@@ -35,6 +35,7 @@ import org.apache.olingo.commons.api.edmx.EdmxReference;
 import org.apache.olingo.server.api.OData;
 import org.apache.olingo.server.api.ODataHttpHandler;
 import org.apache.olingo.server.api.ServiceMetadata;
+import org.apache.olingo.server.api.debug.DefaultDebugSupport;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
@@ -66,6 +67,9 @@ public class DenodoServlet extends HttpServlet {
     @Value("${odataserver.address:}")
     private String odataserverAddress;
     
+    @Value("${debug.enabled}")
+    private boolean debugEnabled;
+    
     /*
      * DATA PROCESSOR, in charge of retrieving data, querying, etc.
      */
@@ -81,12 +85,13 @@ public class DenodoServlet extends HttpServlet {
     private DenodoComplexProcessor denodoComplexProcessor;
     @Autowired
     private DenodoComplexCollectionProcessor denodoComplexCollectionProcessor;
+    
 
     
     @Override
-    public void init(ServletConfig config) throws ServletException {        
+    public void init(final ServletConfig config) throws ServletException {        
         super.init(config);
-        WebApplicationContext springContext = WebApplicationContextUtils.getRequiredWebApplicationContext(config.getServletContext());
+        final WebApplicationContext springContext = WebApplicationContextUtils.getRequiredWebApplicationContext(config.getServletContext());
         final AutowireCapableBeanFactory beanFactory = springContext.getAutowireCapableBeanFactory();
         beanFactory.autowireBean(this);
     }
@@ -96,9 +101,9 @@ public class DenodoServlet extends HttpServlet {
     protected void service(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         try {
 
-            OData odata = OData.newInstance();
-            ServiceMetadata edm = odata.createServiceMetadata(this.denodoEdmProvider, new ArrayList<EdmxReference>());
-            ODataHttpHandler handler = odata.createHandler(edm);
+            final OData odata = OData.newInstance();
+            final ServiceMetadata edm = odata.createServiceMetadata(this.denodoEdmProvider, new ArrayList<EdmxReference>());
+            final ODataHttpHandler handler = odata.createHandler(edm);
             
             // If we have a Service Name we want to consider it as part of the Service Root URI
             if (this.odataserverAddress.trim().length() != 0) {
@@ -111,8 +116,13 @@ public class DenodoServlet extends HttpServlet {
             handler.register(this.denodoPrimitiveProcessor);
             handler.register(this.denodoComplexProcessor);
             handler.register(this.denodoComplexCollectionProcessor);
+            
+            if (this.debugEnabled) {
+                handler.register(new DefaultDebugSupport());
+            }
+            
             handler.process(req, resp);
-        } catch (RuntimeException e) {
+        } catch (final RuntimeException e) {
             logger.error("Server Error", e);
             resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Server Error: The full stack trace of the root cause is available in the log file.");
         }

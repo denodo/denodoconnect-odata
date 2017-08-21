@@ -112,7 +112,7 @@ public class DenodoODataFilter implements Filter {
                     this.serverAddress = StringUtils.appendIfMissing(this.serverAddress, "/");
 
                     final Properties authconfig = (Properties) appCtx.getBean("authconfig");
-                    String allowAdminUserAsString = authconfig.getProperty("allowadminuser");
+                    final String allowAdminUserAsString = authconfig.getProperty("allowadminuser");
                     if (allowAdminUserAsString == null || allowAdminUserAsString.trim().length() == 0) {
                         throw new ServletException("Denodo OData service user not properly configured: check the 'enable.adminUser' property at the configuration file");
                     }
@@ -158,16 +158,16 @@ public class DenodoODataFilter implements Filter {
                 // Check request header contains BASIC AUTH segment
                 final String authorizationHeader = request.getHeader(AUTH_KEYWORD);
                 if (authorizationHeader == null || !StringUtils.startsWithIgnoreCase(authorizationHeader, BASIC_AUTH_KEYWORD)) {
-                    String reason = "HTTP request does not contain AUTH segment";
+                    final String reason = "HTTP request does not contain AUTH segment";
                     logger.trace(reason);
                     showLogin(response, reason);
                     return;
                 }
 
                 // Retrieve credentials
-                String[] credentials = retrieveCredentials(authorizationHeader);
+                final String[] credentials = retrieveCredentials(authorizationHeader);
                 if (credentials == null) {
-                    String reason = "Invalid credentials";
+                    final String reason = "Invalid credentials";
                     logger.trace(reason);
                     showLogin(response, reason);
                     return;
@@ -175,7 +175,7 @@ public class DenodoODataFilter implements Filter {
 
                 // Disable access to the service using 'admin' user if this option is established in the configuration
                 if (!this.allowAdminUser && adminUser.equals(credentials[0])) {
-                    String reason = "Invalid user. The access to the service is not allowed with the 'admin' user.";
+                    final String reason = "Invalid user. The access to the service is not allowed with the 'admin' user.";
                     logger.trace(reason);
                     showLogin(response, reason);
                     return;
@@ -202,7 +202,7 @@ public class DenodoODataFilter implements Filter {
             logger.trace("Acquired data source: " + this.authDataSource);
 
 
-            final DenodoODataRequestWrapper wrappedRequest = new DenodoODataRequestWrapper(request, dataBaseName);
+            final DenodoODataRequestWrapper wrappedRequest = new DenodoODataRequestWrapper(request, dataBaseName, this.serverAddress);
             final DenodoODataResponseWrapper wrappedResponse = new DenodoODataResponseWrapper(response, request, dataBaseName,
                     this.serviceRoot, this.serverAddress);
 
@@ -257,7 +257,7 @@ public class DenodoODataFilter implements Filter {
         final String credentialsString = authHeader.substring(BASIC_AUTH_KEYWORD.length());
         final String decoded = new String(Base64.decodeBase64(credentialsString), CHARACTER_ENCODING);
         
-        String[] credentials =new String[2];
+        final String[] credentials =new String[2];
         credentials[0]= decoded.substring(0, decoded.indexOf(':'));
         credentials[1]= decoded.substring(decoded.indexOf(':') + 1);
         return credentials;

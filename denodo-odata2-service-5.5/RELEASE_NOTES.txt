@@ -1,6 +1,7 @@
 20170821
 --------
-- Add #33446 - Debug support
+- Added #33446 - Debug support
+- Fixed #33458 - HTTP Error 500 when service name contains database name
 
 20170518
 --------

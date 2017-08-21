@@ -30,11 +30,13 @@ import org.apache.commons.lang3.StringUtils;
 public final class DenodoODataRequestWrapper extends HttpServletRequestWrapper {
 
     private final String dataBaseName;
+    private String serviceName;
 
 
-    public DenodoODataRequestWrapper(final HttpServletRequest request, final String dataBaseName) {
+    public DenodoODataRequestWrapper(final HttpServletRequest request, final String dataBaseName, final String serviceName) {
         super(request);
         this.dataBaseName = dataBaseName;
+        this.serviceName = serviceName;
     }
 
 
@@ -71,15 +73,16 @@ public final class DenodoODataRequestWrapper extends HttpServletRequestWrapper {
     
     private String removeDataBaseName(final String url){
         
-
-        int dbPos = url.indexOf(this.dataBaseName);
+        final int servicePos = url.indexOf(this.serviceName);
+        final int serviceEndPos = servicePos + this.serviceName.length();
+        final int dbPos = url.indexOf(this.dataBaseName, serviceEndPos);
         if (dbPos < 0) {
             // no modifications to do... though it is strange that an URL doesn't have the database name for some reason
             return url;
         }
         
-        String serviceRoot = StringUtils.appendIfMissing(url.substring(0, dbPos), "/");
-        String resourcePath = StringUtils.removeStart(url.substring(dbPos + this.dataBaseName.length()), "/");
+        final String serviceRoot = StringUtils.appendIfMissing(url.substring(0, dbPos), "/");
+        final String resourcePath = StringUtils.removeStart(url.substring(dbPos + this.dataBaseName.length()), "/");
         
         return serviceRoot + resourcePath;
 

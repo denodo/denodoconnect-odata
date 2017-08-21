@@ -91,7 +91,7 @@ public final class DenodoODataResponseWrapper extends HttpServletResponseWrapper
     @Override
     public PrintWriter getWriter() throws IOException {
         throw new UnsupportedOperationException(
-                "Cannot invoke \"pring(...)\" methods on wrapped Denodo OData output stream. The underlying OData " +
+                "Cannot invoke \"print(...)\" methods on wrapped Denodo OData output stream. The underlying OData " +
                         "serialization facilities should never be calling this but the non-servlet-specific \"write(...)\" " +
                         "methods instead.");
     }

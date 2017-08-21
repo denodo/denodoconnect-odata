@@ -21,14 +21,17 @@
  */
 package com.denodo.connect.odata2;
 
-import com.denodo.connect.odata2.data.DenodoDataSingleProcessor;
-import com.denodo.connect.odata2.entitydatamodel.DenodoEdmProvider;
-
+import org.apache.olingo.odata2.api.ODataCallback;
 import org.apache.olingo.odata2.api.ODataService;
 import org.apache.olingo.odata2.api.ODataServiceFactory;
 import org.apache.olingo.odata2.api.exception.ODataException;
 import org.apache.olingo.odata2.api.processor.ODataContext;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+
+import com.denodo.connect.odata2.data.DenodoDataSingleProcessor;
+import com.denodo.connect.odata2.debug.DenodoDebugCallback;
+import com.denodo.connect.odata2.entitydatamodel.DenodoEdmProvider;
 
 public class DenodoODataServiceFactory extends ODataServiceFactory {
 
@@ -45,10 +48,25 @@ public class DenodoODataServiceFactory extends ODataServiceFactory {
 	private DenodoDataSingleProcessor denodoDataSingleProcessor;
 
 
+    @Value("${debug.enabled}")
+    private boolean debugEnabled;
 
     @Override
     public ODataService createService(final ODataContext ctx) throws ODataException {
         return createODataSingleProcessorService(this.denodoEdmProvider, this.denodoDataSingleProcessor);
     }
 
+    @Override
+    public <T extends ODataCallback> T getCallback(final Class<T> callbackInterface) {
+        
+        T callback = null;
+
+        if (callbackInterface.isAssignableFrom(DenodoDebugCallback.class)) {
+          callback = (T) new DenodoDebugCallback(this.debugEnabled);
+        } else {
+          callback = super.getCallback(callbackInterface);
+        }
+
+        return callback;
+      }
 }

@@ -1,3 +1,7 @@
+20170821
+--------
+- Add #33446 - Debug support
+
 20170518
 --------
 -   Added #32416 - Create scripts to manage the Odata2 service as Windows service.

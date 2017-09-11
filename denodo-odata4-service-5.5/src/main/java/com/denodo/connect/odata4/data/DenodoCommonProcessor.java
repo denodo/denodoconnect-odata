@@ -410,7 +410,25 @@ public class DenodoCommonProcessor {
                     ValueType valueType = ValueType.PRIMITIVE;
                     
                     Object value = structValues[i];
-                    if (value instanceof Struct) {
+                    
+                    if (value instanceof Array) {
+                        final Object[] arrayElements = (Object[]) ((Array) value).getArray();
+                        
+                        List<Object> arrayValues = new ArrayList<Object>();
+
+                        for (final Object arrayElement : arrayElements) {
+                            // Elements of arrays are Structs in VDP
+                            if (arrayElement instanceof Struct) {
+                                Object[] structValuesInArray = ((Struct) arrayElement).getAttributes();
+
+                                arrayValues.add(getStructAsComplexValue(edmStructuralType.getProperty(propertyNames.get(i)), propertyNames.get(i), structValuesInArray));
+                            }
+                        }
+
+                        value = arrayValues;
+                        
+                        valueType = ValueType.COLLECTION_COMPLEX;
+                    } else if (value instanceof Struct) {
                         Object[] newStructValues = ((Struct) value).getAttributes();
                         value = getStructAsComplexValue(edmStructuralType.getProperty(propertyNames.get(i)), propertyNames.get(i), newStructValues);
                         

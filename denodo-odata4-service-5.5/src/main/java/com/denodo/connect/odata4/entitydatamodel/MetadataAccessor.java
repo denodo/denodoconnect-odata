@@ -788,6 +788,11 @@ public class MetadataAccessor {
                     
                 // If type is null it means that it is a complex type, array or struct.
                 if (type == null) {
+                    if (SQLMetadataUtils.isArrayType(typeCode)) {
+                        // Arrays are collections and we have to mark this fact in the property 
+                        property.setCollection(true);
+                    }
+                    
                     final String typeName = rs.getString("TYPE");
                     property.setType(new FullQualifiedName(edmFQName.getNamespace(), typeName));
                     if (complexTypeInUse != null) {

@@ -135,7 +135,7 @@ public class OdataOAuth2HttpClientFactory     extends AbstractHttpClientFactory 
     }
 
     protected void refreshToken(final DefaultHttpClient client) throws OAuth2Exception {
-      final List<BasicNameValuePair> data = new ArrayList<>();
+      final List<BasicNameValuePair> data = new ArrayList<BasicNameValuePair>();
       data.add(new BasicNameValuePair("grant_type", "refresh_token"));
       data.add(new BasicNameValuePair("refresh_token", this.refreshToken));
       data.add(new BasicNameValuePair("client_id", this.clientId));

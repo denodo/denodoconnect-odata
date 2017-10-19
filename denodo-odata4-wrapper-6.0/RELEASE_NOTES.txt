@@ -1,3 +1,7 @@
+20171019
+========
+#29881 - OAuth2 support in OData4 wrapper
+
 20170503
 ========
 #31630 - Connection against the Odata 4 service does not work

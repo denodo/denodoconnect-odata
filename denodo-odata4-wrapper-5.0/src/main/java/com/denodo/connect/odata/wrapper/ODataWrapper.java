@@ -41,7 +41,6 @@ import org.apache.olingo.client.api.communication.request.cud.ODataEntityCreateR
 import org.apache.olingo.client.api.communication.request.cud.ODataEntityUpdateRequest;
 import org.apache.olingo.client.api.communication.request.cud.UpdateType;
 import org.apache.olingo.client.api.communication.request.retrieve.EdmMetadataRequest;
-import org.apache.olingo.client.api.communication.request.retrieve.ODataEntityRequest;
 import org.apache.olingo.client.api.communication.request.retrieve.ODataMediaRequest;
 import org.apache.olingo.client.api.communication.request.retrieve.ODataRetrieveRequest;
 import org.apache.olingo.client.api.communication.request.retrieve.ODataServiceDocumentRequest;
@@ -61,7 +60,6 @@ import org.apache.olingo.client.api.domain.ClientValue;
 import org.apache.olingo.client.api.http.HttpClientFactory;
 import org.apache.olingo.client.api.uri.URIBuilder;
 import org.apache.olingo.client.core.ODataClientFactory;
-import org.apache.olingo.client.core.http.BasicAuthHttpClientFactory;
 import org.apache.olingo.client.core.http.NTLMAuthHttpClientFactory;
 import org.apache.olingo.client.core.http.ProxyWrappingHttpClientFactory;
 import org.apache.olingo.commons.api.edm.Edm;
@@ -77,7 +75,9 @@ import org.apache.olingo.commons.api.format.ContentType;
 import com.denodo.connect.odata.wrapper.http.BasicAuthHttpPreemptiveTimeoutClientFactory;
 import com.denodo.connect.odata.wrapper.http.HttpTimeoutClientFactory;
 import com.denodo.connect.odata.wrapper.http.NTLMAuthHttpTimeoutClientFactory;
+import com.denodo.connect.odata.wrapper.http.OdataOAuth2HttpClientFactory;
 import com.denodo.connect.odata.wrapper.http.ProxyWrappingHttpTimeoutClientFactory;
+import com.denodo.connect.odata.wrapper.http.cache.ODataAuthenticationCache;
 import com.denodo.connect.odata.wrapper.util.BaseViewMetadata;
 import com.denodo.connect.odata.wrapper.util.CustomNavigationProperty;
 import com.denodo.connect.odata.wrapper.util.DataTableColumnType;
@@ -112,6 +112,12 @@ public class ODataWrapper extends AbstractCustomWrapper {
     private final static String INPUT_PARAMETER_PROXY_PASSWORD = "Proxy Password";
     private final static String INPUT_PARAMETER_NTLM_DOMAIN = "NTLM Domain";
     private final static String INPUT_PARAMETER_TIMEOUT = "Timeout";
+    private final static String INPUT_PARAMETER_ACCESS_TOKEN = "Access Token";
+    private final static String INPUT_PARAMETER_REFRESH_TOKEN = "Refresh Token";
+    private final static String INPUT_PARAMETER_CLIENT_ID = "Client Id";
+    private final static String INPUT_PARAMETER_CLIENT_SECRET = "Client Secret";
+    private final static String INPUT_PARAMETER_OAUTH2 = "Use OAuth2";
+    private final static String INPUT_PARAMETER_TOKEN_ENDPOINT_URL = "Token Endpoint URL";
 
     public final static String PAGINATION_FETCH = "fetch_size";
     public final static String PAGINATION_OFFSET = "offset_size";
@@ -131,7 +137,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
     public final static String  CONTAINSTARGET= "@odata.context";
     private static final String EDM_STREAM_TYPE = "Edm.Stream";
     private static final String EDM_ENUM = "ENUM";
-
+    
+    ODataAuthenticationCache oDataAuthenticationCache= ODataAuthenticationCache.getInstance();
     
     /*
      * A static variable keeps its value between executions but it is shared between all views
@@ -163,13 +170,13 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     INPUT_PARAMETER_LOAD_MEDIA_LINK_RESOURCES,
                     "If checked, Edm.Stream properties and Stream entities will be loaded as BLOB objects",
                     false, CustomWrapperInputParameterTypeFactory.booleanType(false)),
-            new CustomWrapperInputParameter(INPUT_PARAMETER_NTLM, "If checked, NTLM authentication will be used",
-                            false, CustomWrapperInputParameterTypeFactory.booleanType(false)),
             new CustomWrapperInputParameter(INPUT_PARAMETER_USER, "OData Service User for Basic Authentication", false,
                     CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_PASSWORD,
                     "OData Service Password for Basic Authentication", false,
                     CustomWrapperInputParameterTypeFactory.passwordType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_TIMEOUT, "Timeout for the service(milliseconds)", false,
+                    CustomWrapperInputParameterTypeFactory.integerType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_PROXY_HOST, "HTTP Proxy Host", false,
                     CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_PROXY_PORT, "HTTP Port Proxy", false,
@@ -178,10 +185,22 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_PROXY_PASSWORD, "Proxy Password", false,
                     CustomWrapperInputParameterTypeFactory.passwordType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_NTLM, "If checked, NTLM authentication will be used",
+                    false, CustomWrapperInputParameterTypeFactory.booleanType(false)),
             new CustomWrapperInputParameter(INPUT_PARAMETER_NTLM_DOMAIN, "Domain used for NTLM authentication", false,
                     CustomWrapperInputParameterTypeFactory.stringType()),
-            new CustomWrapperInputParameter(INPUT_PARAMETER_TIMEOUT, "Timeout for the service(milliseconds)", false,
-                    CustomWrapperInputParameterTypeFactory.integerType())
+            new CustomWrapperInputParameter(INPUT_PARAMETER_OAUTH2, "If checked, OAUTH2 authentication will be used",
+                     false, CustomWrapperInputParameterTypeFactory.booleanType(false)),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_ACCESS_TOKEN, "Access token for OAuth2 authentication", false,
+                    CustomWrapperInputParameterTypeFactory.stringType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_REFRESH_TOKEN, "Refresh token for OAuth2 authentication", false,
+                    CustomWrapperInputParameterTypeFactory.stringType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_CLIENT_ID, "Client Id for OAuth2 authentication", false,
+                            CustomWrapperInputParameterTypeFactory.stringType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_CLIENT_SECRET, "Client Secret for OAuth2 authentication", false,
+                                    CustomWrapperInputParameterTypeFactory.stringType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_TOKEN_ENDPOINT_URL, "Token endpoint URL for OAuth2 authentication", false,
+                    CustomWrapperInputParameterTypeFactory.stringType())
     };
 
     @Override
@@ -218,10 +237,27 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 }
             }
 
-            final ODataClient client = getClient();
+            String accessToken = (String) getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN).getValue();
+            if(accessToken!= null && !accessToken.isEmpty()){
+                String oldAccessToken= oDataAuthenticationCache.getOldAccessToken();
+                if(oldAccessToken != null && !oldAccessToken.isEmpty()){
+                    if(oldAccessToken!=accessToken){
+                        oDataAuthenticationCache.saveAccessToken("");
+                        oDataAuthenticationCache.saveOldAccessToken("");
+                        if(logger.isDebugEnabled()){
+                            logger.debug("The authentication cache is deleted because the Access Token have been updated");
+                        }
+                    }
+                }
+            }
+                   
+            final ODataClient client =  getClient();
             String uri = (String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT).getValue();
             Map<String, EdmEntitySet> entitySets = new HashMap<String, EdmEntitySet>();
+            logger.info("Used uri: "+uri);
             EdmMetadataRequest request = client.getRetrieveRequestFactory().getMetadataRequest(uri);
+            logger.info("Request metadata: "+request.getURI().toString());
+     
 
             ODataRetrieveResponse<Edm> response = request.execute();
 
@@ -343,11 +379,11 @@ public class ODataWrapper extends AbstractCustomWrapper {
         try {
             
             Boolean loadBlobObjects = (Boolean) getInputParameterValue(INPUT_PARAMETER_LOAD_MEDIA_LINK_RESOURCES).getValue();
-            
+
             final String entityCollection = (String) getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION)
                     .getValue();          
             logger.debug("Entity Collection : " + entityCollection);
-            final ODataClient client = getClient();
+            final ODataClient client = getClient();           
             String uri = (String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT).getValue();
            
             String[] rels=null;
@@ -995,6 +1031,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
         logger.info("Setting query: " + odataQuery);
         uribuilder = uribuilder.appendEntitySetSegment(entityCollection);
+
         // Adds specific OData URL to the execution trace
         getCustomWrapperPlan().addPlanEntry("OData query", odataQuery);
 
@@ -1058,29 +1095,68 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 client.getConfiguration().
                 setHttpClientFactory(  new NTLMAuthHttpClientFactory(user, password, null, domain));
             }
-            
-        }else{
-            
+
+        }else if (((Boolean) getInputParameterValue(INPUT_PARAMETER_OAUTH2).getValue()).booleanValue()) {
+            //OAUTH2
+            if ((getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN) == null)
+                    && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN).getValue())||
+                    (getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN) == null)
+                    && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN).getValue())
+                    ||
+                    (getInputParameterValue(INPUT_PARAMETER_TOKEN_ENDPOINT_URL) == null)
+                    && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_TOKEN_ENDPOINT_URL).getValue())
+                    ||
+                    (getInputParameterValue(INPUT_PARAMETER_CLIENT_ID) == null)
+                    && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_CLIENT_ID).getValue())
+                    ||
+                    (getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET) == null)
+                    && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET).getValue())) {
+                logger.error("It is necessary the access token, the refresh token, client id, client secret and the Token endpoint URL for Oauth2 authentication.");
+                throw  new CustomWrapperException("It is necessary the access token, the refresh token, client id, client secret and the Token endpoint URL for Oauth2 authentication.");
+            }
+            String accessToken= oDataAuthenticationCache.getAccessToken();
+            if(logger.isDebugEnabled()){
+                logger.debug("Value stored in the cache of Access Token: "+ accessToken);
+            }
+            if(accessToken==null|| accessToken.isEmpty()){
+                accessToken = (String) getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN).getValue();
+                if(logger.isDebugEnabled()){
+                    logger.debug("Access token used from parameters");
+                }
+            }else{
+                if(logger.isDebugEnabled()){
+                    logger.debug("Access token used, it was obtained with refresh token");
+                }
+            }
+            client.getConfiguration().
+            setHttpClientFactory(new OdataOAuth2HttpClientFactory((String) getInputParameterValue(INPUT_PARAMETER_TOKEN_ENDPOINT_URL).getValue(),
+                    accessToken,
+                    (String) getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN).getValue(),
+                    (String) getInputParameterValue(INPUT_PARAMETER_CLIENT_ID).getValue(),
+                    (String) getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET).getValue()));
+            logger.info("Using Oauth2 authentication.");
+        } else{
+
             String user=null;
             String password = "";
             if (!((Boolean) getInputParameterValue(INPUT_PARAMETER_NTLM).getValue()).booleanValue() &&
                     (getInputParameterValue(INPUT_PARAMETER_USER) != null)
                     && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_USER).getValue())) {
                 user = (String) getInputParameterValue(INPUT_PARAMETER_USER).getValue();
-                
+
                 if ((getInputParameterValue(INPUT_PARAMETER_PASSWORD) != null)
                         && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_PASSWORD).getValue())) {
                     password = (String) getInputParameterValue(INPUT_PARAMETER_PASSWORD).getValue();
                 }
-                
+
             }
             if(user==null||user.equals("")){
                 if (getInputParameterValue(INPUT_PARAMETER_TIMEOUT) != null) {
                     client.getConfiguration().
-                            setHttpClientFactory((HttpClientFactory)
-                                    new HttpTimeoutClientFactory((Integer) getInputParameterValue(INPUT_PARAMETER_TIMEOUT).getValue()));
+                    setHttpClientFactory((HttpClientFactory)
+                            new HttpTimeoutClientFactory((Integer) getInputParameterValue(INPUT_PARAMETER_TIMEOUT).getValue()));
                 }
-               
+
             }else{
                 if (getInputParameterValue(INPUT_PARAMETER_TIMEOUT) != null) {
                     client.getConfiguration().
@@ -1091,7 +1167,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     setHttpClientFactory( new BasicAuthHttpPreemptiveTimeoutClientFactory(user, password,null));
                 }
             }
-          
+
         }
         
         
@@ -1399,4 +1475,6 @@ public class ODataWrapper extends AbstractCustomWrapper {
         
         return null;
     }
+    
+
 }

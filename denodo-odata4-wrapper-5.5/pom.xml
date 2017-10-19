@@ -27,7 +27,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.denodo.connect.odata</groupId>
   <artifactId>denodo-odata4-wrapper-5.5</artifactId>
-  <version>20170503</version>
+  <version>20171019</version>
   <packaging>jar</packaging>
   <name>denodo-odata4-wrapper-5.5</name>
 
@@ -245,6 +245,12 @@
        <artifactId>slf4j-log4j12</artifactId>
        <version>1.7.7</version>
     </dependency>
-
+    
+    <!-- This dependency is introduced because in the version 0.9 of aalto-xml has a bug with java 7 -->
+    <dependency>
+      <groupId>com.fasterxml</groupId>
+      <artifactId>aalto-xml</artifactId>
+      <version>1.0.0</version>
+    </dependency>
   </dependencies>
 </project>

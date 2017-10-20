@@ -1,12 +1,6 @@
 package com.denodo.connect.odata.wrapper.http.cache;
 
-import java.util.Calendar;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 import org.apache.log4j.Logger;
-
-import com.denodo.connect.odata.wrapper.http.cache.ODataAuthenticationCache;
 
 public class ODataAuthenticationCache {
     private static final Logger logger = Logger.getLogger(ODataAuthenticationCache.class);

@@ -102,9 +102,12 @@ public class OdataOAuth2HttpClientFactory     extends AbstractHttpClientFactory 
           ODataAuthenticationCache.getInstance().saveOldAccessToken(this.accessToken);
           setAccessToken(this.token.get("access_token").asText());
           if(logger.isDebugEnabled()){
-              logger.debug("Access token obtained with refresh token");
+              logger.debug("Access token was obtained with refresh token");
           }
           ODataAuthenticationCache.getInstance().saveAccessToken(this.accessToken);
+          if(logger.isDebugEnabled()){
+              logger.debug("Access token saved in the cache");
+          }
           setRefreshToken(this.token.get("refresh_token").asText());
          
         } catch (Exception e) {

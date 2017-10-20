@@ -237,19 +237,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 }
             }
 
-            String accessToken = (String) getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN).getValue();
-            if(accessToken!= null && !accessToken.isEmpty()){
-                String oldAccessToken= oDataAuthenticationCache.getOldAccessToken();
-                if(oldAccessToken != null && !oldAccessToken.isEmpty()){
-                    if(oldAccessToken!=accessToken){
-                        oDataAuthenticationCache.saveAccessToken("");
-                        oDataAuthenticationCache.saveOldAccessToken("");
-                        if(logger.isDebugEnabled()){
-                            logger.debug("The authentication cache is deleted because the Access Token have been updated");
-                        }
-                    }
-                }
-            }
+          
                    
             final ODataClient client =  getClient();
             String uri = (String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT).getValue();
@@ -1099,34 +1087,48 @@ public class ODataWrapper extends AbstractCustomWrapper {
         }else if (((Boolean) getInputParameterValue(INPUT_PARAMETER_OAUTH2).getValue()).booleanValue()) {
             //OAUTH2
             if ((getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN) == null)
-                    && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN).getValue())||
+                   || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN).getValue())||
                     (getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN) == null)
-                    && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN).getValue())
+                    || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN).getValue())
                     ||
                     (getInputParameterValue(INPUT_PARAMETER_TOKEN_ENDPOINT_URL) == null)
-                    && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_TOKEN_ENDPOINT_URL).getValue())
+                    ||  StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_TOKEN_ENDPOINT_URL).getValue())
                     ||
                     (getInputParameterValue(INPUT_PARAMETER_CLIENT_ID) == null)
-                    && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_CLIENT_ID).getValue())
+                    || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_CLIENT_ID).getValue())
                     ||
                     (getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET) == null)
-                    && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET).getValue())) {
+                    || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET).getValue())) {
                 logger.error("It is necessary the access token, the refresh token, client id, client secret and the Token endpoint URL for Oauth2 authentication.");
                 throw  new CustomWrapperException("It is necessary the access token, the refresh token, client id, client secret and the Token endpoint URL for Oauth2 authentication.");
             }
-            String accessToken= oDataAuthenticationCache.getAccessToken();
-            if(logger.isDebugEnabled()){
-                logger.debug("Value stored in the cache of Access Token: "+ accessToken);
+            String accessToken = (String) getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN).getValue();
+            if(accessToken!= null && !accessToken.isEmpty()){
+                String oldAccessToken= oDataAuthenticationCache.getOldAccessToken();
+                if(oldAccessToken != null && !oldAccessToken.isEmpty()){
+                    if(oldAccessToken!=accessToken){
+                        //Check if the paramater Acces_token were updated
+                        oDataAuthenticationCache.saveAccessToken("");
+                        oDataAuthenticationCache.saveOldAccessToken("");
+                        if(logger.isDebugEnabled()){
+                            logger.debug("The authentication cache is deleted because the Access Token have been updated");
+                        }
+                    }
+                }
             }
-            if(accessToken==null|| accessToken.isEmpty()){
-                accessToken = (String) getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN).getValue();
+            
+            if(this.oDataAuthenticationCache.getAccessToken()==null|| this.oDataAuthenticationCache.getAccessToken().isEmpty()){                
                 if(logger.isDebugEnabled()){
                     logger.debug("Access token used from parameters");
                 }
             }else{
+                accessToken = this.oDataAuthenticationCache.getAccessToken();
                 if(logger.isDebugEnabled()){
                     logger.debug("Access token used, it was obtained with refresh token");
                 }
+            }
+            if(logger.isDebugEnabled()){
+                logger.debug("Value of Access Token in the client of odata: "+ accessToken);
             }
             client.getConfiguration().
             setHttpClientFactory(new OdataOAuth2HttpClientFactory((String) getInputParameterValue(INPUT_PARAMETER_TOKEN_ENDPOINT_URL).getValue(),

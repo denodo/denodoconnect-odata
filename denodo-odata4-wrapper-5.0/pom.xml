@@ -8,7 +8,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.denodo.connect.odata</groupId>
   <artifactId>denodo-odata4-wrapper-5.0</artifactId>
-  <version>20171019</version>
+  <version>20171030</version>
   <packaging>jar</packaging>
   <name>denodo-odata4-wrapper</name>
 
@@ -210,9 +210,10 @@
     <dependency>
        <groupId>org.apache.olingo</groupId>
        <artifactId>odata-client-core</artifactId>
-       <version>4.3.0</version>
+       <version>4.4.0</version>
        <scope>compile</scope>
     </dependency>
+    
     <dependency>
        <groupId>org.slf4j</groupId>
        <artifactId>slf4j-log4j12</artifactId>

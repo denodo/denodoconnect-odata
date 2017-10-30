@@ -1,6 +1,8 @@
-20171019
+20171030
 ========
 #29881 - OAuth2 support in OData4 wrapper
+#34159 - Add support for optimistic concurrency in odata4
+#34210 - Add support for Custom Query options
 
 20170503
 ========

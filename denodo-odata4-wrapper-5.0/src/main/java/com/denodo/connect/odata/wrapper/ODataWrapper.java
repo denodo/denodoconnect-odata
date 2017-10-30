@@ -22,6 +22,7 @@
 package com.denodo.connect.odata.wrapper;
 
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.Types;
@@ -118,7 +119,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
     private final static String INPUT_PARAMETER_CLIENT_SECRET = "Client Secret";
     private final static String INPUT_PARAMETER_OAUTH2 = "Use OAuth2";
     private final static String INPUT_PARAMETER_TOKEN_ENDPOINT_URL = "Token Endpoint URL";
-
+    private final static String INPUT_PARAMETER_CUSTOM_QUERY_OPTIONS = "Custom Query Options";
+    
     public final static String PAGINATION_FETCH = "fetch_size";
     public final static String PAGINATION_OFFSET = "offset_size";
     public final static String USE_NTLM_AUTH = "http.ntlm.auth";
@@ -159,6 +161,10 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     true, CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_ENTITY_COLLECTION, "Entity to be used in the base view",
                     true, CustomWrapperInputParameterTypeFactory.stringType()),
+            new CustomWrapperInputParameter(
+                    INPUT_PARAMETER_CUSTOM_QUERY_OPTIONS,
+                    "Data service-specific information to be placed in the data service URI",                                    
+                    false, CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_EXPAND,
                     "If checked, related entities will be mapped as part of the output schema",
                     false, CustomWrapperInputParameterTypeFactory.booleanType(false)), 
@@ -235,9 +241,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 for (final Entry<String, String> inputParam : inputValues.entrySet()) {
                     logger.debug(String.format("%s : %s", inputParam.getKey(), inputParam.getValue()));
                 }
-            }
-
-          
+            }          
                    
             final ODataClient client =  getClient();
             String uri = (String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT).getValue();
@@ -369,11 +373,14 @@ public class ODataWrapper extends AbstractCustomWrapper {
             Boolean loadBlobObjects = (Boolean) getInputParameterValue(INPUT_PARAMETER_LOAD_MEDIA_LINK_RESOURCES).getValue();
 
             final String entityCollection = (String) getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION)
-                    .getValue();          
+                    .getValue();   
             logger.debug("Entity Collection : " + entityCollection);
             final ODataClient client = getClient();           
             String uri = (String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT).getValue();
-           
+            String customQueryOption= null;
+            if(getInputParameterValue(INPUT_PARAMETER_CUSTOM_QUERY_OPTIONS)!=null){
+                customQueryOption = (String) getInputParameterValue(INPUT_PARAMETER_CUSTOM_QUERY_OPTIONS).getValue();
+            }
             String[] rels=null;
             Map<String, EdmEntitySet> entitySets = new HashMap<String, EdmEntitySet>();
             
@@ -445,7 +452,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
             }
             
             final URI finalURI = getURI(uri, entityCollection, rels, client, condition, projectedFields,
-                    inputValues, SELECT_OPERATION, loadBlobObjects);
+                    inputValues, SELECT_OPERATION, loadBlobObjects, customQueryOption);
             logger.debug("URI query: "+finalURI);
             URI nextLink = finalURI;
             
@@ -463,7 +470,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 }
                 ClientEntitySetIterator<ClientEntitySet, ClientEntity> iterator = response.getBody();
                 if(logger.isDebugEnabled()){
-                    logger.debug("ProjectedFields:  "+ projectedFields.toString());
+                    logger.debug("ProjectedFields: "+ projectedFields.toString());
                 }
                 while (iterator.hasNext()) {
                   final Object[] params = new Object[projectedFields.size()];
@@ -593,6 +600,10 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     throws CustomWrapperException {
         final String entityCollection = (String) getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION).getValue();
         String endPoint = (String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT).getValue();
+        String customQueryOption = null;
+        if(getInputParameterValue(INPUT_PARAMETER_CUSTOM_QUERY_OPTIONS)!=null){
+            customQueryOption = (String) getInputParameterValue(INPUT_PARAMETER_CUSTOM_QUERY_OPTIONS).getValue();
+        }
         logger.info("Inserting entity: " + entityCollection);
         String uriKeyCache=getUriKeyCache(endPoint, entityCollection);
         ODataClient client;
@@ -690,7 +701,20 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 }
             }
 
-
+                                                     
+            if(customQueryOption!=null && !StringUtils.isBlank(customQueryOption)){          
+                String uriString=uri.toString();
+                if(uriString.contains("?")){ 
+                    uriString=uriString.toString().replaceFirst("\\?", "?"+customQueryOption+"&");
+                }else{
+                    uriString=uriString+"?"+customQueryOption;
+                }
+                uri=new URI(uriString);
+            }
+          
+            
+            logger.debug("New object: "+newObject.toString());
+            logger.debug("Insert uri: "+uri.toString());
             final ODataEntityCreateRequest<ClientEntity> request = client.getCUDRequestFactory().getEntityCreateRequest(uri, newObject);
 
             ODataEntityCreateResponse<ClientEntity> res = request.execute();
@@ -719,6 +743,10 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
             logger.info("Updating entity: " + entityCollection);
             String serviceRoot = (String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT).getValue();
+            String customQueryOption= null;
+            if(getInputParameterValue(INPUT_PARAMETER_CUSTOM_QUERY_OPTIONS)!=null){
+                customQueryOption = (String) getInputParameterValue(INPUT_PARAMETER_CUSTOM_QUERY_OPTIONS).getValue();
+            }
             String[] rels=null;
             String uriKeyCache=getUriKeyCache(serviceRoot, entityCollection);
             BaseViewMetadata baseViewMetadata = metadataMap.get(uriKeyCache);
@@ -737,7 +765,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
                 //Searching the entities that match with the conditions of the where(1 query)
                 //TODO check if there is a way to filter and delete in the same query. 
-                URI productsUri = getURI(serviceRoot, entityCollection, rels, client, conditions, null, inputValues, UPDATE_OPERATION, loadBlobObjects);
+                URI productsUri = getURI(serviceRoot, entityCollection, rels, client, conditions, null, inputValues, UPDATE_OPERATION, loadBlobObjects, customQueryOption);
 
                 Map<String, EdmProperty> edmProperties = baseViewMetadata.getProperties();
                 
@@ -754,10 +782,11 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     while (iterator.hasNext()) {
                         //updating every entity in a query
                         ClientEntity product = iterator.next();
-    
+                        
                         ClientEntity newEntity =  client.getObjectFactory().newEntity(product.getTypeName());
-    
+
                         logger.info("Updating entity: " + product.getId().toString());
+                        logger.debug("Type name updated query: "+ product.getTypeName().toString());
     
                         final CustomWrapperSchemaParameter[] schemaParameters = getSchemaParameters(inputValues);
                       
@@ -811,10 +840,29 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                 logger.error("Update of complex types is not supported ");
                                 throw new CustomWrapperException("Update of complex types is not supported");
                             }
+                            URI uri = product.getId();      
                             
+                            if(customQueryOption!=null && !StringUtils.isBlank(customQueryOption)){          
+                                String uriString=uri.toString();
+                                if(uriString.contains("?")){ 
+                                    uriString=uriString.toString().replaceFirst("\\?", "?"+customQueryOption+"&");
+                                }else{
+                                    uriString=uriString+"?"+customQueryOption;
+                                }
+                                uri=new URI(uriString);
+                            }
+                        
+                          
+                            logger.debug("etag:  "+product.getETag());
+                            logger.debug("Product uri:  "+product.getId().toString());
+                            logger.debug("Updated entity: "+newEntity.toString());
                             ODataEntityUpdateRequest<ClientEntity> req = client
-                                    .getCUDRequestFactory().getEntityUpdateRequest(product.getId(),
+                                    .getCUDRequestFactory().getEntityUpdateRequest(uri,
                                             UpdateType.PATCH,newEntity );
+                            logger.debug("Content type request: "+req.getContentType().toString());
+                            if(product.getETag()!=null && !product.getETag().isEmpty() ){
+                                req.addCustomHeader("If-Match", product.getETag());
+                            }
     
                             ODataEntityUpdateResponse<ClientEntity> res = req.execute();
                             if (res.getStatusCode()==204) {
@@ -849,6 +897,10 @@ public class ODataWrapper extends AbstractCustomWrapper {
             logger.info("Deleting entity: " + entityCollection);
 
             String serviceRoot = (String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT).getValue();
+            String customQueryOption= null;
+            if(getInputParameterValue(INPUT_PARAMETER_CUSTOM_QUERY_OPTIONS)!=null){
+                customQueryOption = (String) getInputParameterValue(INPUT_PARAMETER_CUSTOM_QUERY_OPTIONS).getValue();
+            }
             String[] rels=null;
 
             final Map<CustomWrapperFieldExpression, Object> conditionsMap = conditions.getConditionMap(true);
@@ -865,7 +917,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     addMetadataCache(serviceRoot, entityCollection, client, loadBlobObjects);
                     baseViewMetadata = metadataMap.get(uriKeyCache);
                 }
-                URI productsUri = getURI(serviceRoot, entityCollection, rels, client, conditions, null, inputValues, DELETE_OPERATION, loadBlobObjects);
+                URI productsUri = getURI(serviceRoot, entityCollection, rels, client, conditions, null, inputValues, DELETE_OPERATION, loadBlobObjects, customQueryOption);
                 
                 URI nextLink = productsUri;
                 
@@ -880,9 +932,20 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     while (iterator.hasNext()) {
                        //deleting every entity in a query
                         ClientEntity product = iterator.next();
-                        logger.info("Deleting entity: "+product.getId().toString());
+                        URI uri = product.getId();   
+                        if(customQueryOption!=null && !StringUtils.isBlank(customQueryOption)){          
+                            String uriString=uri.toString();
+                            if(uriString.contains("?")){ 
+                                uriString=uriString.toString().replaceFirst("\\?", "?"+customQueryOption+"&");
+                            }else{
+                                uriString=uriString+"?"+customQueryOption;
+                            }
+                            uri=new URI(uriString);
+                        }
+                        logger.info("Deleting entity: "+uri.toString());
+                        logger.debug("etag:  "+product.getETag());
                         ODataDeleteResponse deleteRes = client.getCUDRequestFactory()
-                                .getDeleteRequest(product.getId()).execute();
+                                .getDeleteRequest(uri).execute();
     
                         if (deleteRes.getStatusCode()==204) {
                             deleted++;
@@ -903,7 +966,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
     private URI getURI(String endPoint, final String entityCollection, final String[] rels,
             final ODataClient client,
             final CustomWrapperConditionHolder condition, final List<CustomWrapperFieldExpression> projectedFields,
-            final Map<String, String> inputValues,String operation,  Boolean loadBlobObjects) throws CustomWrapperException {
+            final Map<String, String> inputValues,String operation,  Boolean loadBlobObjects, String customQueryOption) throws CustomWrapperException, URISyntaxException, UnsupportedEncodingException {
        
         //Build the Uri
 
@@ -1018,13 +1081,25 @@ public class ODataWrapper extends AbstractCustomWrapper {
         }
 
         logger.info("Setting query: " + odataQuery);
-        uribuilder = uribuilder.appendEntitySetSegment(entityCollection);
+
+        uribuilder.appendEntitySetSegment(entityCollection);
 
         // Adds specific OData URL to the execution trace
         getCustomWrapperPlan().addPlanEntry("OData query", odataQuery);
+        URI uri= uribuilder.build();
+     
 
-        // Executes the request
-        return uribuilder.build();
+        if(customQueryOption!=null && !StringUtils.isBlank(customQueryOption)){          
+            String uriString=uri.toString();
+            if(uriString.contains("?")){ 
+                uriString=uriString.toString().replaceFirst("\\?", "?"+customQueryOption+"&");
+            }else{
+                uriString=uriString+"?"+customQueryOption;
+            }
+            uri=new URI(uriString);
+        }
+        logger.debug("Base URI: "+uri.toString());
+        return uri;
     }
 
     private static List<String> getProjectedFieldsAsString(List<CustomWrapperFieldExpression> projectedFields) {
@@ -1478,5 +1553,5 @@ public class ODataWrapper extends AbstractCustomWrapper {
         return null;
     }
     
-
+   
 }

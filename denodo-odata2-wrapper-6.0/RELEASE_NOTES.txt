@@ -1,3 +1,7 @@
+20180228
+========
+#36217 - Improve parsing of responses with errors that contain no body.
+
 20170706
 ========
 #33141 - entity sets not being correctly identified at EdmDataServices.findEdmEntitySet(...) when the

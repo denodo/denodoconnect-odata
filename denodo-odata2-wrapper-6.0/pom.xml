@@ -27,7 +27,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.denodo.connect.odata</groupId>
   <artifactId>denodo-odata2-wrapper-6.0</artifactId>
-  <version>20170706</version>
+  <version>20180228</version>
   <packaging>jar</packaging>
   <name>denodo-odata2-wrapper-6.0</name>
 
@@ -248,13 +248,13 @@
     <dependency>
       <groupId>org.odata4j</groupId>
       <artifactId>odata4j-core</artifactId>
-      <version>0.8.0-denodo-20170706</version>
+      <version>0.8.0-denodo-20180228</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.odata4j</groupId>
       <artifactId>odata4j-cxf</artifactId>
-      <version>0.8.0-denodo-20170706</version>
+      <version>0.8.0-denodo-20180228</version>
     </dependency>
 
   </dependencies>

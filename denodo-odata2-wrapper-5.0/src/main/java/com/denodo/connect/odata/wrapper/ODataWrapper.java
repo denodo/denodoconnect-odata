@@ -207,7 +207,14 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 logger.info("Generating schema for custom wrapper " + this.getClass());
                 logger.info("Input parameters:");
                 for (final Entry<String, String> inputParam : inputValues.entrySet()) {
-                    logger.info(String.format("%s : %s", inputParam.getKey(), inputParam.getValue()));
+                    final String inputParamName = inputParam.getKey();
+                    String inputParamValue = inputParam.getValue();
+                    if (INPUT_PARAMETER_PASSWORD.equalsIgnoreCase(inputParamName) ||
+                            INPUT_PARAMETER_PROXY_PASSWORD.equalsIgnoreCase(inputParamName)) {
+                        // Configured passwords need to be hidden from log
+                        inputParamValue = "**** (hidden)";
+                    }
+                    logger.info(String.format("%s : %s", inputParamName, inputParamValue));
                 }
             }
 

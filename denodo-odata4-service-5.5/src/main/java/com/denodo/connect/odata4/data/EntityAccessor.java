@@ -99,7 +99,7 @@ public class EntityAccessor {
 
     public Entity getEntity(final EdmEntitySet edmEntitySet, final Map<String, String> keys, final List<String> selectedItems,
             final List<EdmProperty> propertyPath, final String baseURI, final UriInfo uriInfo, final ExpandOption expandOption) throws ODataApplicationException {
-        EntityCollection entities = getEntityData(edmEntitySet, keys, null, null, uriInfo, selectedItems, null, propertyPath, null, baseURI, expandOption);
+        final EntityCollection entities = getEntityData(edmEntitySet, keys, null, null, uriInfo, selectedItems, null, propertyPath, null, baseURI, expandOption);
         if (entities != null && !entities.getEntities().isEmpty()) {
             return entities.getEntities().get(0);
         }
@@ -110,7 +110,7 @@ public class EntityAccessor {
             final List<String> selectedItems, final List<EdmProperty> propertyPath,
             final List<UriResourceNavigation> uriResourceNavigationList, final EdmEntitySet edmEntitySetTarget, final String baseURI,
             final UriInfo uriInfo, final ExpandOption expandOption) throws ODataApplicationException {
-        EntityCollection entities = getEntityData(edmEntitySet, keyParams, null, null, uriInfo, selectedItems, edmEntitySetTarget,
+        final EntityCollection entities = getEntityData(edmEntitySet, keyParams, null, null, uriInfo, selectedItems, edmEntitySetTarget,
                 propertyPath, uriResourceNavigationList, baseURI, expandOption);
         if (entities != null && !entities.getEntities().isEmpty()) {
             return entities.getEntities().get(0);
@@ -130,7 +130,7 @@ public class EntityAccessor {
             String filterExpression = null;
             final FilterOption filterOption = uriInfo.getFilterOption();
             if (filterOption != null) {
-                Expression expression = filterOption.getExpression();
+                final Expression expression = filterOption.getExpression();
                 filterExpression = expression.accept(new VQLExpressionVisitor(uriInfo));
 
             }
@@ -143,7 +143,7 @@ public class EntityAccessor {
 
             return getEntitySetData(sqlStatement, edmEntitySet, edmEntitySetTarget, baseURI, expandOption, uriInfo);
         
-        } catch (ExpressionVisitException e) {
+        } catch (final ExpressionVisitException e) {
             throw new ODataApplicationException("Exception in filter expression", HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(),
                     Locale.getDefault());
         }
@@ -153,9 +153,9 @@ public class EntityAccessor {
     private EntityCollection getEntitySetData(final String sqlStatement, final EdmEntitySet edmEntitySet, 
             final EdmEntitySet edmEntitySetTarget, final String baseURI, final ExpandOption expandOption, final UriInfo uriInfo) throws ODataApplicationException {
         
-        EntityCollection entityCollection = new EntityCollection();
+        final EntityCollection entityCollection = new EntityCollection();
         
-        List<Entity> entitySetData = entityCollection.getEntities();
+        final List<Entity> entitySetData = entityCollection.getEntities();
 
         final EdmEntitySet edmEntitySetActual = edmEntitySetTarget != null ? edmEntitySetTarget : edmEntitySet;
         final EdmEntityType edmEntityTypeActual =  edmEntitySetActual.getEntityType();
@@ -166,23 +166,23 @@ public class EntityAccessor {
                 new RowMapper<Entity>(){
 
         @Override
-        public Entity mapRow(ResultSet resultSet, int rowNum) throws SQLException {
-            ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
-            Entity entity = new Entity();
+        public Entity mapRow(final ResultSet resultSet, final int rowNum) throws SQLException {
+            final ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+            final Entity entity = new Entity();
             
-            Map<String, Object> newEntityKeys = new  HashMap<String, Object>();
-            List<String> entityKeyNames = edmEntityTypeActual.getKeyPredicateNames();
+            final Map<String, Object> newEntityKeys = new  HashMap<String, Object>();
+            final List<String> entityKeyNames = edmEntityTypeActual.getKeyPredicateNames();
             
                 for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
-                    String columnName = resultSetMetaData.getColumnName(i);
+                    final String columnName = resultSetMetaData.getColumnName(i);
                     Object value = resultSet.getObject(i);
 
-                    String expandColumnKey = new StringBuilder().append(edmEntitySetActual.getName()).append("-").append(columnName).toString();
+                    final String expandColumnKey = new StringBuilder().append(edmEntitySetActual.getName()).append("-").append(columnName).toString();
 
                     if (expandData.containsKey(expandColumnKey)) {
                         try {
                             DenodoCommonProcessor.setExpandData(expandColumnKey, newEntityKeys, entity, expandData, value, baseURI, uriInfo);
-                        } catch (ODataApplicationException e) {
+                        } catch (final ODataApplicationException e) {
                             logger.error("Error setting expand data: " + expandColumnKey + e);
                             throw new SQLException("Error setting expand data: " + expandColumnKey + e);
                         }
@@ -197,14 +197,14 @@ public class EntityAccessor {
                             final Object[] arrayElements = (Object[]) ((Array) value).getArray();
 
                             try {
-                                EdmTyped edmTyped = edmEntityTypeActual.getProperty(columnName);
+                                final EdmTyped edmTyped = edmEntityTypeActual.getProperty(columnName);
 
-                                List<Object> arrayValues = new ArrayList<Object>();
+                                final List<Object> arrayValues = new ArrayList<Object>();
 
                                 for (final Object arrayElement : arrayElements) {
                                     // Elements of arrays are Structs in VDP
                                     if (arrayElement instanceof Struct) {
-                                        Object[] structValues = ((Struct) arrayElement).getAttributes();
+                                        final Object[] structValues = ((Struct) arrayElement).getAttributes();
 
                                         arrayValues.add(DenodoCommonProcessor.getStructAsComplexValue(edmTyped, columnName, structValues));
                                     }
@@ -213,7 +213,7 @@ public class EntityAccessor {
                                 value = arrayValues;
 
                                 valueType = ValueType.COLLECTION_COMPLEX;
-                            } catch (EdmException e1) {
+                            } catch (final EdmException e1) {
                                 logger.error("Error getting property data: " + columnName + e1);
                                 throw new SQLException("Error getting property data: " + columnName + e1);
                             }
@@ -222,14 +222,14 @@ public class EntityAccessor {
                             // This is because select_navigational queries return some additional fields
                             // in addition to the ones specified in the SELECT clause
                             if (((Struct) value).getSQLTypeName().compareTo("relation_link") != 0) {
-                                Object[] structValues = ((Struct) value).getAttributes();
+                                final Object[] structValues = ((Struct) value).getAttributes();
 
                                 try {
-                                    EdmTyped edmTyped = edmEntityTypeActual.getProperty(columnName);
+                                    final EdmTyped edmTyped = edmEntityTypeActual.getProperty(columnName);
                                     value = DenodoCommonProcessor.getStructAsComplexValue(edmTyped, columnName, structValues);
 
                                     valueType = ValueType.COMPLEX;
-                                } catch (EdmException e2) {
+                                } catch (final EdmException e2) {
                                     logger.error("Error getting property data: " + columnName + e2);
                                     throw new SQLException("Error getting property data: " + columnName + e2);
                                 }
@@ -239,7 +239,7 @@ public class EntityAccessor {
                         }
 
                         if (!relationLinkValue) {
-                            Property newProperty = new Property(null, columnName, valueType, value);
+                            final Property newProperty = new Property(null, columnName, valueType, value);
                             if (entityKeyNames.contains(columnName)) {
                                 newEntityKeys.put(columnName, value);
                             }
@@ -248,14 +248,14 @@ public class EntityAccessor {
                     }
                 }
                 
-            URI entityURI = URIUtils.createIdURI(baseURI, edmEntityTypeActual, entity);
+            final URI entityURI = URIUtils.createIdURI(baseURI, edmEntityTypeActual, entity);
             entity.setId(entityURI);
             
             // @odata.navigationLink and @odata.associationLink
             DenodoCommonProcessor.setLinks(entity, edmEntitySetActual);
             
             // @odata.readLink
-            Link link = new Link();
+            final Link link = new Link();
             link.setHref(entityURI.toString());
             link.setRel(Constants.SELF_LINK_REL); 
             entity.setSelfLink(link);
@@ -276,7 +276,7 @@ public class EntityAccessor {
     private static String getSelectSection(final EdmEntitySet entitySet, final List<String> selectedProperties, 
             final List<EdmProperty> propertyPath, final Boolean count, final Map<String, String> keys,
             final List<UriResourceNavigation> uriResourceNavigationList, final ExpandOption expandOption) throws EdmException, ODataApplicationException {
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
 
         String selectExpression;
         if(count != null && count.booleanValue()){
@@ -335,19 +335,19 @@ public class EntityAccessor {
     
     private static List<Object> getNavigationProperties(final ExpandOption expandOption, final EdmEntitySet startEdmEntitySet) throws ODataApplicationException {
         
-        List<Object> edmNavigationPropertyList = new ArrayList<Object>();
+        final List<Object> edmNavigationPropertyList = new ArrayList<Object>();
         EdmNavigationProperty edmNavigationProperty = null;
         
         if (expandOption != null) {
-            List<ExpandItem> expandItems = expandOption.getExpandItems();
-            for (ExpandItem expandItem : expandItems) {
-                List<Object> expandItemList = new ArrayList<Object>();
+            final List<ExpandItem> expandItems = expandOption.getExpandItems();
+            for (final ExpandItem expandItem : expandItems) {
+                final List<Object> expandItemList = new ArrayList<Object>();
                 // Getting the navigation properties to expand
                 if (expandItem.isStar()) { // we have a "*" as an expand item
                     expandItemList.addAll(DenodoCommonProcessor.getAllNavigationProperties(startEdmEntitySet));
                     
                 } else {
-                    UriResource ur = expandItem.getResourcePath().getUriResourceParts().get(0);
+                    final UriResource ur = expandItem.getResourcePath().getUriResourceParts().get(0);
 
                     if (ur instanceof UriResourceNavigation) {
                         edmNavigationProperty = ((UriResourceNavigation) ur).getProperty();
@@ -360,7 +360,7 @@ public class EntityAccessor {
                 }
                 
                 if (edmNavigationProperty != null && expandItem.getExpandOption() != null) {
-                    EdmEntitySet entitySet = ProcessorUtils.getNavigationTargetEntitySetByNavigationPropertyNames(startEdmEntitySet, Arrays.asList(edmNavigationProperty.getName()));
+                    final EdmEntitySet entitySet = ProcessorUtils.getNavigationTargetEntitySetByNavigationPropertyNames(startEdmEntitySet, Arrays.asList(edmNavigationProperty.getName()));
                     expandItemList.add(getNavigationProperties(expandItem.getExpandOption(), entitySet));
                 }
                 edmNavigationPropertyList.add(expandItemList);
@@ -375,29 +375,29 @@ public class EntityAccessor {
         return getNavigationPropertiesString(expandOption, startEdmEntitySet, expand, null);
     }
     
-    private static String getNavigationPropertiesString(final ExpandOption expandOption, final EdmEntitySet startEdmEntitySet,boolean expand, final String nestedNavProperties) throws ODataApplicationException {
+    private static String getNavigationPropertiesString(final ExpandOption expandOption, final EdmEntitySet startEdmEntitySet,final boolean expand, final String nestedNavProperties) throws ODataApplicationException {
         
         EdmNavigationProperty edmNavigationProperty = null;
         
-        StringBuilder navigationPropertiesToExpand = new StringBuilder();
+        final StringBuilder navigationPropertiesToExpand = new StringBuilder();
         
         // Useful when you have nested expands
-        StringBuilder localNavigationPropertiesToExpand = new StringBuilder(); 
+        final StringBuilder localNavigationPropertiesToExpand = new StringBuilder(); 
         localNavigationPropertiesToExpand.append(nestedNavProperties != null ? nestedNavProperties : StringUtils.EMPTY);
         
         if (expandOption != null) {
-            List<ExpandItem> expandItems = expandOption.getExpandItems();
+            final List<ExpandItem> expandItems = expandOption.getExpandItems();
             boolean first = true;
-            for (ExpandItem expandItem : expandItems) {
+            for (final ExpandItem expandItem : expandItems) {
                 if (!first) {
                     navigationPropertiesToExpand.append(", ");
                 }
                 first = false;
-                List<Object> expandItemList = new ArrayList<Object>();
+                final List<Object> expandItemList = new ArrayList<Object>();
                 // Getting the navigation properties to expand
                 if (expandItem.isStar()) { // we have a "*" as an expand item
-                    List<EdmNavigationProperty> list = DenodoCommonProcessor.getAllNavigationProperties(startEdmEntitySet);
-                    for (EdmNavigationProperty navProperty : list) {
+                    final List<EdmNavigationProperty> list = DenodoCommonProcessor.getAllNavigationProperties(startEdmEntitySet);
+                    for (final EdmNavigationProperty navProperty : list) {
                         navigationPropertiesToExpand.append(localNavigationPropertiesToExpand.toString())
                         .append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(navProperty.getName()));
                         if (!expand) { //String for select of the query
@@ -408,38 +408,43 @@ public class EntityAccessor {
                     }
                     navigationPropertiesToExpand.delete(navigationPropertiesToExpand.length()-2, navigationPropertiesToExpand.length());
                 } else {
-                    UriResource ur = expandItem.getResourcePath().getUriResourceParts().get(0);
+                    final UriResource ur = expandItem.getResourcePath().getUriResourceParts().get(0);
 
                     if (ur instanceof UriResourceNavigation) {
                         edmNavigationProperty = ((UriResourceNavigation) ur).getProperty();
                         if (edmNavigationProperty != null) {
                             expandItemList.add(edmNavigationProperty);
-                            String navPropertyString = SQLMetadataUtils.getStringSurroundedByFrenchQuotes(edmNavigationProperty.getName());
+                            final String navPropertyString = SQLMetadataUtils.getStringSurroundedByFrenchQuotes(edmNavigationProperty.getName());
 
                             if (expand) { //String for expand of the query
                                 navigationPropertiesToExpand.append(localNavigationPropertiesToExpand.toString())
                                 .append(navPropertyString);
                             } else { //String for select of the query
-                                if(expandItem.getSelectOption()!=null){
+                                if (expandItem.getSelectOption() != null){
                                     boolean firstExpand=true;
-                                    for(SelectItem item: expandItem.getSelectOption().getSelectItems()){
-                                        if(!firstExpand){
+                                    for (final SelectItem item : expandItem.getSelectOption().getSelectItems()) {
+                                        if (!firstExpand){
                                             navigationPropertiesToExpand.append(" , ");
 
                                         }
-                                        firstExpand=false;
+                                        firstExpand = false;
                                         navigationPropertiesToExpand.append(localNavigationPropertiesToExpand.toString())
-                                        .append(navPropertyString+" / "+item.getResourcePath().getUriResourceParts().get(0).getSegmentValue()+" " );}
+                                                .append(navPropertyString)
+                                                .append(" / ")
+                                                .append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(item.getResourcePath().getUriResourceParts().get(0).getSegmentValue()))
+                                                .append(" " );
+                                    }
                                 } else {
                                     navigationPropertiesToExpand.append(localNavigationPropertiesToExpand.toString())
-                                    .append(navPropertyString+" / * " );
+                                            .append(navPropertyString)
+                                            .append(" / * " );
                                 }
                             }
                             
                             if (expandItem.getExpandOption() != null) {
-                                EdmEntitySet entitySet = ProcessorUtils.getNavigationTargetEntitySetByNavigationPropertyNames(startEdmEntitySet, Arrays.asList(edmNavigationProperty.getName()));
+                                final EdmEntitySet entitySet = ProcessorUtils.getNavigationTargetEntitySetByNavigationPropertyNames(startEdmEntitySet, Arrays.asList(edmNavigationProperty.getName()));
                                 expandItemList.add(getNavigationProperties(expandItem.getExpandOption(), entitySet));
-                                StringBuilder newLocalNavigationPropertiesToExpand = new StringBuilder(localNavigationPropertiesToExpand.toString()).append(navPropertyString).append(" / ");
+                                final StringBuilder newLocalNavigationPropertiesToExpand = new StringBuilder(localNavigationPropertiesToExpand.toString()).append(navPropertyString).append(" / ");
                                 navigationPropertiesToExpand.append(", ").append(getNavigationPropertiesString(expandItem.getExpandOption(), entitySet, expand, newLocalNavigationPropertiesToExpand.toString()));
                             }
                         }
@@ -456,20 +461,20 @@ public class EntityAccessor {
             final List<String> selectedProperties, final List<EdmProperty> propertyPath, final Boolean count,
             final List<UriResourceNavigation> uriResourceNavigationList, final ExpandOption expandOption) throws EdmException, ODataApplicationException {
 
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
 
         sb.append(getSelectSection(entitySet, selectedProperties, propertyPath, count, keys, uriResourceNavigationList, expandOption));
 
         boolean whereClause = false;
         // If there is navigation, the keys are implicit in the query (e.g. SELECT_NAVIGATIONAL * FROM film/1;)
-        boolean navigation = uriResourceNavigationList != null && !uriResourceNavigationList.isEmpty();
+        final boolean navigation = uriResourceNavigationList != null && !uriResourceNavigationList.isEmpty();
         if (!navigation && keys != null && !keys.isEmpty()) {
             whereClause = true;
             sb.append(" WHERE ");
             boolean first = true;
             
             
-            for (Entry<String, String> key : keys.entrySet()) {
+            for (final Entry<String, String> key : keys.entrySet()) {
                 if (!first) {
                     sb.append(" AND ");
                 }
@@ -505,16 +510,16 @@ public class EntityAccessor {
     
     private static String addOrderByExpression(final String sqlStatement, final UriInfo uriInfo) throws ExpressionVisitException, ODataApplicationException {
 
-        OrderByOption orderByOption = uriInfo.getOrderByOption();
+        final OrderByOption orderByOption = uriInfo.getOrderByOption();
         if (orderByOption == null) {
             return sqlStatement;
         }
 
-        StringBuilder sb = new StringBuilder();
-        List<OrderByItem> orders = orderByOption.getOrders();
+        final StringBuilder sb = new StringBuilder();
+        final List<OrderByItem> orders = orderByOption.getOrders();
         int i = 0;
-        for(OrderByItem order : orders) {
-            String expression = order.getExpression().accept(new VQLExpressionVisitor(uriInfo));
+        for(final OrderByItem order : orders) {
+            final String expression = order.getExpression().accept(new VQLExpressionVisitor(uriInfo));
             if (expression != null) {
                 if (i > 0) {
                     sb.append(',');
@@ -525,15 +530,15 @@ public class EntityAccessor {
             }
         }
         
-        String expressions = sb.toString();
+        final String expressions = sb.toString();
         return expressions.isEmpty() ? sqlStatement : sqlStatement + " ORDER BY " + expressions;
     }
 
 
     private static String addSkipTopOption(final String sqlStatement, final Integer skip, final Integer top) {
-        StringBuilder sb = new StringBuilder(sqlStatement);
+        final StringBuilder sb = new StringBuilder(sqlStatement);
         if (skip != null ) {
-            int skipAsInt = skip.intValue();
+            final int skipAsInt = skip.intValue();
            
             // If a value less than 0 is specified, the URI should be considered
             // malformed.
@@ -544,7 +549,7 @@ public class EntityAccessor {
             }
         }
         if(top!=null){
-            int topAsInt = top.intValue();
+            final int topAsInt = top.intValue();
             if(topAsInt >=0){
                 
                 sb.append(" LIMIT ");
@@ -564,10 +569,10 @@ public class EntityAccessor {
    
 
     private static String getSelectOption(final List<String> selectedItems) {
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
 
         if (selectedItems != null) {
-            for (String item : selectedItems) {
+            for (final String item : selectedItems) {
                 sb.append(item).append(",");
             }
 
@@ -589,14 +594,14 @@ public class EntityAccessor {
      * @throws EdmException
      */
     private static String getPropertyPathExpression(final List<EdmProperty> propertyPath) throws EdmException {
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
         if (propertyPath.size() == 1) {
             sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(propertyPath.get(0).getName())).append(" ");
         } else {
             // It is a register
             boolean first = true; 
             for (int i=0; i<propertyPath.size(); i++) {
-                EdmProperty propertyElement = propertyPath.get(i);
+                final EdmProperty propertyElement = propertyPath.get(i);
                 sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(propertyElement.getName()));
                 if (first) {
                     sb.insert(0, "(");
@@ -617,11 +622,11 @@ public class EntityAccessor {
     private static String getSelectNavigation (final Map<String, String> keys, 
             final List<UriResourceNavigation> uriResourceNavigationList) throws EdmException {
         
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
         
         if (uriResourceNavigationList != null && !uriResourceNavigationList.isEmpty() && keys != null && !keys.isEmpty()) {
             sb.append('/');
-            for (Entry<String, String> key : keys.entrySet()) {
+            for (final Entry<String, String> key : keys.entrySet()) {
 
                 sb.append(key.getValue());
 
@@ -632,16 +637,16 @@ public class EntityAccessor {
             sb.deleteCharAt(sb.length()-1);
             
             if (uriResourceNavigationList != null && !uriResourceNavigationList.isEmpty()) {
-                for (UriResourceNavigation uriResourceNavigation : uriResourceNavigationList) {
+                for (final UriResourceNavigation uriResourceNavigation : uriResourceNavigationList) {
                     sb.append('/');
                     sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(uriResourceNavigation.getProperty().getName()));
                     sb.append('/');
                     
-                    for (UriParameter key : uriResourceNavigation.getKeyPredicates()) {
+                    for (final UriParameter key : uriResourceNavigation.getKeyPredicates()) {
 
-                        String keyText = key.getText();
+                        final String keyText = key.getText();
 
-                        boolean isString = key.getExpression() instanceof StringLiteral;
+                        final boolean isString = key.getExpression() instanceof StringLiteral;
                         if (isString) {
                             sb.append('\'');
                         }
@@ -673,20 +678,20 @@ public class EntityAccessor {
             String filterExpression = null;
             final FilterOption filterOption = uriInfo.getFilterOption();
             if (filterOption != null) {
-                Expression expression = filterOption.getExpression();
+                final Expression expression = filterOption.getExpression();
                 filterExpression = expression.accept(new VQLExpressionVisitor(uriInfo));
 
             }
 
-            String sqlStatement = getSQLStatement(entitySet, keys, filterExpression, null, null, Boolean.TRUE,
+            final String sqlStatement = getSQLStatement(entitySet, keys, filterExpression, null, null, Boolean.TRUE,
                     uriResourceNavigationList, null);
             logger.debug("Executing query: " + sqlStatement);
 
             return this.denodoTemplate.queryForObject(sqlStatement, Integer.class);
 
-        } catch (EdmException e) {
+        } catch (final EdmException e) {
             logger.error(e);
-        } catch (ExpressionVisitException e) {
+        } catch (final ExpressionVisitException e) {
             throw new ODataApplicationException("Exception in filter expression", HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(),
                     Locale.getDefault());
         }

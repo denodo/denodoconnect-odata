@@ -41,6 +41,7 @@ import javax.ws.rs.core.SecurityContext;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
+import org.apache.olingo.commons.core.Encoder;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 
@@ -114,17 +115,17 @@ public class DenodoODataFilter implements Filter {
                     }
 
                     final Properties authconfig = (Properties) appCtx.getBean("authconfig");
-                    String allowAdminUserAsString = authconfig.getProperty("allowadminuser");
+                    final String allowAdminUserAsString = authconfig.getProperty("allowadminuser");
                     if (allowAdminUserAsString == null || allowAdminUserAsString.trim().length() == 0) {
                         throw new ServletException("Denodo OData service user not properly configured: check the 'enable.adminUser' property at the configuration file");
                     }
                     this.allowAdminUser = Boolean.parseBoolean(allowAdminUserAsString);
                     
-                    String disabledKerberosAuthAsString = authconfig.getProperty("disabledkerberosauth");
+                    final String disabledKerberosAuthAsString = authconfig.getProperty("disabledkerberosauth");
                     if (disabledKerberosAuthAsString != null && disabledKerberosAuthAsString.trim().length() != 0) {
                         this.disabledKerberosAuth = Boolean.parseBoolean(disabledKerberosAuthAsString);
                     }
-                    String disabledBasicAuthAsString = authconfig.getProperty("disabledbasicauth");
+                    final String disabledBasicAuthAsString = authconfig.getProperty("disabledbasicauth");
                     if (disabledBasicAuthAsString != null && disabledBasicAuthAsString.trim().length() != 0) {
                         this.disabledBasicAuth = Boolean.parseBoolean(disabledBasicAuthAsString);
                     }
@@ -202,9 +203,9 @@ public class DenodoODataFilter implements Filter {
 
                 // Retrieve BASIC credentials
                 if (!this.disabledBasicAuth && StringUtils.startsWithIgnoreCase(authorizationHeader, BASIC_AUTH_KEYWORD)) {
-                    String[] credentials = retrieveCredentials(authorizationHeader);
+                    final String[] credentials = retrieveCredentials(authorizationHeader);
                     if (credentials == null) {
-                        String reason = "Invalid credentials";
+                        final String reason = "Invalid credentials";
                         logger.trace(reason);
                         showLogin(response, reason);
                         return;
@@ -215,7 +216,7 @@ public class DenodoODataFilter implements Filter {
                     
                     // Disable access to the service using 'admin' user if this option is established in the configuration
                     if (!this.allowAdminUser && adminUser.equals(login)) {
-                        String reason = "Invalid user. The access to the service is not allowed with the 'admin' user.";
+                        final String reason = "Invalid user. The access to the service is not allowed with the 'admin' user.";
                         logger.trace(reason);
                         showLogin(response, reason);
                         return;
@@ -227,9 +228,9 @@ public class DenodoODataFilter implements Filter {
                 } 
 
             }
-
-
-            final String dataBaseName = retrieveDataBaseNameFromUrl(request.getRequestURL().toString(), this.serviceAddress, request.getContextPath());
+  
+            final String dataBaseName = retrieveDataBaseNameFromUrl(request.getPathInfo(), this.serviceAddress);
+            final boolean dataBaseNameEncoded = request.getRequestURI().indexOf(dataBaseName) == -1;
 
             if (StringUtils.isEmpty(dataBaseName)){  // we will get a collection name (or a $metadata) as a database name! (maybe check that?)
                 response.sendError(HttpServletResponse.SC_NOT_FOUND);
@@ -238,9 +239,9 @@ public class DenodoODataFilter implements Filter {
 
             UserAuthenticationInfo userAuthInfo = null;
             if (login != null) {
-                userAuthInfo = new UserAuthenticationInfo(login, password, dataBaseName);
+                userAuthInfo = new UserAuthenticationInfo(login, password, dataBaseName, dataBaseNameEncoded);
             } else {
-                userAuthInfo = new UserAuthenticationInfo(kerberosClientToken, dataBaseName);
+                userAuthInfo = new UserAuthenticationInfo(kerberosClientToken, dataBaseName, dataBaseNameEncoded);
             }
 
 
@@ -253,10 +254,10 @@ public class DenodoODataFilter implements Filter {
                 try {
                     logger.trace("Checking Kerberos in VDP server");
                     final WebApplicationContext appCtx = WebApplicationContextUtils.getWebApplicationContext(this.servletContext);
-                    DenodoODataAuthDataSource dataSource = appCtx.getBean(DenodoODataAuthDataSource.class);
+                    final DenodoODataAuthDataSource dataSource = appCtx.getBean(DenodoODataAuthDataSource.class);
                     
                     dataSource.getConnection();
-                } catch (DenodoODataKerberosDisabledException e) {
+                } catch (final DenodoODataKerberosDisabledException e) {
                     logger.trace("Kerberos authentication is not enabled in VDP");
                     this.disabledKerberosAuth = true;
                     clearRequestAuthentication();
@@ -266,7 +267,7 @@ public class DenodoODataFilter implements Filter {
                         logger.trace("Basic authentication starts");
                         return;
                     }
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     logger.error("An exception was raised while obtaining connection in order to check Kerberos availability " + e.getLocalizedMessage());
                     clearRequestAuthentication();
                 } finally {
@@ -274,8 +275,9 @@ public class DenodoODataFilter implements Filter {
                 }
             }
 
-            final DenodoODataRequestWrapper wrappedRequest = new DenodoODataRequestWrapper(request, dataBaseName);
-            final DenodoODataResponseWrapper wrappedResponse = new DenodoODataResponseWrapper(response, getServiceRoot(request), dataBaseName);
+            final String dataBaseNameInURL = getDataBaseNameInURL(dataBaseName, dataBaseNameEncoded);
+            final DenodoODataRequestWrapper wrappedRequest = new DenodoODataRequestWrapper(request, dataBaseNameInURL);
+            final DenodoODataResponseWrapper wrappedResponse = new DenodoODataResponseWrapper(response, getServiceRoot(request), dataBaseNameInURL);
 
             chain.doFilter(wrappedRequest, wrappedResponse);
 
@@ -283,6 +285,17 @@ public class DenodoODataFilter implements Filter {
             clearRequestAuthentication();
         }
     }
+
+    private String getDataBaseNameInURL(final String dataBaseName, final boolean dataBaseNameEncoded) {
+
+        if (dataBaseNameEncoded) {
+            return Encoder.encode(dataBaseName);
+        }
+        
+        return dataBaseName;
+    }
+
+
 
     private String getServiceRoot(final HttpServletRequest request) {
         
@@ -317,14 +330,16 @@ public class DenodoODataFilter implements Filter {
     /**
      * This method extracts from an Odata-like URL the name of data source.
      *
-     * @param url OData-like URL
+     * @param pathInfo Path info *decoded* by the web container.
+     * @param serverAddress  may be empty because it is not mandatory
      * @return data source name
      */
-    private static String retrieveDataBaseNameFromUrl(final String url, final String serverAddress, final String contextPath){
-        // ServerAddress may be empty because it is not mandatory
-        final String navigationPath = StringUtils.substringAfter(url, serverAddress.trim().length() != 0 ? serverAddress : 
-            (!contextPath.endsWith("/") ? contextPath + "/" : contextPath));
-        return StringUtils.substringBefore(navigationPath, "/"); 
+    private static String retrieveDataBaseNameFromUrl(final String pathInfo, final String serverAddress) {
+
+        String database = StringUtils.removeStart(pathInfo, "/");
+        database = StringUtils.removeStart(database, serverAddress); 
+        
+        return StringUtils.substringBefore(database, "/"); 
     }
 
 
@@ -339,7 +354,7 @@ public class DenodoODataFilter implements Filter {
         final String credentialsString = authHeader.substring(BASIC_AUTH_KEYWORD.length());
         final String decoded = new String(Base64.decodeBase64(credentialsString), CHARACTER_ENCODING);
        
-        String[] credentials =new String[2];
+        final String[] credentials =new String[2];
         credentials[0]= decoded.substring(0, decoded.indexOf(':'));
         credentials[1]= decoded.substring(decoded.indexOf(':') + 1);
         return credentials;
@@ -355,6 +370,7 @@ public class DenodoODataFilter implements Filter {
             final String developmentModeDangerousBypassAuthentication){
         final Map<String, String> parameters = new HashMap<String, String>();
         parameters.put(DenodoODataAuthDataSource.DATA_BASE_NAME, userAuthenticationInfo.getDatabaseName());
+        parameters.put(DenodoODataAuthDataSource.DATA_BASE_NAME_RESERVED_CHARS, String.valueOf(userAuthenticationInfo.hasDbNameReservedChars()));
         parameters.put(DenodoODataAuthDataSource.USER_NAME, userAuthenticationInfo.getLogin());
         parameters.put(DenodoODataAuthDataSource.KERBEROS_CLIENT_TOKEN, userAuthenticationInfo.getKerberosClientToken());
         parameters.put(DenodoODataAuthDataSource.PASSWORD_NAME, userAuthenticationInfo.getPassword());

@@ -195,7 +195,7 @@ public class DenodoODataFilter implements Filter {
                 return;
             }
 
-            final UserAuthenticationInfo userAuthInfo = new UserAuthenticationInfo(login, password, dataBaseName, dataBaseNameEncoded);
+            final UserAuthenticationInfo userAuthInfo = new UserAuthenticationInfo(login, password, dataBaseName);
 
 
             // Set connection parameters
@@ -286,7 +286,6 @@ public class DenodoODataFilter implements Filter {
             final String developmentModeDangerousBypassAuthentication){
         final Map<String,String> parameters = new HashMap<String,String>();
         parameters.put(DenodoODataAuthDataSource.DATA_BASE_NAME, userAuthenticationInfo.getDatabaseName());
-        parameters.put(DenodoODataAuthDataSource.DATA_BASE_NAME_RESERVED_CHARS, String.valueOf(userAuthenticationInfo.hasDbNameReservedChars()));
         parameters.put(DenodoODataAuthDataSource.USER_NAME, userAuthenticationInfo.getLogin());
         parameters.put(DenodoODataAuthDataSource.PASSWORD_NAME, userAuthenticationInfo.getPassword());
         

@@ -239,9 +239,9 @@ public class DenodoODataFilter implements Filter {
 
             UserAuthenticationInfo userAuthInfo = null;
             if (login != null) {
-                userAuthInfo = new UserAuthenticationInfo(login, password, dataBaseName, dataBaseNameEncoded);
+                userAuthInfo = new UserAuthenticationInfo(login, password, dataBaseName);
             } else {
-                userAuthInfo = new UserAuthenticationInfo(kerberosClientToken, dataBaseName, dataBaseNameEncoded);
+                userAuthInfo = new UserAuthenticationInfo(kerberosClientToken, dataBaseName);
             }
 
 
@@ -370,7 +370,6 @@ public class DenodoODataFilter implements Filter {
             final String developmentModeDangerousBypassAuthentication){
         final Map<String, String> parameters = new HashMap<String, String>();
         parameters.put(DenodoODataAuthDataSource.DATA_BASE_NAME, userAuthenticationInfo.getDatabaseName());
-        parameters.put(DenodoODataAuthDataSource.DATA_BASE_NAME_RESERVED_CHARS, String.valueOf(userAuthenticationInfo.hasDbNameReservedChars()));
         parameters.put(DenodoODataAuthDataSource.USER_NAME, userAuthenticationInfo.getLogin());
         parameters.put(DenodoODataAuthDataSource.KERBEROS_CLIENT_TOKEN, userAuthenticationInfo.getKerberosClientToken());
         parameters.put(DenodoODataAuthDataSource.PASSWORD_NAME, userAuthenticationInfo.getPassword());

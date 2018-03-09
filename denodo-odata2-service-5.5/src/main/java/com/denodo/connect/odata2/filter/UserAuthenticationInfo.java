@@ -28,15 +28,12 @@ public class UserAuthenticationInfo {
     private final String login;
     private final String password;
     private final String databaseName;
-    private boolean dbNameWithReservedChars;
 
-    public UserAuthenticationInfo(final String login, final String password, final String databaseName,
-            final boolean dbNameWithReservedChars) {
+    public UserAuthenticationInfo(final String login, final String password, final String databaseName) {
         
         this.login = login;
         this.password = password;
         this.databaseName = databaseName;
-        this.dbNameWithReservedChars = dbNameWithReservedChars;
     }
 
     public String getLogin() {
@@ -49,10 +46,6 @@ public class UserAuthenticationInfo {
 
     public String getDatabaseName() {
         return this.databaseName;
-    }
-    
-    public boolean hasDbNameReservedChars() {
-        return this.dbNameWithReservedChars;
     }
 
     @Override

@@ -48,7 +48,6 @@ public class DenodoODataAuthDataSource implements DataSource {
     public final static String USER_NAME = "user";
     public final static String PASSWORD_NAME = "password";
     public final static String DATA_BASE_NAME = "databaseName";
-    public static final String DATA_BASE_NAME_RESERVED_CHARS = "databaseNameWithReserverChars";
     public final static String DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION = "developmentModeDangerousBypassAuthentication";
 
     // ERRORS
@@ -203,14 +202,9 @@ public class DenodoODataAuthDataSource implements DataSource {
     
     private String getDataBaseName() {
         
-        final boolean dbNameWithReservedChars = Boolean.parseBoolean(this.parameters.get().get(DATA_BASE_NAME_RESERVED_CHARS));
-        String dataBase = this.parameters.get().get(DATA_BASE_NAME);
-        
-        if (dbNameWithReservedChars) {
-            dataBase = SQLMetadataUtils.getStringSurroundedByFrenchQuotes(dataBase);
-        }
-        
-        return dataBase;
+        final String dataBase = this.parameters.get().get(DATA_BASE_NAME);
+        // as ODdata URLs are case sensitive
+        return SQLMetadataUtils.getStringSurroundedByFrenchQuotes(dataBase);
     }
 
     @Override

@@ -35,6 +35,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.support.JdbcUtils;
 
+import com.denodo.connect.odata2.util.SQLMetadataUtils;
+
 public class DenodoODataAuthDataSource implements DataSource {
 
     private static final Logger logger = Logger.getLogger(DenodoODataAuthDataSource.class);
@@ -46,6 +48,7 @@ public class DenodoODataAuthDataSource implements DataSource {
     public final static String USER_NAME = "user";
     public final static String PASSWORD_NAME = "password";
     public final static String DATA_BASE_NAME = "databaseName";
+    public static final String DATA_BASE_NAME_RESERVED_CHARS = "databaseNameWithReserverChars";
     public final static String DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION = "developmentModeDangerousBypassAuthentication";
 
     // ERRORS
@@ -73,14 +76,14 @@ public class DenodoODataAuthDataSource implements DataSource {
         
         try {
             // Call closeConnection only when the request has finished because we are caching authenticated connections.
-            DenodoODataConnectionWrapper connection = this.authenticatedConnection.get();
+            final DenodoODataConnectionWrapper connection = this.authenticatedConnection.get();
             if (connection != null) {
                 connection.closeConnection();
             }
         
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             logger.warn("Could not close JDBC Connection", ex);
-        } catch (Throwable ex) {
+        } catch (final Throwable ex) {
             // JDBC driver: It might throw RuntimeException or Error.
             logger.warn("Unexpected exception on closing JDBC Connection", ex);
         } finally {
@@ -108,6 +111,7 @@ public class DenodoODataAuthDataSource implements DataSource {
         return this.loginTimeout;
     }
 
+    @Override
     public java.util.logging.Logger getParentLogger() throws SQLFeatureNotSupportedException {
         throw new SQLFeatureNotSupportedException("CommonDataSource#getParentLogger() not supported");
     }
@@ -153,12 +157,12 @@ public class DenodoODataAuthDataSource implements DataSource {
                      * credentials included in the data source configuration
                      * (JNDI resource).
                      */
-                    command = new StringBuilder("CONNECT ").append(" DATABASE ").append(this.parameters.get().get(DATA_BASE_NAME));
+                    command = new StringBuilder("CONNECT ").append(" DATABASE ").append(getDataBaseName());
                 } else {
 
                     command = new StringBuilder("CONNECT USER ").append(this.parameters.get().get(USER_NAME)).append(" PASSWORD ")
                             .append("'").append(this.parameters.get().get(PASSWORD_NAME)).append("'").append(" DATABASE ")
-                            .append(this.parameters.get().get(DATA_BASE_NAME));
+                            .append(getDataBaseName());
                 }
 
                 this.authenticatedConnection.set(connection);
@@ -195,6 +199,18 @@ public class DenodoODataAuthDataSource implements DataSource {
         		JdbcUtils.closeStatement(stmt);
         	}
         }
+    }
+    
+    private String getDataBaseName() {
+        
+        final boolean dbNameWithReservedChars = Boolean.parseBoolean(this.parameters.get().get(DATA_BASE_NAME_RESERVED_CHARS));
+        String dataBase = this.parameters.get().get(DATA_BASE_NAME);
+        
+        if (dbNameWithReservedChars) {
+            dataBase = SQLMetadataUtils.getStringSurroundedByFrenchQuotes(dataBase);
+        }
+        
+        return dataBase;
     }
 
     @Override

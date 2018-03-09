@@ -1,3 +1,7 @@
+CURRENT RELEASE
+---------------
+- Fixed #36389 - The OData 2 Service cannot access VDP databases and views with non-ASCII characters in their names.
+
 20170821
 --------
 - Added #33446 - Debug support

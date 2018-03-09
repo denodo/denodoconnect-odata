@@ -36,7 +36,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <version.cxf>3.1.0</version.cxf>
     <version.slf4j>1.7.1</version.slf4j>
-    <version.olingo>2.0.8</version.olingo>
+    <version.olingo>2.0.10</version.olingo>
     <version.springframework>3.2.14.RELEASE</version.springframework><!-- 3.2.14.RELEASE-->
     <version.commonsdbcp>1.4</version.commonsdbcp>
     <version.denodovdpjdbcdriver>5.5.0_9</version.denodovdpjdbcdriver>

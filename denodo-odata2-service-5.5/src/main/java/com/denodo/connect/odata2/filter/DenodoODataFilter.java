@@ -41,6 +41,7 @@ import javax.ws.rs.core.SecurityContext;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
+import org.apache.olingo.odata2.core.commons.Encoder;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 
@@ -186,14 +187,15 @@ public class DenodoODataFilter implements Filter {
             }
 
 
-            final String dataBaseName = retrieveDataBaseNameFromUrl(request.getRequestURL().toString(), this.serverAddress);
-
+            final String dataBaseName = retrieveDataBaseNameFromUrl(request.getPathInfo(), this.serverAddress);
+            final boolean dataBaseNameEncoded = request.getRequestURI().indexOf(dataBaseName) == -1;
+            
             if (StringUtils.isEmpty(dataBaseName)){  // TODO This will never really happen - we will get a collection name (or a $metadata) as a database name! (maybe check that?)
                 response.sendError(HttpServletResponse.SC_NOT_FOUND);
                 return;
             }
 
-            final UserAuthenticationInfo userAuthInfo = new UserAuthenticationInfo(login, password, dataBaseName);
+            final UserAuthenticationInfo userAuthInfo = new UserAuthenticationInfo(login, password, dataBaseName, dataBaseNameEncoded);
 
 
             // Set connection parameters
@@ -201,9 +203,9 @@ public class DenodoODataFilter implements Filter {
 
             logger.trace("Acquired data source: " + this.authDataSource);
 
-
-            final DenodoODataRequestWrapper wrappedRequest = new DenodoODataRequestWrapper(request, dataBaseName, this.serverAddress);
-            final DenodoODataResponseWrapper wrappedResponse = new DenodoODataResponseWrapper(response, request, dataBaseName,
+            final String dataBaseNameInURL = getDataBaseNameInURL(dataBaseName, dataBaseNameEncoded);
+            final DenodoODataRequestWrapper wrappedRequest = new DenodoODataRequestWrapper(request, dataBaseNameInURL, this.serverAddress);
+            final DenodoODataResponseWrapper wrappedResponse = new DenodoODataResponseWrapper(response, request, dataBaseNameInURL,
                     this.serviceRoot, this.serverAddress);
 
             chain.doFilter(wrappedRequest, wrappedResponse);
@@ -211,6 +213,15 @@ public class DenodoODataFilter implements Filter {
         } finally {
             clearRequestAuthentication();
         }
+    }
+    
+    private String getDataBaseNameInURL(final String dataBaseName, final boolean dataBaseNameEncoded) {
+
+        if (dataBaseNameEncoded) {
+            return Encoder.encode(dataBaseName);
+        }
+        
+        return dataBaseName;
     }
 
     // clear per-request caching of authentication
@@ -236,13 +247,15 @@ public class DenodoODataFilter implements Filter {
     /**
      * This method extracts from an Odata-like URL the name of data source.
      *
-     * @param url OData-like URL
+     * @param pathInfo Path info *decoded* by the web container.
      * @return data source name
      */
-    private static String retrieveDataBaseNameFromUrl(final String url, final String serverAddress){
-        final String navigationPath = StringUtils.substringAfter(url, serverAddress);
-        final String dataSourceName = StringUtils.substringBefore(navigationPath, "/");
-        return dataSourceName;
+    private static String retrieveDataBaseNameFromUrl(final String pathInfo, final String serverAddress){
+        
+        String database = StringUtils.removeStart(pathInfo, "/");
+        database = StringUtils.removeStart(database, serverAddress); 
+        
+        return StringUtils.substringBefore(database, "/"); 
     }
 
 
@@ -273,6 +286,7 @@ public class DenodoODataFilter implements Filter {
             final String developmentModeDangerousBypassAuthentication){
         final Map<String,String> parameters = new HashMap<String,String>();
         parameters.put(DenodoODataAuthDataSource.DATA_BASE_NAME, userAuthenticationInfo.getDatabaseName());
+        parameters.put(DenodoODataAuthDataSource.DATA_BASE_NAME_RESERVED_CHARS, String.valueOf(userAuthenticationInfo.hasDbNameReservedChars()));
         parameters.put(DenodoODataAuthDataSource.USER_NAME, userAuthenticationInfo.getLogin());
         parameters.put(DenodoODataAuthDataSource.PASSWORD_NAME, userAuthenticationInfo.getPassword());
         

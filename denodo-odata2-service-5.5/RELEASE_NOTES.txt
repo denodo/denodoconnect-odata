@@ -1,5 +1,6 @@
-CURRENT RELEASE
+20180312
 ---------------
+- Fixed #36395 - OData 2 does not allow views without primary key
 - Fixed #36389 - The OData 2 Service cannot access VDP databases and views with non-ASCII characters in their names.
 
 20170821

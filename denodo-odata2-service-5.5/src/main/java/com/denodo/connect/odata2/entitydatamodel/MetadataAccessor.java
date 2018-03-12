@@ -242,7 +242,6 @@ public class MetadataAccessor {
 
     public Key getEntityPrimaryKey(final FullQualifiedName entityName) throws SQLException {
 
-        // Many entities will not have primary key information in VDP environments, so we save some objects
         List<PropertyRef> entityPrimaryKeyProperties = null;
 
         Connection connection = null;
@@ -256,21 +255,12 @@ public class MetadataAccessor {
             final DatabaseMetaData metadata = connection.getMetaData();
 
             columnsRs = metadata.getPrimaryKeys(connection.getCatalog(), null, entityName.getName());
+            entityPrimaryKeyProperties = buildKeys(columnsRs);
 
-            while (columnsRs.next()) {
-            /*
-             * PropertyRef entities are really simple: we only need to obtain the name of the column
-             */
-                final PropertyRef primaryKeyProperty = new PropertyRef();
-                primaryKeyProperty.setName(columnsRs.getString("COLUMN_NAME"));
-                if (entityPrimaryKeyProperties == null) {
-                    entityPrimaryKeyProperties = new ArrayList<PropertyRef>(2);
-                }
-                entityPrimaryKeyProperties.add(primaryKeyProperty);
-            }
-
-            if (entityPrimaryKeyProperties == null) {
-                return null;
+            // Many entities will not have primary key information in VDP environments, so we build a PK containing all the fields
+            if (entityPrimaryKeyProperties.isEmpty()) {
+                columnsRs = metadata.getColumns(connection.getCatalog(), null, entityName.getName(), null);
+                entityPrimaryKeyProperties = buildKeys(columnsRs);
             }
 
             return (new Key()).setKeys(entityPrimaryKeyProperties);
@@ -282,6 +272,25 @@ public class MetadataAccessor {
 
     }
 
+
+
+
+    private List<PropertyRef> buildKeys(final ResultSet columnsRs) throws SQLException {
+        
+        final List<PropertyRef> entityPrimaryKeyProperties = new ArrayList<PropertyRef>();
+        
+        while (columnsRs.next()) {
+        /*
+         * PropertyRef entities are really simple: we only need to obtain the name of the column
+         */
+            final PropertyRef primaryKeyProperty = new PropertyRef();
+            primaryKeyProperty.setName(columnsRs.getString("COLUMN_NAME"));
+            entityPrimaryKeyProperties.add(primaryKeyProperty);
+        }
+        return entityPrimaryKeyProperties;
+    }
+
+    
 
 
 
@@ -316,8 +325,7 @@ public class MetadataAccessor {
 
 
     public List<NavigationProperty> getEntityNavigationProperties(
-            final FullQualifiedName entityName, final List<Association> allAssociations)
-            throws SQLException {
+            final FullQualifiedName entityName, final List<Association> allAssociations) {
 
         /*
          * We will try to convert all these metadatas into NavigationProperty objects, discarding those that
@@ -463,7 +471,7 @@ public class MetadataAccessor {
 
 
 
-    public Association getAssociation(final FullQualifiedName associationName) throws SQLException {
+    public Association getAssociation(final FullQualifiedName associationName) {
 
         /*
          * Modeling associations from Virtual DataPort has several caveats. First the existence of these bugs:
@@ -791,7 +799,7 @@ public class MetadataAccessor {
 
                     @Override
                     public String mapRow(final ResultSet rs, final int rowNum) throws SQLException {
-                        String registerName = rs.getString(1);
+                        final String registerName = rs.getString(1);
                         if ("relation_link".equals(registerName)) {
                             /*
                              *  This is an internal type of VDP. It is necessary in VDP but
@@ -832,7 +840,7 @@ public class MetadataAccessor {
                 this.denodoTemplate.query(descComplexTypeQuery, new RowMapper<Property>() {
                     @Override
                     public Property mapRow(final ResultSet rs, final int rowNum) throws SQLException {
-                        int typeCode = rs.getInt("TYPECODE");
+                        final int typeCode = rs.getInt("TYPECODE");
                         
                         /*
                          *  We establish string type as default value.

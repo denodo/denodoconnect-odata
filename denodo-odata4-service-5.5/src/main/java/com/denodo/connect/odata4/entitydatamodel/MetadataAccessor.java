@@ -87,7 +87,7 @@ public class MetadataAccessor {
 
 
         Connection connection = null;
-        ResultSet tablesRs = null;
+        final ResultSet tablesRs = null;
         ResultSet columnsRs = null;
 
         try {
@@ -132,7 +132,7 @@ public class MetadataAccessor {
 
                 final EdmPrimitiveTypeKind type = SQLMetadataUtils.sqlTypeToODataType(sqlType);
 
-                CsdlProperty property = new CsdlProperty();
+                final CsdlProperty property = new CsdlProperty();
                 
                 // If type is null it means that it is a complex type, array or struct.
                 if (type == null) {
@@ -205,7 +205,6 @@ public class MetadataAccessor {
 
     public List<CsdlPropertyRef> getEntityPrimaryKey(final FullQualifiedName entityName) throws SQLException {
 
-        // Many entities will not have primary key information in VDP environments, so we save some objects
         List<CsdlPropertyRef> entityPrimaryKeyProperties = null;
 
         Connection connection = null;
@@ -219,21 +218,12 @@ public class MetadataAccessor {
             final DatabaseMetaData metadata = connection.getMetaData();
 
             columnsRs = metadata.getPrimaryKeys(connection.getCatalog(), null, entityName.getName());
+            entityPrimaryKeyProperties = buildPropertyRefs(columnsRs);
 
-            while (columnsRs.next()) {
-            /*
-             * PropertyRef entities are really simple: we only need to obtain the name of the column
-             */
-                final CsdlPropertyRef primaryKeyProperty = new CsdlPropertyRef();
-                primaryKeyProperty.setName(columnsRs.getString("COLUMN_NAME"));
-                if (entityPrimaryKeyProperties == null) {
-                    entityPrimaryKeyProperties = new ArrayList<CsdlPropertyRef>(2);
-                }
-                entityPrimaryKeyProperties.add(primaryKeyProperty);
-            }
-
-            if (entityPrimaryKeyProperties == null) {
-                return null;
+            // Many entities will not have primary key information in VDP environments, so we build a PK containing all the fields
+            if (entityPrimaryKeyProperties.isEmpty()) {
+                columnsRs = metadata.getColumns(connection.getCatalog(), null, entityName.getName(), null);
+                entityPrimaryKeyProperties = buildPropertyRefs(columnsRs);
             }
 
             return entityPrimaryKeyProperties;
@@ -243,6 +233,25 @@ public class MetadataAccessor {
             DataSourceUtils.releaseConnection(connection, this.denodoTemplate.getDataSource());
         }
 
+    }
+
+
+
+
+    private List<CsdlPropertyRef> buildPropertyRefs(final ResultSet columnsRs) throws SQLException {
+        
+        final List<CsdlPropertyRef> entityPrimaryKeyProperties = new ArrayList<CsdlPropertyRef>();
+        
+        while (columnsRs.next()) {
+        /*
+         * PropertyRef entities are really simple: we only need to obtain the name of the column
+         */
+            final CsdlPropertyRef primaryKeyProperty = new CsdlPropertyRef();
+            primaryKeyProperty.setName(columnsRs.getString("COLUMN_NAME"));
+            entityPrimaryKeyProperties.add(primaryKeyProperty);
+        }
+        
+        return entityPrimaryKeyProperties;
     }
 
 
@@ -264,11 +273,10 @@ public class MetadataAccessor {
 
 
     public List<CsdlNavigationProperty> getEntityNavigationProperties(
-            final FullQualifiedName entityName, final Map<FullQualifiedName, List<NavigationProperty>> allAssociations)
-            throws SQLException {
+            final FullQualifiedName entityName, final Map<FullQualifiedName, List<NavigationProperty>> allAssociations) {
 
         
-        List<NavigationProperty> navigationProperties = allAssociations.get(entityName);
+        final List<NavigationProperty> navigationProperties = allAssociations.get(entityName);
 
         
         return getCsdlNavigationPropertiesFromNavigationProperties(navigationProperties);
@@ -292,8 +300,7 @@ public class MetadataAccessor {
 
 
     public List<CsdlNavigationPropertyBinding> getEntityNavigationPropertiesBinding(
-            final FullQualifiedName entityName, final Map<FullQualifiedName, List<NavigationProperty>> allAssociations)
-            throws SQLException {
+            final FullQualifiedName entityName, final Map<FullQualifiedName, List<NavigationProperty>> allAssociations) {
 
         /*
          * We will try to convert all these metadatas into NavigationProperty objects, discarding those that
@@ -305,7 +312,7 @@ public class MetadataAccessor {
          */
 
         
-        List<NavigationProperty> navigationProperties = allAssociations.get(entityName);
+        final List<NavigationProperty> navigationProperties = allAssociations.get(entityName);
 
         
         return getCsdlNavigationPropertiesBindingFromNavigationProperties(navigationProperties);
@@ -314,10 +321,10 @@ public class MetadataAccessor {
     
     private static List<CsdlNavigationProperty> getCsdlNavigationPropertiesFromNavigationProperties(final List<NavigationProperty> navigationProperties) {
         
-        List<CsdlNavigationProperty> csdlNavigationProperties = new ArrayList<CsdlNavigationProperty>();
+        final List<CsdlNavigationProperty> csdlNavigationProperties = new ArrayList<CsdlNavigationProperty>();
         
         if (navigationProperties != null) {
-            for (NavigationProperty navProp : navigationProperties) {
+            for (final NavigationProperty navProp : navigationProperties) {
                 if (navProp.getNavigationProperty() != null) {
                     csdlNavigationProperties.add(navProp.getNavigationProperty());
                 }
@@ -329,10 +336,10 @@ public class MetadataAccessor {
     
     private static List<CsdlNavigationPropertyBinding> getCsdlNavigationPropertiesBindingFromNavigationProperties(final List<NavigationProperty> navigationProperties) {
         
-        List<CsdlNavigationPropertyBinding> csdlNavigationPropertiesBinding = new ArrayList<CsdlNavigationPropertyBinding>();
+        final List<CsdlNavigationPropertyBinding> csdlNavigationPropertiesBinding = new ArrayList<CsdlNavigationPropertyBinding>();
         
         if (navigationProperties != null) {
-            for (NavigationProperty navProp : navigationProperties) {
+            for (final NavigationProperty navProp : navigationProperties) {
                 if (navProp.getNavigationPropertyBinding() != null) {
                     csdlNavigationPropertiesBinding.add(navProp.getNavigationPropertyBinding());
                 }
@@ -347,11 +354,11 @@ public class MetadataAccessor {
         
         if (csdlNavigationProperties != null) {
             
-            List<CsdlNavigationPropertyBinding> csdlNavigationPropertiesBinding = new ArrayList<CsdlNavigationPropertyBinding>();
+            final List<CsdlNavigationPropertyBinding> csdlNavigationPropertiesBinding = new ArrayList<CsdlNavigationPropertyBinding>();
             
-            for (CsdlNavigationProperty csdlNavProperty : csdlNavigationProperties) {
-                String path = csdlNavProperty.getName();
-                String target = csdlNavProperty.getTypeFQN().getName();
+            for (final CsdlNavigationProperty csdlNavProperty : csdlNavigationProperties) {
+                final String path = csdlNavProperty.getName();
+                final String target = csdlNavProperty.getTypeFQN().getName();
                 csdlNavigationPropertiesBinding.add(new CsdlNavigationPropertyBinding().setPath(path).setTarget(target));
             }
             
@@ -386,14 +393,14 @@ public class MetadataAccessor {
          * SECOND STEP: For each of the obtained association names, execute a DESC and obtain its metadata
          */
 
-        Map<FullQualifiedName, List<NavigationProperty>> navigationPropertyMap = new HashMap<FullQualifiedName, List<NavigationProperty>>();
+        final Map<FullQualifiedName, List<NavigationProperty>> navigationPropertyMap = new HashMap<FullQualifiedName, List<NavigationProperty>>();
         
         for (final String associationName : associationNames) {
             final FullQualifiedName associationFQName = new FullQualifiedName(namespace, associationName);
             
-            Map<FullQualifiedName, NavigationProperty> navProperties = this.getAssociation(null, associationFQName);
+            final Map<FullQualifiedName, NavigationProperty> navProperties = this.getAssociation(null, associationFQName);
             
-            for (Map.Entry<FullQualifiedName, NavigationProperty> e : navProperties.entrySet()) {
+            for (final Map.Entry<FullQualifiedName, NavigationProperty> e : navProperties.entrySet()) {
                 List<NavigationProperty> navPropertyList = navigationPropertyMap.get(e.getKey());
                 if (navPropertyList != null) {
                     navPropertyList.add(e.getValue());
@@ -412,7 +419,7 @@ public class MetadataAccessor {
 
 
 
-    public List<NavigationProperty> getAssociationsForEntity(final FullQualifiedName entityName) throws SQLException {
+    public List<NavigationProperty> getAssociationsForEntity(final FullQualifiedName entityName) {
 
         /*
          * FIRST STEP: Obtain the list of names of the associations related with the required entity
@@ -550,7 +557,7 @@ public class MetadataAccessor {
 
                         final Map<FullQualifiedName, NavigationProperty> navPropertyMap = new HashMap<FullQualifiedName, NavigationProperty>();
 
-                        FullQualifiedName fqnLeft = new FullQualifiedName(associationName.getNamespace(), rightViewName);
+                        final FullQualifiedName fqnLeft = new FullQualifiedName(associationName.getNamespace(), rightViewName);
                         if (entityName == null || (entityName != null && entityName.equals(fqnLeft))) {
                             final CsdlNavigationProperty navigationPropertyLeft = new CsdlNavigationProperty();
                             navigationPropertyLeft.setName(leftRole);
@@ -582,7 +589,7 @@ public class MetadataAccessor {
                             navPropertyMap.put(fqnLeft, navigationProperty);
                         }
                         
-                        FullQualifiedName fqnRight = new FullQualifiedName(associationName.getNamespace(), leftViewName);
+                        final FullQualifiedName fqnRight = new FullQualifiedName(associationName.getNamespace(), leftViewName);
                         if (entityName == null || (entityName != null && entityName.equals(fqnRight))) {
                             final CsdlNavigationProperty navigationPropertyRight = new CsdlNavigationProperty();
                             navigationPropertyRight.setName(rightRole);
@@ -771,14 +778,14 @@ public class MetadataAccessor {
         final List<CsdlProperty> complexTypes = this.denodoTemplate.query(descComplexTypeQuery, new RowMapper<CsdlProperty>() {
             @Override
             public CsdlProperty mapRow(final ResultSet rs, final int rowNum) throws SQLException {
-                int typeCode = rs.getInt("TYPECODE");
+                final int typeCode = rs.getInt("TYPECODE");
 
                 /*
                  * We establish string type as default value.
                  */
                 EdmPrimitiveTypeKind type = EdmPrimitiveTypeKind.String;
                 
-                CsdlProperty property = new CsdlProperty();
+                final CsdlProperty property = new CsdlProperty();
 
                 if (typeCode != 0) {
                     // When typeCode is zero it means that we do not have

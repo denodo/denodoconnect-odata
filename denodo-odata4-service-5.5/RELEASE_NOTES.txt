@@ -1,5 +1,6 @@
-20180307
+20180312
 --------
+- Fixed #35414 - OData 4 web service of a view without primary key should not be allowed to be available for an OData web service
 - Fixed #36282 - The OData 4 Service cannot access VDP databases and views with non-ASCII characters in their names
 
 20170912

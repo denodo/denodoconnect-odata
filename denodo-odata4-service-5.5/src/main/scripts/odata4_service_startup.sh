@@ -37,7 +37,7 @@ then
     fi
 fi
 
-DENODO_LAUNCHER_CLASSPATH="$DENODO_HOME/lib/denodo-launcher-util.jar"
+DENODO_LAUNCHER_CLASSPATH="$DENODO_HOME/lib/${denodo.launcher.jar}"
 if [ "$DENODO_EXTERNAL_CLASSPATH" != "" ]
 then
     DENODO_LAUNCHER_CLASSPATH=$DENODO_LAUNCHER_CLASSPATH:$DENODO_EXTERNAL_CLASSPATH
@@ -61,7 +61,7 @@ then
           --conf "$DENODO_CONF" \
           --conf "$DENODO_HOME/resources/apache-tomcat/conf" \
           --lib "$DENODO_HOME/lib/contrib" \
-		  --arg start --arg denodo-odata4-service-5.5
+		  --arg start --arg denodo-odata4-service-${denodo.version}
        
  
     exit 0

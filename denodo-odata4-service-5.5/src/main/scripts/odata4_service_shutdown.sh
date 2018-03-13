@@ -10,5 +10,5 @@ DENODO_HOME=..
 
 export DENODO_CONF="$DENODO_HOME/conf/vdp"
 
-exec "$DENODO_HOME/bin/webcontainer.sh" stop denodo-odata4-service-5.5
+exec "$DENODO_HOME/bin/webcontainer.sh" stop denodo-odata4-service-${denodo.version}
 

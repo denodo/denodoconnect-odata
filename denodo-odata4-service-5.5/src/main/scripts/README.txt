@@ -1,45 +1,59 @@
-Steps for configuring Denodo Odata Service inside Denodo internal web container, there are two options, with the option A , you can execute manually the scripts.
-And with the option B, you can run the start and the stop of the application as a Service in Windows NT/2000/2003/XP/Vista.
 
+ Configuring Denodo Odata Service inside Denodo internal web container
+======================================================================
 
-OPTION A
-=========
+ There are two options for configuring Denodo Odata Service inside Denodo internal web container.
+ - With the option A, you can execute manually the scripts.
+ - With the option B, you can run the start and the stop of the application as a Service in
+   Windows NT/2000/2003/XP/Vista.
 
-(1) Copy the denodo-odata4-service-5.5.war into the following location: 
-     <DENODO_HOME>/resources/apache-tomcat/webapps/
+ OPTION A
+==========
+
+(1) Copy the denodo-odata4-service-${denodo.version}.war into the following location: 
+    <DENODO_HOME>/resources/apache-tomcat/webapps/
      
-(2) Create a context xml for the Denodo Odata Service.  You can use the attached xml template, denodo-odata4-service-5.5.xml
+(2) Create a context xml for the Denodo Odata Service. You can use the attached xml template,
+    denodo-odata4-service-${denodo.version}.xml
 
-(3) Copy the denodo-odata4-service-5.5.xml file into the following location:
-     <DENODO_HOME>/resources/apache-tomcat/conf/DenodoPlatform-5.5/localhost
+(3) Copy the denodo-odata4-service-${denodo.version}.xml file into the following location:
+    <DENODO_HOME>/resources/apache-tomcat/conf/DenodoPlatform-${denodo.version}/localhost
 
-(4) Check that in <DENODO_HOME>/resources/apache-tomcat/conf/catalina.properties in the property common.loader there is a reference to the vdp-jdbcdriver. In 
-tomcat 5.5 the reference could be in the property shared.loader. If there isn´t this reference, you should add ${catalina.base}/../../lib/vdp-jdbcdriver-core/denodo-vdp-jdbcdriver.jar
+(4) Check that in <DENODO_HOME>/resources/apache-tomcat/conf/catalina.properties in the property
+    common.loader there is a reference to the vdp-jdbcdriver. In older tomcats the reference could be
+    in the property shared.loader. If there is no reference, you should add it:
+    ${denodo.driver.path}
    
-(5) Create launch scripts for the Denodo Odata Service(odata4_service_startup and odata4_service_shutdown). You can use the attached templates.
-     Make sure to modify the DENODO_HOME variable in the script templates to point to your Denodo installation.
+(5) Create launch scripts for the Denodo Odata Service(odata4_service_startup and odata4_service_shutdown).
+    You can use the attached templates.
+    Make sure to modify the DENODO_HOME variable in the script templates to point to your Denodo installation.
 
 (6) Copy the launch scripts into <DENODO_HOME>/bin
 
 
 
 
-After copying all the necessary files into the correct directories, run the odata4_service_startup.bat (or odata4_service_startup-sh)  launch script. 
-Then navigate to http://localhost:9090/denodo-odata4-service-5.5/denodo-odata.svc/<DBNAME>.  
+ After copying all the necessary files into the correct directories, run the odata4_service_startup.bat
+ (or odata4_service_startup-sh)  launch script. 
 
-You can stop the service executing odata4_service_shutdown and restarting executing again the script odata4-service-startup
+ Then navigate to http://localhost:9090/denodo-odata4-service-${denodo.version}/denodo-odata.svc/<DBNAME>.  
 
-OPTION B
-========
+ You can stop the service executing odata4_service_shutdown and restarting executing again the script odata4-service-startup
+
+ OPTION B
+=========
+
 This option is only for Windows Systems.
 
 (1-4) Same as in the option A
 
-(5)   Create service script for the Denodo Odata Service(odata4_service_service). You can use the attached template.
+(5)   Create service script for the Denodo Odata Service(odata4_service_service) in <DENODO_HOME>/bin.
+      You can use the attached template.
       Make sure to modify the DENODO_HOME variable in the script templates to point to your Denodo installation.
 
-(6)   Create the file service.conf and copy in the folder <DENODO_HOME>/conf/denodo_odata4-service-service/, you can use the attached template.
-Make sure to modify the DENODO_HOME variable in the script templates to point to your Denodo installation. 
+(6)   Create the file service.conf and copy in the folder <DENODO_HOME>/conf/denodo-odata4-service-service/,
+      you can use the attached template. Make sure to modify the DENODO_HOME variable in the script templates
+      to point to your Denodo installation. 
 
 (7)   Install as a Windows service. Execute "odata4-service-service.bat install"
 

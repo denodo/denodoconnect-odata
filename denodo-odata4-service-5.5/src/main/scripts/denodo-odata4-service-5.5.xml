@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<Context className="org.apache.catalina.core.StandardContext"
-                 mapperClass="org.apache.catalina.core.StandardContextMapper"
-                 path="/denodo-odata4-service-5.5"
-                 wrapperClass="org.apache.catalina.core.StandardWrapper">
-        </Context>

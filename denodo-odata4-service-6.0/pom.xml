@@ -35,11 +35,14 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <version.cxf>3.1.0</version.cxf>
-    <version.slf4j>1.7.1</version.slf4j>
-    <version.olingo>4.3.0</version.olingo>
-    <version.springframework>3.2.14.RELEASE</version.springframework><!-- 3.2.14.RELEASE-->
-    <version.commonsdbcp>1.4</version.commonsdbcp>
+    <version.commons.codec>1.10</version.commons.codec>
+    <version.commons.dbcp>1.4</version.commons.dbcp>
+    <version.commons.lang>3.3.2</version.commons.lang>
     <version.denodovdpjdbcdriver>6.0.10</version.denodovdpjdbcdriver>
+    <version.olingo>4.3.0</version.olingo>
+    <version.servlet.api>2.4</version.servlet.api>
+    <version.slf4j>1.7.1</version.slf4j>
+    <version.springframework>3.2.14.RELEASE</version.springframework>
     <classifier.denodovdpjdbcdriver>full</classifier.denodovdpjdbcdriver>
   </properties>
 
@@ -49,11 +52,11 @@
 
     <resources>      
       <resource>
-        <directory>../denodo-odata4-service-5.5/src/main/resources</directory>
+        <directory>${basedir}/../denodo-odata4-service-5.5/src/main/resources</directory>
       </resource>
     </resources>
 
-    <sourceDirectory>../denodo-odata4-service-5.5/src/main/java</sourceDirectory>
+    <sourceDirectory>${basedir}/../denodo-odata4-service-5.5/src/main/java</sourceDirectory>
 
     <pluginManagement>
       <plugins>
@@ -69,7 +72,7 @@
           <configuration>                                                          
             <webResources>
                 <resource>
-                    <directory>../denodo-odata4-service-5.5/src/main/webapp</directory>
+                    <directory>${basedir}/../denodo-odata4-service-5.5/src/main/webapp</directory>
                     <excludes>
                       <!-- Exclude this since it is copied from the current project -->
                       <exclude>**/cors_settings.xml</exclude>
@@ -91,7 +94,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.1</version>
         <configuration>
           <source>1.6</source>
           <target>1.6</target>
@@ -121,27 +123,30 @@
         </executions>
       </plugin>
 
-      <plugin>
+    <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
         <version>2.2-beta-5</version>
         <executions>
-          <execution>
-            <id>make-assembly-dist</id>
-            <phase>package</phase>
-            <goals>
-              <goal>attached</goal>
-            </goals>
-            <configuration>
-              <descriptors>
-                <descriptor>${basedir}/src/main/assembly/dist.xml</descriptor>
-              </descriptors>
-              <appendAssemblyId>true</appendAssemblyId>
-              <finalName>${project.artifactId}-${project.version}</finalName>
-            </configuration>
-          </execution>
+            <execution>
+                <id>make-assembly-dist</id>
+                <phase>package</phase>
+                <goals>
+                    <goal>attached</goal>
+                </goals>
+                <configuration>
+                    <filters>
+                        <filter>${basedir}/src/main/assembly/filter.properties</filter>
+                    </filters>
+                    <descriptors>
+                        <descriptor>${basedir}/src/main/assembly/dist.xml</descriptor>
+                    </descriptors>
+                    <appendAssemblyId>true</appendAssemblyId>
+                    <finalName>${project.artifactId}-${project.version}</finalName>
+                </configuration>
+            </execution>
         </executions>
-      </plugin>
+    </plugin>
 
     </plugins>
 
@@ -154,14 +159,14 @@
     <dependency>
       <groupId>javax.servlet</groupId>
       <artifactId>servlet-api</artifactId>
-      <version>2.4</version>
+      <version>${version.servlet.api}</version>
       <scope>provided</scope>
     </dependency>
     
     <dependency>
         <groupId>commons-codec</groupId>
         <artifactId>commons-codec</artifactId>
-        <version>1.10</version>
+        <version>${version.commons.codec}</version>
     </dependency>
 
     <dependency>
@@ -257,14 +262,14 @@
     <dependency>
       <groupId>commons-dbcp</groupId>
       <artifactId>commons-dbcp</artifactId>
-      <version>${version.commonsdbcp}</version>
+      <version>${version.commons.dbcp}</version>
       <scope>compile</scope>
     </dependency>
 
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
-      <version>3.3.2</version>
+      <version>${version.commons.lang}</version>
     </dependency>
 
     <dependency>

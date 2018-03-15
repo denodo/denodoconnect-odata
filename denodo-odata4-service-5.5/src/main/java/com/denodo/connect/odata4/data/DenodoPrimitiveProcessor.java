@@ -26,7 +26,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -36,6 +35,7 @@ import org.apache.olingo.commons.api.data.Entity;
 import org.apache.olingo.commons.api.data.Property;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveType;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeException;
 import org.apache.olingo.commons.api.edm.EdmProperty;
 import org.apache.olingo.commons.api.ex.ODataRuntimeException;
 import org.apache.olingo.commons.api.format.ContentType;
@@ -73,34 +73,34 @@ public class DenodoPrimitiveProcessor extends DenodoAbstractProcessor implements
     private ServiceMetadata serviceMetadata;
     
     @Override
-    public void init(OData odata, ServiceMetadata serviceMetadata) {
+    public void init(final OData odata, final ServiceMetadata serviceMetadata) {
         this.odata = odata;
         this.serviceMetadata = serviceMetadata;
     }
     
     @Override
-    public void readPrimitive(ODataRequest request, ODataResponse response, UriInfo uriInfo, ContentType responseFormat)
+    public void readPrimitive(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo, final ContentType responseFormat)
             throws ODataApplicationException, ODataLibraryException {
         
         Entity responseEntity = null;
 
         // 1. Retrieve info from URI
         // 1.1. retrieve the info about the requested entity set
-        List<UriResource> resourceParts = uriInfo.getUriResourceParts();
+        final List<UriResource> resourceParts = uriInfo.getUriResourceParts();
         // Note: only in our example we can rely that the first segment is the EntitySet
-        UriResourceEntitySet uriEntityset = (UriResourceEntitySet) resourceParts.get(0);
-        EdmEntitySet edmEntitySet = uriEntityset.getEntitySet();
+        final UriResourceEntitySet uriEntityset = (UriResourceEntitySet) resourceParts.get(0);
+        final EdmEntitySet edmEntitySet = uriEntityset.getEntitySet();
         // the key for the entity
-        List<UriParameter> keyPredicates = uriEntityset.getKeyPredicates();
+        final List<UriParameter> keyPredicates = uriEntityset.getKeyPredicates();
 
 
         // Gets the path used to select a (simple or complex) property of an entity.
         // If it is a simple property this list should have only one element, otherwise
         // each element is the path to a simple element of a register
-        List<EdmProperty> propertyPath = new ArrayList<EdmProperty>();
-        for (UriResource uriResource : resourceParts) {
+        final List<EdmProperty> propertyPath = new ArrayList<EdmProperty>();
+        for (final UriResource uriResource : resourceParts) {
             if (uriResource instanceof UriResourceProperty) {
-                EdmProperty edmProperty = ((UriResourceProperty) uriResource).getProperty();
+                final EdmProperty edmProperty = ((UriResourceProperty) uriResource).getProperty();
                 propertyPath.add(edmProperty);
             }
         }
@@ -108,17 +108,17 @@ public class DenodoPrimitiveProcessor extends DenodoAbstractProcessor implements
 
         // Retrieve the requested (Edm) property
         // the last segment is the Property
-        UriResourceProperty uriProperty = (UriResourceProperty) resourceParts.get(resourceParts.size() - 1);
+        final UriResourceProperty uriProperty = (UriResourceProperty) resourceParts.get(resourceParts.size() - 1);
 
 
-        List<UriResourceNavigation> uriResourceNavigationList = ProcessorUtils.getNavigationSegments(uriInfo);
+        final List<UriResourceNavigation> uriResourceNavigationList = ProcessorUtils.getNavigationSegments(uriInfo);
 
         if (uriResourceNavigationList.isEmpty()) { // no navigation
-            Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
+            final Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
             responseEntity = this.entityAccessor.getEntity(edmEntitySet, keys, null, propertyPath, getServiceRoot(request), uriInfo, null);
         } else { // navigation
-            EdmEntitySet responseEdmEntitySet = ProcessorUtils.getNavigationTargetEntitySet(edmEntitySet, uriResourceNavigationList);
-            Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
+            final EdmEntitySet responseEdmEntitySet = ProcessorUtils.getNavigationTargetEntitySet(edmEntitySet, uriResourceNavigationList);
+            final Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
             responseEntity = this.entityAccessor.getEntityByAssociation(edmEntitySet, keys, null, null,
                     uriResourceNavigationList, responseEdmEntitySet, getServiceRoot(request), uriInfo, null);
         }
@@ -130,18 +130,19 @@ public class DenodoPrimitiveProcessor extends DenodoAbstractProcessor implements
 
         // Serialize
         ContextURL contextUrl = null;
-        EdmProperty edmProperty = uriProperty.getProperty();
-        String edmPropertyName = edmProperty.getName();
+        final EdmProperty edmProperty = uriProperty.getProperty();
+        final String edmPropertyName = edmProperty.getName();
         try {
             contextUrl = ContextURL.with().entitySet(edmEntitySet).navOrPropertyPath(edmPropertyName).serviceRoot(new URI(getServiceRoot(request) + "/")).build();
-        } catch (URISyntaxException e) {
+        } catch (final URISyntaxException e) {
             throw new ODataRuntimeException("Unable to create service root URI: ", e);
         }
-        PrimitiveSerializerOptions options = PrimitiveSerializerOptions.with().contextURL(contextUrl).build();
+        final PrimitiveSerializerOptions options = PrimitiveSerializerOptions.with().contextURL(contextUrl).
+                facetsFrom(edmProperty).build();
 
-        ODataSerializer serializer = this.odata.createSerializer(responseFormat);
-        EdmPrimitiveType edmPropertyType = (EdmPrimitiveType) edmProperty.getType();
-        SerializerResult serializerResult = serializer.primitive(this.serviceMetadata, edmPropertyType,
+        final ODataSerializer serializer = this.odata.createSerializer(responseFormat);
+        final EdmPrimitiveType edmPropertyType = (EdmPrimitiveType) edmProperty.getType();
+        final SerializerResult serializerResult = serializer.primitive(this.serviceMetadata, edmPropertyType,
                 responseEntity.getProperty(edmPropertyName), options);
 
         // Configure the response object
@@ -152,54 +153,58 @@ public class DenodoPrimitiveProcessor extends DenodoAbstractProcessor implements
     }
 
     @Override
-    public void updatePrimitive(ODataRequest request, ODataResponse response, UriInfo uriInfo, ContentType requestFormat,
-            ContentType responseFormat) throws ODataApplicationException, ODataLibraryException {
+    public void updatePrimitive(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo, final ContentType requestFormat,
+            final ContentType responseFormat) throws ODataApplicationException, ODataLibraryException {
         throw new ODataApplicationException("Not supported.", HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
         
     }
 
     @Override
-    public void deletePrimitive(ODataRequest request, ODataResponse response, UriInfo uriInfo) throws ODataApplicationException,
+    public void deletePrimitive(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo) throws ODataApplicationException,
             ODataLibraryException {
         throw new ODataApplicationException("Not supported.", HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
         
     }
 
     @Override
-    public void readPrimitiveValue(ODataRequest request, ODataResponse response, UriInfo uriInfo, ContentType responseFormat)
+    public void readPrimitiveValue(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo, final ContentType responseFormat)
             throws ODataApplicationException, ODataLibraryException {
         
         Entity responseEntity = null;
 
         // 1. Retrieve info from URI
         // 1.1. retrieve the info about the requested entity set
-        List<UriResource> resourceParts = uriInfo.getUriResourceParts();
+        final List<UriResource> resourceParts = uriInfo.getUriResourceParts();
         // Note: only in our example we can rely that the first segment is the EntitySet
-        UriResourceEntitySet uriEntityset = (UriResourceEntitySet) resourceParts.get(0);
-        EdmEntitySet edmEntitySet = uriEntityset.getEntitySet();
+        final UriResourceEntitySet uriEntityset = (UriResourceEntitySet) resourceParts.get(0);
+        final EdmEntitySet edmEntitySet = uriEntityset.getEntitySet();
         // the key for the entity
-        List<UriParameter> keyPredicates = uriEntityset.getKeyPredicates();
-
-        // Next we get the property value from the entity and pass the value to serialization
-        UriResourceProperty uriProperty = (UriResourceProperty) uriInfo
-                .getUriResourceParts().get(uriInfo.getUriResourceParts().size() - 2);
-
-
+        final List<UriParameter> keyPredicates = uriEntityset.getKeyPredicates();
+        
         // Gets the path used to select a (simple or complex) property of an entity.
         // If it is a simple property this list should have only one element, otherwise
         // each element is the path to a simple element of a register
+        final List<EdmProperty> propertyPath = new ArrayList<EdmProperty>();
+        for (final UriResource uriResource : resourceParts) {
+            if (uriResource instanceof UriResourceProperty) {
+                final EdmProperty edmProperty = ((UriResourceProperty) uriResource).getProperty();
+                propertyPath.add(edmProperty);
+            }
+        }
 
-        EdmProperty edmProperty = uriProperty.getProperty();
-        List<EdmProperty> edmPropertyList = Arrays.asList(edmProperty);
+        // Next we get the property value from the entity and pass the value to serialization
+        final UriResourceProperty uriProperty = (UriResourceProperty) uriInfo
+                .getUriResourceParts().get(uriInfo.getUriResourceParts().size() - 2);
 
-        List<UriResourceNavigation> uriResourceNavigationList = ProcessorUtils.getNavigationSegments(uriInfo);
+
+        final List<UriResourceNavigation> uriResourceNavigationList = ProcessorUtils.getNavigationSegments(uriInfo);
 
         if (uriResourceNavigationList.isEmpty()) { // no navigation
-            Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
-            responseEntity = this.entityAccessor.getEntity(edmEntitySet, keys, null, edmPropertyList, getServiceRoot(request), uriInfo, null);
+            final Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
+            responseEntity = this.entityAccessor.getEntity(edmEntitySet, keys, null, propertyPath, getServiceRoot(request), uriInfo, null);
         } else { // navigation
-            EdmEntitySet responseEdmEntitySet = ProcessorUtils.getNavigationTargetEntitySet(edmEntitySet, uriResourceNavigationList);
-            Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
+            final EdmEntitySet responseEdmEntitySet = ProcessorUtils.getNavigationTargetEntitySet(edmEntitySet, uriResourceNavigationList);
+            final Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
             responseEntity = this.entityAccessor.getEntityByAssociation(edmEntitySet, keys, null, null,
                     uriResourceNavigationList, responseEdmEntitySet, getServiceRoot(request), uriInfo, null);
         }
@@ -208,7 +213,8 @@ public class DenodoPrimitiveProcessor extends DenodoAbstractProcessor implements
             throw new ODataApplicationException("No entity found for this key.", HttpStatusCode.NOT_FOUND.getStatusCode(), Locale.getDefault());
         }
 
-        Property property = responseEntity.getProperty(edmProperty.getName());
+        final EdmProperty edmProperty = uriProperty.getProperty();
+        final Property property = responseEntity.getProperty(edmProperty.getName());
 
         if (property == null) {
             throw new ODataApplicationException("No property found", HttpStatusCode.NOT_FOUND
@@ -217,24 +223,33 @@ public class DenodoPrimitiveProcessor extends DenodoAbstractProcessor implements
         if (property.getValue() == null) {
             response.setStatusCode(HttpStatusCode.NO_CONTENT.getStatusCode());
         } else {
-            String value = String.valueOf(property.getValue());
-            ByteArrayInputStream serializerContent = new ByteArrayInputStream(value.getBytes(Charset.forName("UTF-8")));
-            response.setContent(serializerContent);
-            response.setStatusCode(HttpStatusCode.OK.getStatusCode());
-            response.setHeader(HttpHeader.CONTENT_TYPE, ContentType.TEXT_PLAIN.toContentTypeString());
+            try {
+                final String value = ((EdmPrimitiveType) edmProperty.getType()).valueToString(property.getValue(), edmProperty.isNullable(),
+                        edmProperty.getMaxLength(), edmProperty.getPrecision(), edmProperty.getScale(), edmProperty.isUnicode());
+                
+                final ByteArrayInputStream serializerContent = new ByteArrayInputStream(value.getBytes(Charset.forName("UTF-8")));
+                response.setContent(serializerContent);
+                response.setStatusCode(HttpStatusCode.OK.getStatusCode());
+                response.setHeader(HttpHeader.CONTENT_TYPE, ContentType.TEXT_PLAIN.toContentTypeString());
+
+            } catch (final EdmPrimitiveTypeException e) {
+                throw new ODataApplicationException("Failed to retrieve String value", HttpStatusCode.INTERNAL_SERVER_ERROR
+                        .getStatusCode(), Locale.getDefault(), e);
+            }
+            
         }
 
     }
 
     @Override
-    public void updatePrimitiveValue(ODataRequest request, ODataResponse response, UriInfo uriInfo, ContentType requestFormat,
-            ContentType responseFormat) throws ODataApplicationException, ODataLibraryException {
+    public void updatePrimitiveValue(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo, final ContentType requestFormat,
+            final ContentType responseFormat) throws ODataApplicationException, ODataLibraryException {
         throw new ODataApplicationException("Not supported.", HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
         
     }
 
     @Override
-    public void deletePrimitiveValue(ODataRequest request, ODataResponse response, UriInfo uriInfo) throws ODataApplicationException,
+    public void deletePrimitiveValue(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo) throws ODataApplicationException,
             ODataLibraryException {
         throw new ODataApplicationException("Not supported.", HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
         

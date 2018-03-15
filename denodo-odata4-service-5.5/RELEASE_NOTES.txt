@@ -1,3 +1,7 @@
+CURRENT_RELEASE
+---------------
+- Fixed #36498 - Issues addressing individual properties and their values
+
 20180312
 --------
 - Fixed #35414 - OData 4 web service of a view without primary key should not be allowed to be available for an OData web service

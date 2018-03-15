@@ -39,7 +39,7 @@
     <version.commons.dbcp>1.4</version.commons.dbcp>
     <version.commons.lang>3.3.2</version.commons.lang>
     <version.denodovdpjdbcdriver>6.0.10</version.denodovdpjdbcdriver>
-    <version.olingo>4.3.0</version.olingo>
+    <version.olingo>4.4.0</version.olingo>
     <version.servlet.api>2.4</version.servlet.api>
     <version.slf4j>1.7.1</version.slf4j>
     <version.springframework>3.2.14.RELEASE</version.springframework>

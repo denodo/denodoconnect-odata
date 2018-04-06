@@ -30,6 +30,12 @@
   <name>${project.artifactId}</name>
   <version>20180312</version>
 
+  <organization>
+    <name>Denodo Technologies</name>
+    <url>http://www.denodo.com</url>
+  </organization>
+  
+
   <packaging>war</packaging>
 
   <properties>
@@ -71,11 +77,25 @@
           <artifactId>maven-compiler-plugin</artifactId>
           <version>2.3.2</version>
         </plugin>
+        
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-war-plugin</artifactId>
           <version>2.4</version>
+          <configuration>
+            <archive>
+                <addMavenDescriptor>false</addMavenDescriptor>
+                <manifest>
+                    <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                    <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                </manifest>
+                <manifestEntries>
+                    <Built-By>denodo</Built-By>
+              </manifestEntries>                
+            </archive>
+          </configuration>
         </plugin>
+        
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-eclipse-plugin</artifactId>

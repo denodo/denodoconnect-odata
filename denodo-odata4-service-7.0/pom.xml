@@ -37,8 +37,8 @@
     <version.cxf>3.1.0</version.cxf>
     <version.commons.codec>1.10</version.commons.codec>
     <version.commons.dbcp>1.4</version.commons.dbcp>
-    <version.commons.lang>3.3.2</version.commons.lang>
-    <version.denodovdpjdbcdriver>7.0.0-Beta2</version.denodovdpjdbcdriver>
+    <version.commons.lang>3.5</version.commons.lang>
+    <version.denodovdpjdbcdriver>7.0.0</version.denodovdpjdbcdriver>
     <version.olingo>4.4.0</version.olingo>
     <version.servlet.api>2.4</version.servlet.api>
     <version.slf4j>1.7.1</version.slf4j>
@@ -286,7 +286,7 @@
       <version>${version.slf4j}</version>
     </dependency>
 
-    <dependency>
+    <dependency> 
       <groupId>com.denodo.vdp.jdbc</groupId>
       <artifactId>denodo-vdp-jdbcdriver-dist</artifactId>
       <version>${version.denodovdpjdbcdriver}</version>

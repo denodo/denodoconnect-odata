@@ -52,8 +52,10 @@ import org.springframework.jdbc.support.JdbcUtils;
 import org.springframework.stereotype.Repository;
 
 import com.denodo.connect.odata4.util.NavigationProperty;
+import com.denodo.connect.odata4.util.PropertyUtils;
 import com.denodo.connect.odata4.util.SQLMetadataUtils;
 import com.denodo.connect.odata4.util.SQLMetadataUtils.ODataMultiplicity;
+import com.denodo.connect.odata4.util.VDPJDBCTypes;
 
 
 
@@ -62,6 +64,7 @@ import com.denodo.connect.odata4.util.SQLMetadataUtils.ODataMultiplicity;
 public class MetadataAccessor {
 
 
+    private static final int VDP_7_NEW_DATETIME_TYPES = 7;
     private static final String ASSOCIATIONS_LIST_ALL_QUERY_FORMAT = "LIST ASSOCIATIONS;";
     private static final String ASSOCIATIONS_LIST_QUERY_FORMAT = "LIST ASSOCIATIONS `%s`;";
     private static final String ASSOCIATION_DESC_QUERY_FORMAT = "DESC ASSOCIATION `%s`;";
@@ -70,8 +73,6 @@ public class MetadataAccessor {
 
     @Autowired
     private JdbcTemplate denodoTemplate;
-
-
 
 
     public MetadataAccessor() {
@@ -104,87 +105,9 @@ public class MetadataAccessor {
             
             while (columnsRs.next()) {
 
-                /*
-                 * As of June 2015, there is no way to specify documentation (metainfo) about specific fields
-                 * of a VDP view -- this can only be done at the view level. So we cannot create Documentation
-                 * objects for our OData properties. If this changes in the future, this metainfo will probably
-                 * come in the "REMARKS" column of this ResultSet.
-                 */
-
-                /*
-                 * NOTE the metadata for these types is extracting according to what is established on
-                 * the Apache Olingo documentation at:
-                 * http://olingo.apache.org/javadoc/odata2/org/apache/olingo/odata2/api/edm/EdmSimpleType.html
-                 * ---
-                 * For all EDM simple types, the facet Nullable is taken into account. For Binary, MaxLength
-                 * is also applicable. For String, the facets MaxLength and Unicode are also considered. The
-                 * EDM simple types DateTime, DateTimeOffset, and Time can have a Precision facet. Decimal can
-                 * have the facets Precision and Scale.
-                 * ---
-                 * Note also that, in order to better understand the way these properties are extracted from
-                 * metadata, it is useful to understand the names of the different metadata fields (and their
-                 * correspondence between ODBC 2.0 and 3.0), given OData evolves from Microsoft specifications
-                 * like the Entity Framework.
-                 * See: https://msdn.microsoft.com/en-us/library/ms711683%28v=vs.85%29.aspx and find "ODBC 2.0 column"
-                 */
-
-                final int sqlType = columnsRs.getInt("DATA_TYPE");
-
-                final EdmPrimitiveTypeKind type = SQLMetadataUtils.sqlTypeToODataType(sqlType);
-
-                final CsdlProperty property = new CsdlProperty();
-                
-                // If type is null it means that it is a complex type, array or struct.
-                if (type == null) {
-                    if (SQLMetadataUtils.isArrayType(sqlType)) {
-                        // Arrays are collections and we have to mark this fact in the property 
-                        property.setCollection(true);
-                    }
-                    final String typeName = columnsRs.getString("TYPE_NAME");
-                    property.setType(new FullQualifiedName(entityName.getNamespace(), typeName));
-                    if (complexTypeNames != null) {
-                        complexTypeNames.add(typeName);
-                    }
-                } else {
-                    property.setType(type.getFullQualifiedName());
-                }
-
-                property.setName(columnsRs.getString("COLUMN_NAME"));
-
-                // Nullable flag, normalized by SQLMetadataUtils
-                final Boolean nullable =
-                        SQLMetadataUtils.sqlNullableToODataNullable(columnsRs.getInt("NULLABLE"));
-                if (nullable != null) {
-                    property.setNullable(nullable);
-                }
-                // Size of VARCHAR (String) columns and precision of DECIMAL columns
-                if (type == EdmPrimitiveTypeKind.String) {
-                    if (!SQLMetadataUtils.isArrayType(sqlType)) {
-                        final int maxLength = columnsRs.getInt("COLUMN_SIZE");
-                        if (maxLength != Integer.MAX_VALUE && !columnsRs.wasNull()) {
-                            property.setMaxLength(Integer.valueOf(maxLength));
-                        }
-                    }
-                } else if (type == EdmPrimitiveTypeKind.Decimal) {
-                    final int scale = columnsRs.getInt("DECIMAL_DIGITS");
-                    if (!columnsRs.wasNull()) {
-                        property.setScale(Integer.valueOf(scale));
-                    }
-                    final int precision = columnsRs.getInt("COLUMN_SIZE");
-                    if (!columnsRs.wasNull()) {
-                        property.setPrecision(Integer.valueOf(precision));
-                    }
-                } else if (type == EdmPrimitiveTypeKind.Binary) {
-                    final int maxLength = columnsRs.getInt("COLUMN_SIZE");
-                    if (!columnsRs.wasNull()) {
-                        property.setMaxLength(Integer.valueOf(maxLength));
-                    }
-                } else if (type == EdmPrimitiveTypeKind.DateTimeOffset || type == EdmPrimitiveTypeKind.TimeOfDay) {
-                    final int precision = columnsRs.getInt("COLUMN_SIZE");
-                    if (!columnsRs.wasNull()) {
-                        property.setPrecision(Integer.valueOf(precision));
-                    }
-                }
+                final CsdlProperty property = buildCsdlProperty(entityName, complexTypeNames, columnsRs,
+                        "DATA_TYPE", "TYPE_NAME", "COLUMN_NAME", "NULLABLE", "DECIMAL_DIGITS", "COLUMN_SIZE",
+                        metadata.getDatabaseMajorVersion());
 
                 entityProperties.add(property);
 
@@ -198,6 +121,116 @@ public class MetadataAccessor {
             DataSourceUtils.releaseConnection(connection, this.denodoTemplate.getDataSource());
         }
 
+    }
+
+    /*
+     * As of June 2015, there is no way to specify documentation (metainfo) about specific fields
+     * of a VDP view -- this can only be done at the view level. So we cannot create Documentation
+     * objects for our OData properties. If this changes in the future, this metainfo will probably
+     * come in the "REMARKS" column of this ResultSet.
+     */
+
+    /*
+     * NOTE the metadata for these types is extracting according to what is established on
+     * the Apache Olingo documentation at:
+     * http://olingo.apache.org/javadoc/odata2/org/apache/olingo/odata2/api/edm/EdmSimpleType.html
+     * ---
+     * For all EDM simple types, the facet Nullable is taken into account. For Binary, MaxLength
+     * is also applicable. For String, the facets MaxLength and Unicode are also considered. The
+     * EDM simple types DateTime, DateTimeOffset, and Time can have a Precision facet. Decimal can
+     * have the facets Precision and Scale.
+     * ---
+     * Note also that, in order to better understand the way these properties are extracted from
+     * metadata, it is useful to understand the names of the different metadata fields (and their
+     * correspondence between ODBC 2.0 and 3.0), given OData evolves from Microsoft specifications
+     * like the Entity Framework.
+     * See: https://msdn.microsoft.com/en-us/library/ms711683%28v=vs.85%29.aspx and find "ODBC 2.0 column"
+     */
+    private CsdlProperty buildCsdlProperty(final FullQualifiedName entityName, final Set<String> complexTypeNames,
+            final ResultSet columnsRs, final String sqlTypeColumn, final String typeNameColumn, final String nameColumn,
+            final String nullableColumn, final String decimalColumn, final String precisionColumn,
+            final int vdpVersion) throws SQLException {
+        
+        final CsdlProperty property = new CsdlProperty();
+
+        final int sqlType = columnsRs.getInt(sqlTypeColumn);
+
+        EdmPrimitiveTypeKind type = EdmPrimitiveTypeKind.String; // string type as default value
+        if (sqlType != 0) {
+            // When sqlType is zero it means that we do not have information about the type
+            type = SQLMetadataUtils.sqlTypeToODataType(sqlType);
+        }
+        
+        // If type is null it means that it is a complex type, array or struct.
+        if (type == null) {
+            if (SQLMetadataUtils.isArrayType(sqlType)) {
+                // Arrays are collections and we have to mark this fact in the property 
+                property.setCollection(true);
+            }
+            final String typeName = columnsRs.getString(typeNameColumn);
+            property.setType(new FullQualifiedName(entityName.getNamespace(), typeName));
+            if (complexTypeNames != null) {
+                complexTypeNames.add(typeName);
+            }
+        } else {
+            property.setType(type.getFullQualifiedName());
+            if (vdpVersion >= VDP_7_NEW_DATETIME_TYPES) {
+                PropertyUtils.markUnsupportedTypeMappings(sqlType, property);
+            }
+        }
+
+        property.setName(columnsRs.getString(nameColumn));
+
+        // Nullable flag, normalized by SQLMetadataUtils
+        if (nullableColumn != null) { // for complex types there is no nullable column
+            final Boolean nullable = SQLMetadataUtils.sqlNullableToODataNullable(columnsRs.getInt(nullableColumn));
+            if (nullable != null) {
+                property.setNullable(nullable);
+            }
+        }
+        
+        
+        if (type == EdmPrimitiveTypeKind.String 
+                && sqlType != VDPJDBCTypes.INTERVAL_YEAR_MONTH) { // because column size for INTERVAL_YEAR_MONTH 
+                                                                  // is for precision, not for maxlength
+            if (!SQLMetadataUtils.isArrayType(sqlType)) {
+                final int maxLength = columnsRs.getInt(precisionColumn);
+                if (maxLength != Integer.MAX_VALUE && !columnsRs.wasNull()) {
+                    property.setMaxLength(Integer.valueOf(maxLength));
+                }
+            }
+        } else if (type == EdmPrimitiveTypeKind.Decimal) {
+            final int scale = columnsRs.getInt(decimalColumn);
+            if (!columnsRs.wasNull()) {
+                property.setScale(Integer.valueOf(scale));
+            } else {
+                // we must establish the precision to avoid Olingo serialization errors
+                property.setScale(Integer.valueOf(Integer.MAX_VALUE));
+            }
+            final int precision = columnsRs.getInt(precisionColumn);
+            if (!columnsRs.wasNull()) {
+                property.setPrecision(Integer.valueOf(precision));
+            } 
+        } else if (type == EdmPrimitiveTypeKind.Binary) {
+            final int maxLength = columnsRs.getInt(precisionColumn);
+            if (!columnsRs.wasNull()) {
+                property.setMaxLength(Integer.valueOf(maxLength));
+            }
+        } else if (type == EdmPrimitiveTypeKind.DateTimeOffset || type == EdmPrimitiveTypeKind.TimeOfDay) {
+            final int precision = columnsRs.getInt(precisionColumn);
+            if (!columnsRs.wasNull()) {
+                property.setPrecision(Integer.valueOf(precision));
+            } else {
+                // we must establish the precision to avoid Olingo serialization errors
+                property.setPrecision(Integer.valueOf(Integer.MAX_VALUE));
+            }
+        } else if (type == EdmPrimitiveTypeKind.Duration) {
+            // because we manipulate duration inside the service (converting it to seconds expected by to Olingo
+            // and to milliseconds expected by VDP) we need a precision larger than the one returned by the driver 
+            property.setPrecision(Integer.valueOf(Integer.MAX_VALUE)); 
+                                                    
+        }
+        return property;
     }
 
 
@@ -218,12 +251,12 @@ public class MetadataAccessor {
             final DatabaseMetaData metadata = connection.getMetaData();
 
             columnsRs = metadata.getPrimaryKeys(connection.getCatalog(), null, entityName.getName());
-            entityPrimaryKeyProperties = buildPropertyRefs(columnsRs);
+            entityPrimaryKeyProperties = buildPropertyRefs(columnsRs, false);
 
             // Many entities will not have primary key information in VDP environments, so we build a PK containing all the fields
             if (entityPrimaryKeyProperties.isEmpty()) {
                 columnsRs = metadata.getColumns(connection.getCatalog(), null, entityName.getName(), null);
-                entityPrimaryKeyProperties = buildPropertyRefs(columnsRs);
+                entityPrimaryKeyProperties = buildPropertyRefs(columnsRs, true);
             }
 
             return entityPrimaryKeyProperties;
@@ -238,17 +271,26 @@ public class MetadataAccessor {
 
 
 
-    private List<CsdlPropertyRef> buildPropertyRefs(final ResultSet columnsRs) throws SQLException {
+    private List<CsdlPropertyRef> buildPropertyRefs(final ResultSet columnsRs, final boolean autogeneratedPK) throws SQLException {
         
         final List<CsdlPropertyRef> entityPrimaryKeyProperties = new ArrayList<CsdlPropertyRef>();
         
         while (columnsRs.next()) {
-        /*
-         * PropertyRef entities are really simple: we only need to obtain the name of the column
-         */
-            final CsdlPropertyRef primaryKeyProperty = new CsdlPropertyRef();
-            primaryKeyProperty.setName(columnsRs.getString("COLUMN_NAME"));
-            entityPrimaryKeyProperties.add(primaryKeyProperty);
+ 
+            boolean includeInPK = true;
+            if (autogeneratedPK) { // when we are autogenerating the key we have the data_type column in the resultSet,
+                                   // so we should check to avoid complex types as primaryKeys
+                final int sqlType = columnsRs.getInt("DATA_TYPE");
+                if (sqlType == Types.STRUCT || sqlType == Types.ARRAY) {
+                    includeInPK = false;
+                }
+            }
+            
+            if (includeInPK) {
+                final CsdlPropertyRef primaryKeyProperty = new CsdlPropertyRef();
+                primaryKeyProperty.setName(columnsRs.getString("COLUMN_NAME"));
+                entityPrimaryKeyProperties.add(primaryKeyProperty);
+            }
         }
         
         return entityPrimaryKeyProperties;
@@ -778,52 +820,10 @@ public class MetadataAccessor {
         final List<CsdlProperty> complexTypes = this.denodoTemplate.query(descComplexTypeQuery, new RowMapper<CsdlProperty>() {
             @Override
             public CsdlProperty mapRow(final ResultSet rs, final int rowNum) throws SQLException {
-                final int typeCode = rs.getInt("TYPECODE");
-
-                /*
-                 * We establish string type as default value.
-                 */
-                EdmPrimitiveTypeKind type = EdmPrimitiveTypeKind.String;
                 
-                final CsdlProperty property = new CsdlProperty();
-
-                if (typeCode != 0) {
-                    // When typeCode is zero it means that we do not have
-                    // information about the type
-                    type = SQLMetadataUtils.sqlTypeToODataType(typeCode);
-                }
-                    
-                // If type is null it means that it is a complex type, array or struct.
-                if (type == null) {
-                    if (SQLMetadataUtils.isArrayType(typeCode)) {
-                        // Arrays are collections and we have to mark this fact in the property 
-                        property.setCollection(true);
-                    }
-                    
-                    final String typeName = rs.getString("TYPE");
-                    property.setType(new FullQualifiedName(edmFQName.getNamespace(), typeName));
-                    if (complexTypeInUse != null) {
-                        complexTypeInUse.add(typeName);
-                    }
-                } else {
-                    property.setType(type.getFullQualifiedName());
-                }
-
-                property.setName(rs.getString("FIELD"));
-                
-                if (type == EdmPrimitiveTypeKind.Decimal) {
-                  final int scale = rs.getInt("TYPEDECIMALS");
-                  if (!rs.wasNull()) {
-                      property.setScale(Integer.valueOf(scale));
-                  } else {
-                      // A BigDecimal object has infinite precision so its value is null,
-                      // however we must establish a scale value in order to avoid a matching error
-                      property.setScale(Integer.valueOf(Integer.MAX_VALUE));
-                  }
-                }
-                
-
-                return property;
+                final int vdpVersion = rs.getStatement().getConnection().getMetaData().getDatabaseMajorVersion();
+                return buildCsdlProperty(edmFQName, complexTypeInUse, rs, "TYPECODE", "TYPE", "FIELD", null,
+                        "TYPEDECIMALS", "TYPEPRECISION", vdpVersion);
             }
         });
         return complexTypes;

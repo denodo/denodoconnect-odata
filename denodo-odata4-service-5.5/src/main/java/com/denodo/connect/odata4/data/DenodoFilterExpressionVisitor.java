@@ -24,6 +24,7 @@ package com.denodo.connect.odata4.data;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Timestamp;
+import java.text.ParseException;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
@@ -32,18 +33,23 @@ import java.util.Locale;
 
 import org.apache.olingo.commons.api.data.Entity;
 import org.apache.olingo.commons.api.edm.EdmEnumType;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeException;
 import org.apache.olingo.commons.api.edm.EdmType;
 import org.apache.olingo.commons.api.http.HttpStatusCode;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmBinary;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmBoolean;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmByte;
+import org.apache.olingo.commons.core.edm.primitivetype.EdmDate;
+import org.apache.olingo.commons.core.edm.primitivetype.EdmDateTimeOffset;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmDecimal;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmDouble;
+import org.apache.olingo.commons.core.edm.primitivetype.EdmDuration;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmInt16;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmInt32;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmInt64;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmSByte;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmString;
+import org.apache.olingo.commons.core.edm.primitivetype.EdmTimeOfDay;
 import org.apache.olingo.server.api.ODataApplicationException;
 import org.apache.olingo.server.api.uri.UriInfo;
 import org.apache.olingo.server.api.uri.UriResource;
@@ -58,19 +64,21 @@ import org.apache.olingo.server.api.uri.queryoption.expression.MethodKind;
 import org.apache.olingo.server.api.uri.queryoption.expression.UnaryOperatorKind;
 
 import com.denodo.connect.odata4.util.DenodoFilterExpressionVisitorUtils;
+import com.denodo.connect.odata4.util.IntervalUtils;
+import com.denodo.connect.odata4.util.TimestampUtils;
 
 public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor implements ExpressionVisitor<Object> {
 
     private Entity currentEntity;
     private UriInfo uriInfo;
 
-    public DenodoFilterExpressionVisitor(Entity currentEntity, UriInfo uriInfo) {
+    public DenodoFilterExpressionVisitor(final Entity currentEntity, final UriInfo uriInfo) {
         this.currentEntity = currentEntity;
         this.uriInfo = uriInfo;
     }
     
     @Override
-    public Object visitBinaryOperator(BinaryOperatorKind operator, Object left, Object right) throws ExpressionVisitException,
+    public Object visitBinaryOperator(final BinaryOperatorKind operator, final Object left, final Object right) throws ExpressionVisitException,
             ODataApplicationException {
         
         // Binary Operators are split up in three different kinds. Up to the kind of the operator it can be applied 
@@ -92,14 +100,14 @@ public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor imple
         }
     }
     
-    private static Object evaluateBooleanOperation(BinaryOperatorKind operator, Object left, Object right) throws ODataApplicationException {
+    private static Object evaluateBooleanOperation(final BinaryOperatorKind operator, final Object left, final Object right) throws ODataApplicationException {
 
         Boolean booleanValue = null;
         
         // First check that both operands are of type Boolean
         if (left instanceof Boolean && right instanceof Boolean) {
-            Boolean valueLeft = (Boolean) left;
-            Boolean valueRight = (Boolean) right;
+            final Boolean valueLeft = (Boolean) left;
+            final Boolean valueRight = (Boolean) right;
 
             // Then calculate the result value
             if (operator == BinaryOperatorKind.AND) {
@@ -141,7 +149,7 @@ public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor imple
         }
     }
 
-    private static Object evaluateComparisonOperation(BinaryOperatorKind operator, Object left, Object right)
+    private static Object evaluateComparisonOperation(final BinaryOperatorKind operator, final Object left, final Object right)
             throws ODataApplicationException {
 
         int result;
@@ -170,12 +178,12 @@ public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor imple
                     DenodoFilterExpressionVisitorUtils.isClassDateish(normalizedRightClass)) {
                 
                 if (normalizedLeft instanceof Date) {
-                    Calendar calendar = Calendar.getInstance();
+                    final Calendar calendar = Calendar.getInstance();
                     calendar.setTimeInMillis(((Date) normalizedLeft).getTime());
                     normalizedLeft = calendar;
                 }
                 if (normalizedRight instanceof Date) {
-                    Calendar calendar = Calendar.getInstance();
+                    final Calendar calendar = Calendar.getInstance();
                     calendar.setTimeInMillis(((Date) normalizedRight).getTime());
                     normalizedRight = calendar;
                 }
@@ -225,12 +233,12 @@ public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor imple
 
     }
 
-    private static Object evaluateArithmeticOperation(BinaryOperatorKind operator, Object left, Object right) throws ODataApplicationException {
+    private static Object evaluateArithmeticOperation(final BinaryOperatorKind operator, final Object left, final Object right) throws ODataApplicationException {
 
         // First check if the type of both operands is numerical
         if (left instanceof Number && right instanceof Number) {
-            Number valueLeft = (Number) left;
-            Number valueRight = (Number) right;
+            final Number valueLeft = (Number) left;
+            final Number valueRight = (Number) right;
 
             // Than calculate the result value
             if (operator == BinaryOperatorKind.ADD) {
@@ -255,7 +263,7 @@ public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor imple
 
     
     @Override
-    public Object visitUnaryOperator(UnaryOperatorKind operator, Object operand) throws ExpressionVisitException, ODataApplicationException {
+    public Object visitUnaryOperator(final UnaryOperatorKind operator, final Object operand) throws ExpressionVisitException, ODataApplicationException {
         // OData allows two different unary operators. We have to take care, that the type of the operand fits to
         // operand
         
@@ -290,52 +298,78 @@ public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor imple
     }
 
     @Override
-    public Object visitLiteral(Literal literal) throws ExpressionVisitException, ODataApplicationException {
+    public Object visitLiteral(final Literal literal) throws ExpressionVisitException, ODataApplicationException {
         
         // In real world scenarios it can be difficult to guess the type of an literal.
         // We can be sure, that the literal is a valid OData literal because the URI Parser checks 
         // the lexicographical structure
         
         // String literals start and end with an single quotation mark
-        String literalAsString = literal.getText();
+        final String literalAsString = literal.getText();
         if (literal.getType() == null) {
             return null;
         } else if (literal.getType() instanceof EdmString) {
           String stringLiteral = "";
-          if(literal.getText().length() > 2) {
+          if (literal.getText().length() > 2) {
             stringLiteral = literalAsString.substring(1, literalAsString.length() - 1);
           }
           return stringLiteral;
         } else if (literal.getType() instanceof EdmDecimal) {
             return new BigDecimal(literalAsString);
-        } if (literal.getType() instanceof EdmInt16 || literal.getType() instanceof EdmInt32 
+        } else if (literal.getType() instanceof EdmInt16 || literal.getType() instanceof EdmInt32 
                 || literal.getType() instanceof EdmInt64 || literal.getType() instanceof EdmByte
                 || literal.getType() instanceof EdmSByte) {
-            int parseInt = Integer.parseInt(literalAsString);
-            return Integer.valueOf(parseInt);
-        } if (literal.getType() instanceof EdmDouble) {
-            double parseDouble = Double.parseDouble(literalAsString);
-            return Double.valueOf(parseDouble);
-        } if (literal.getType() instanceof EdmBoolean) {
+            return Integer.valueOf(literalAsString);
+        } else if (literal.getType() instanceof EdmDouble) {
+            return Double.valueOf(literalAsString);
+        } else if (literal.getType() instanceof EdmBoolean) {
             return Boolean.valueOf(literalAsString);
-        } if (literal.getType() instanceof EdmBinary) {
+        } else if (literal.getType() instanceof EdmBinary) {
             return literalAsString.getBytes();
-        } else {
-            throw new ODataApplicationException(literal.getType().getName() +" is not implemented", 
-                HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
+        } else if (literal.getType() instanceof EdmDate) {
+            try {
+                return TimestampUtils.parseDate(literalAsString);
+            } catch (final ParseException e) {
+                throw new ODataApplicationException("The literal '" + literalAsString + "' has illegal content.",
+                        HttpStatusCode.BAD_REQUEST.getStatusCode(), Locale.getDefault());
+            }
+        } else if (literal.getType() instanceof EdmDateTimeOffset) {
+            try {
+                return TimestampUtils.parseDateTimeOffset(literalAsString);
+            } catch (final ParseException e) {
+                throw new ODataApplicationException("The literal '" + literalAsString + "' has illegal content.",
+                        HttpStatusCode.BAD_REQUEST.getStatusCode(), Locale.getDefault());
+            }
+        } else if (literal.getType() instanceof EdmTimeOfDay) {
+            try {
+                return TimestampUtils.parseTimeOfDay(literalAsString);
+            } catch (final ParseException e) {
+                throw new ODataApplicationException("The literal '" + literalAsString + "' has illegal content.",
+                        HttpStatusCode.BAD_REQUEST.getStatusCode(), Locale.getDefault());
+            }            
+        } else if (literal.getType() instanceof EdmDuration) {
+            try {
+                return IntervalUtils.toOlingoDuration(literal.getText());
+            } catch (final EdmPrimitiveTypeException e) {
+                throw new ODataApplicationException("The literal '" + literalAsString + "' has illegal content.",
+                        HttpStatusCode.BAD_REQUEST.getStatusCode(), Locale.getDefault());
+            }
         }
+        
+        throw new ODataApplicationException(literal.getType().getName() +" is not implemented", 
+            HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
     }
 
     @Override
-    public Object visitMember(Member member) throws ExpressionVisitException, ODataApplicationException {
+    public Object visitMember(final Member member) throws ExpressionVisitException, ODataApplicationException {
         final List<UriResource> uriResourceParts = member.getResourcePath().getUriResourceParts();
         
         // Make sure that the resource path of the property contains only a single segment and a primitive property
-        // has been addressed. We can be sure, that the property exists because the UriParser checks if the
+        // has been addressed. We can be sure, that the property exists because the UriFcale checks if the
         // property has been defined in service metadata document.
         
         if (uriResourceParts.size() == 1 && uriResourceParts.get(0) instanceof UriResourcePrimitiveProperty) {
-            UriResourcePrimitiveProperty uriResourceProperty = (UriResourcePrimitiveProperty) uriResourceParts.get(0);
+            final UriResourcePrimitiveProperty uriResourceProperty = (UriResourcePrimitiveProperty) uriResourceParts.get(0);
             return this.currentEntity.getProperty(uriResourceProperty.getProperty().getName()).getValue();
         } else {
             // The OData specification allows in addition complex properties and navigation properties 
@@ -351,14 +385,14 @@ public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor imple
     }
     
     @Override
-    public Object visitMethodCall(MethodKind methodCall, List<Object> parameters) throws ExpressionVisitException,
+    public Object visitMethodCall(final MethodKind methodCall, final List<Object> parameters) throws ExpressionVisitException,
             ODataApplicationException {
         
         // String functions
         if (methodCall == MethodKind.CONTAINS) {
             if (parameters.get(0) instanceof String && parameters.get(1) instanceof String) {
-                String valueParam1 = (String) parameters.get(0);
-                String valueParam2 = (String) parameters.get(1);
+                final String valueParam1 = (String) parameters.get(0);
+                final String valueParam2 = (String) parameters.get(1);
 
                 return Boolean.valueOf(valueParam1.contains(valueParam2));
             } else {
@@ -367,8 +401,8 @@ public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor imple
             }
         } else if (methodCall == MethodKind.STARTSWITH) {
             if (parameters.get(0) instanceof String && parameters.get(1) instanceof String) {
-                String valueParam1 = (String) parameters.get(0);
-                String valueParam2 = (String) parameters.get(1);
+                final String valueParam1 = (String) parameters.get(0);
+                final String valueParam2 = (String) parameters.get(1);
 
                 return Boolean.valueOf(valueParam1.startsWith(valueParam2));
             } else {
@@ -377,8 +411,8 @@ public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor imple
             }
         } else if (methodCall == MethodKind.ENDSWITH) {
             if (parameters.get(0) instanceof String && parameters.get(1) instanceof String) {
-                String valueParam1 = (String) parameters.get(0);
-                String valueParam2 = (String) parameters.get(1);
+                final String valueParam1 = (String) parameters.get(0);
+                final String valueParam2 = (String) parameters.get(1);
 
                 return Boolean.valueOf(valueParam1.endsWith(valueParam2));
             } else {
@@ -387,8 +421,8 @@ public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor imple
             }
         } else if (methodCall == MethodKind.INDEXOF) {
             if (parameters.get(0) instanceof String && parameters.get(1) instanceof String) {
-                String valueParam1 = (String) parameters.get(0);
-                String valueParam2 = (String) parameters.get(1);
+                final String valueParam1 = (String) parameters.get(0);
+                final String valueParam2 = (String) parameters.get(1);
 
                 return Integer.valueOf(valueParam1.indexOf(valueParam2));
             } else {
@@ -397,7 +431,7 @@ public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor imple
             }
         } else if (methodCall == MethodKind.LENGTH) {
             if (parameters.get(0) instanceof String) {
-                String valueParam1 = (String) parameters.get(0);
+                final String valueParam1 = (String) parameters.get(0);
 
                 return Integer.valueOf(valueParam1.length());
             } else {
@@ -406,9 +440,9 @@ public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor imple
             }
         } else if (methodCall == MethodKind.SUBSTRING) {
             if (parameters.get(0) instanceof String && parameters.get(1) instanceof Integer) {
-                String valueParam = (String) parameters.get(0);
-                Integer beginIndex = (Integer) parameters.get(1);
-                Integer endIndex = parameters.size() == 3 ? (Integer) parameters.get(2) : null;
+                final String valueParam = (String) parameters.get(0);
+                final Integer beginIndex = (Integer) parameters.get(1);
+                final Integer endIndex = parameters.size() == 3 ? (Integer) parameters.get(2) : null;
 
                 return endIndex != null ? valueParam.substring(beginIndex.intValue(), endIndex.intValue()) : 
                     valueParam.substring(beginIndex.intValue());
@@ -419,7 +453,7 @@ public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor imple
             }
         } else if (methodCall == MethodKind.TOLOWER) {
             if (parameters.get(0) instanceof String) {
-                String valueParam1 = (String) parameters.get(0);
+                final String valueParam1 = (String) parameters.get(0);
 
                 return valueParam1.toLowerCase();
             } else {
@@ -428,7 +462,7 @@ public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor imple
             }
         } else if (methodCall == MethodKind.TOUPPER) {
             if (parameters.get(0) instanceof String) {
-                String valueParam1 = (String) parameters.get(0);
+                final String valueParam1 = (String) parameters.get(0);
 
                 return valueParam1.toUpperCase();
             } else {
@@ -437,7 +471,7 @@ public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor imple
             }
         } else if (methodCall == MethodKind.TRIM) {
             if (parameters.get(0) instanceof String) {
-                String valueParam1 = (String) parameters.get(0);
+                final String valueParam1 = (String) parameters.get(0);
 
                 return valueParam1.trim();
             } else {
@@ -446,8 +480,8 @@ public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor imple
             }
         } else if (methodCall == MethodKind.CONCAT) {
             if (parameters.get(0) instanceof String && parameters.get(1) instanceof String) {
-                String valueParam1 = (String) parameters.get(0);
-                String valueParam2 = (String) parameters.get(1);
+                final String valueParam1 = (String) parameters.get(0);
+                final String valueParam2 = (String) parameters.get(1);
 
                 return valueParam1.concat(valueParam2);
             } else {
@@ -486,7 +520,7 @@ public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor imple
             }
             
             if (valueParam1 != null) { 
-                Calendar calendar = Calendar.getInstance();
+                final Calendar calendar = Calendar.getInstance();
                 calendar.setTimeInMillis(valueParam1.getTime());
                 if (methodCall == MethodKind.SECOND) {
                     return Integer.valueOf(calendar.get(Calendar.SECOND));
@@ -507,7 +541,7 @@ public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor imple
                         HttpStatusCode.BAD_REQUEST.getStatusCode(), Locale.getDefault());
             }
         } else if (methodCall == MethodKind.NOW) {
-            Calendar calendar = Calendar.getInstance();
+            final Calendar calendar = Calendar.getInstance();
             return calendar.getTime();
         } else {
             throw new ODataApplicationException( methodCall + " function is not supported.", HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
@@ -515,7 +549,7 @@ public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor imple
     }
     
     @Override
-    public Object visitAlias(String aliasName) throws ExpressionVisitException, ODataApplicationException {
+    public Object visitAlias(final String aliasName) throws ExpressionVisitException, ODataApplicationException {
         
         String valueForAlias = this.uriInfo.getValueForAlias(aliasName);
         
@@ -531,26 +565,26 @@ public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor imple
     }
     
     @Override
-    public Object visitTypeLiteral(EdmType type) throws ExpressionVisitException, ODataApplicationException {
+    public Object visitTypeLiteral(final EdmType type) throws ExpressionVisitException, ODataApplicationException {
         throw new ODataApplicationException("Type literals are not implemented", 
                 HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
     }
     
     @Override
-    public Object visitLambdaReference(String variableName) throws ExpressionVisitException, ODataApplicationException {
+    public Object visitLambdaReference(final String variableName) throws ExpressionVisitException, ODataApplicationException {
         throw new ODataApplicationException("Lamdba references are not implemented", 
                 HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
     }
 
     @Override
-    public Object visitLambdaExpression(String lambdaFunction, String lambdaVariable, Expression expression)
+    public Object visitLambdaExpression(final String lambdaFunction, final String lambdaVariable, final Expression expression)
             throws ExpressionVisitException, ODataApplicationException {
         throw new ODataApplicationException("Lamdba expressions are not implemented", 
                 HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
     }
     
     @Override
-    public Object visitEnum(EdmEnumType type, List<String> enumValues) throws ExpressionVisitException, ODataApplicationException {
+    public Object visitEnum(final EdmEnumType type, final List<String> enumValues) throws ExpressionVisitException, ODataApplicationException {
         throw new ODataApplicationException("Enums are not implemented", 
                 HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
     }

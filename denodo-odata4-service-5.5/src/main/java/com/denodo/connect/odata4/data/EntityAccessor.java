@@ -35,7 +35,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.apache.olingo.commons.api.Constants;
 import org.apache.olingo.commons.api.data.Entity;
@@ -48,13 +48,14 @@ import org.apache.olingo.commons.api.edm.EdmEntityType;
 import org.apache.olingo.commons.api.edm.EdmException;
 import org.apache.olingo.commons.api.edm.EdmNavigationProperty;
 import org.apache.olingo.commons.api.edm.EdmProperty;
-import org.apache.olingo.commons.api.edm.EdmTyped;
 import org.apache.olingo.commons.api.http.HttpStatusCode;
+import org.apache.olingo.commons.core.edm.EdmPropertyImpl;
 import org.apache.olingo.server.api.ODataApplicationException;
 import org.apache.olingo.server.api.uri.UriInfo;
 import org.apache.olingo.server.api.uri.UriParameter;
 import org.apache.olingo.server.api.uri.UriResource;
 import org.apache.olingo.server.api.uri.UriResourceNavigation;
+import org.apache.olingo.server.api.uri.UriResourceProperty;
 import org.apache.olingo.server.api.uri.queryoption.ExpandItem;
 import org.apache.olingo.server.api.uri.queryoption.ExpandOption;
 import org.apache.olingo.server.api.uri.queryoption.FilterOption;
@@ -70,6 +71,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
 import com.denodo.connect.odata4.util.ProcessorUtils;
+import com.denodo.connect.odata4.util.PropertyUtils;
 import com.denodo.connect.odata4.util.SQLMetadataUtils;
 import com.denodo.connect.odata4.util.URIUtils;
 import com.denodo.connect.odata4.util.VQLExpressionVisitor;
@@ -197,7 +199,7 @@ public class EntityAccessor {
                             final Object[] arrayElements = (Object[]) ((Array) value).getArray();
 
                             try {
-                                final EdmTyped edmTyped = edmEntityTypeActual.getProperty(columnName);
+                                final EdmPropertyImpl edmProperty = (EdmPropertyImpl) edmEntityTypeActual.getProperty(columnName);
 
                                 final List<Object> arrayValues = new ArrayList<Object>();
 
@@ -206,7 +208,7 @@ public class EntityAccessor {
                                     if (arrayElement instanceof Struct) {
                                         final Object[] structValues = ((Struct) arrayElement).getAttributes();
 
-                                        arrayValues.add(DenodoCommonProcessor.getStructAsComplexValue(edmTyped, columnName, structValues));
+                                        arrayValues.add(DenodoCommonProcessor.getStructAsComplexValue(edmProperty, columnName, structValues));
                                     }
                                 }
 
@@ -225,8 +227,8 @@ public class EntityAccessor {
                                 final Object[] structValues = ((Struct) value).getAttributes();
 
                                 try {
-                                    final EdmTyped edmTyped = edmEntityTypeActual.getProperty(columnName);
-                                    value = DenodoCommonProcessor.getStructAsComplexValue(edmTyped, columnName, structValues);
+                                    final EdmPropertyImpl edmProperty = (EdmPropertyImpl) edmEntityTypeActual.getProperty(columnName);
+                                    value = DenodoCommonProcessor.getStructAsComplexValue(edmProperty, columnName, structValues);
 
                                     valueType = ValueType.COMPLEX;
                                 } catch (final EdmException e2) {
@@ -239,7 +241,8 @@ public class EntityAccessor {
                         }
 
                         if (!relationLinkValue) {
-                            final Property newProperty = new Property(null, columnName, valueType, value);
+                            final EdmProperty edmProperty = findPrimitiveProperty(uriInfo, edmEntityTypeActual, columnName);
+                            final Property newProperty = PropertyUtils.buildProperty(columnName, valueType, value, edmProperty);
                             if (entityKeyNames.contains(columnName)) {
                                 newEntityKeys.put(columnName, value);
                             }
@@ -265,13 +268,29 @@ public class EntityAccessor {
             
             return entity;
         }
+
+        
         }));
 
         
         
         return entityCollection;
     }
-
+    
+    private EdmProperty findPrimitiveProperty(final UriInfo uriInfo, final EdmEntityType edmEntityTypeActual,
+            final String columnName) {
+        
+        final EdmProperty edmProperty = (EdmProperty) edmEntityTypeActual.getProperty(columnName);
+        if (edmProperty == null) {
+            final List<UriResource> resourceParts = uriInfo.getUriResourceParts();
+            for (final UriResource resource : resourceParts) {
+                if (columnName.equals(resource.getSegmentValue())) {
+                    return ((UriResourceProperty) resource).getProperty();
+                }
+            }
+        }
+        return edmProperty;
+    }
     
     private static String getSelectSection(final EdmEntitySet entitySet, final List<String> selectedProperties, 
             final List<EdmProperty> propertyPath, final Boolean count, final Map<String, String> keys,
@@ -479,9 +498,13 @@ public class EntityAccessor {
                     sb.append(" AND ");
                 }
 
-                sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(key.getKey()));
+                final String property = key.getKey();
+                sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(property));
                 sb.append('=');
-                sb.append(key.getValue());
+                String value = key.getValue();
+                final EdmProperty edmProperty = (EdmProperty) entitySet.getEntityType().getProperty(property);
+                value = PropertyUtils.toVDPLiteral(value, edmProperty);
+                sb.append(value);
                 first = false;
             }
         }
@@ -507,7 +530,6 @@ public class EntityAccessor {
         return sb.toString();
     }
 
-    
     private static String addOrderByExpression(final String sqlStatement, final UriInfo uriInfo) throws ExpressionVisitException, ODataApplicationException {
 
         final OrderByOption orderByOption = uriInfo.getOrderByOption();

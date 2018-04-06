@@ -37,7 +37,7 @@
     <version.cxf>3.1.0</version.cxf>
     <version.commons.codec>1.10</version.commons.codec>
     <version.commons.dbcp>1.4</version.commons.dbcp>
-    <version.commons.lang>3.3.2</version.commons.lang>
+    <version.commons.lang>3.5</version.commons.lang>
     <version.denodovdpjdbcdriver>5.5.0_9</version.denodovdpjdbcdriver>
     <version.olingo>4.4.0</version.olingo>
     <version.servlet.api>2.4</version.servlet.api>

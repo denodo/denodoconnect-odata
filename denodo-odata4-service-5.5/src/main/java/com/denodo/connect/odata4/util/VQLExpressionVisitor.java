@@ -27,15 +27,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.olingo.commons.api.edm.EdmComplexType;
+import org.apache.olingo.commons.api.edm.EdmElement;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
 import org.apache.olingo.commons.api.edm.EdmEntityType;
 import org.apache.olingo.commons.api.edm.EdmEnumType;
 import org.apache.olingo.commons.api.edm.EdmException;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveType;
 import org.apache.olingo.commons.api.edm.EdmType;
+import org.apache.olingo.commons.api.edm.constants.EdmTypeKind;
 import org.apache.olingo.commons.api.http.HttpStatusCode;
-import org.apache.olingo.commons.core.edm.primitivetype.EdmDate;
-import org.apache.olingo.commons.core.edm.primitivetype.EdmDateTimeOffset;
 import org.apache.olingo.server.api.ODataApplicationException;
 import org.apache.olingo.server.api.uri.UriInfo;
 import org.apache.olingo.server.api.uri.UriInfoResource;
@@ -62,19 +63,21 @@ public class VQLExpressionVisitor implements ExpressionVisitor<String> {
     private String entityName;
     private EdmEntityType entityType;
     
+    private String previousMember;
+    
     public VQLExpressionVisitor(final UriInfo uriInfo) throws ODataApplicationException {
         this.uriInfo = uriInfo;
 
-        List<UriResourceNavigation> uriResourceNavigationList = ProcessorUtils.getNavigationSegments(uriInfo);
+        final List<UriResourceNavigation> uriResourceNavigationList = ProcessorUtils.getNavigationSegments(uriInfo);
         
-        UriResource uriResource = uriInfo.getUriResourceParts().get(0); 
-        EdmEntitySet entitySet = ((UriResourceEntitySet) uriResource).getEntitySet();
+        final UriResource uriResource = uriInfo.getUriResourceParts().get(0); 
+        final EdmEntitySet entitySet = ((UriResourceEntitySet) uriResource).getEntitySet();
         
         if (uriResourceNavigationList.isEmpty()) { // no navigation
             this.entityName = entitySet.getName();
             this.entityType = entitySet.getEntityType();
         } else { // navigation
-            EdmEntitySet responseEdmEntitySet = ProcessorUtils.getNavigationTargetEntitySet(entitySet, uriResourceNavigationList);
+            final EdmEntitySet responseEdmEntitySet = ProcessorUtils.getNavigationTargetEntitySet(entitySet, uriResourceNavigationList);
             
             this.entityName = responseEdmEntitySet.getName();
             this.entityType = responseEdmEntitySet.getEntityType();
@@ -82,7 +85,7 @@ public class VQLExpressionVisitor implements ExpressionVisitor<String> {
     }
     
     @Override
-    public String visitBinaryOperator(BinaryOperatorKind operator, String left, String right) throws ExpressionVisitException,
+    public String visitBinaryOperator(final BinaryOperatorKind operator, final String left, final String right) throws ExpressionVisitException,
             ODataApplicationException {
         
         
@@ -134,7 +137,7 @@ public class VQLExpressionVisitor implements ExpressionVisitor<String> {
         return sb.toString();
     }
 
-    private String buildArithmeticOperation(String left, String right, String vqlFunction) throws ODataApplicationException {
+    private String buildArithmeticOperation(final String left, final String right, final String vqlFunction) throws ODataApplicationException {
         
         final StringBuilder sb = new StringBuilder();
         
@@ -168,9 +171,9 @@ public class VQLExpressionVisitor implements ExpressionVisitor<String> {
                 
             matcher2.reset();
             while (matcher2.find()) {
-                EdmType edmType = edmEntityType.getProperty(matcher2.group(1)).getType();
+                final EdmType edmType = edmEntityType.getProperty(matcher2.group(1)).getType();
                 if (edmType instanceof EdmPrimitiveType) {
-                    EdmPrimitiveType type = (EdmPrimitiveType) edmType; 
+                    final EdmPrimitiveType type = (EdmPrimitiveType) edmType; 
                     if (Number.class.isAssignableFrom(type.getDefaultType())) {
                         number= true;
                     }
@@ -191,7 +194,7 @@ public class VQLExpressionVisitor implements ExpressionVisitor<String> {
     }
 
     @Override
-    public String visitUnaryOperator(UnaryOperatorKind operator, String operand) throws ExpressionVisitException, ODataApplicationException {
+    public String visitUnaryOperator(final UnaryOperatorKind operator, final String operand) throws ExpressionVisitException, ODataApplicationException {
         
         final StringBuilder sb = new StringBuilder();
         sb.append(operator);
@@ -203,7 +206,7 @@ public class VQLExpressionVisitor implements ExpressionVisitor<String> {
     }
 
     @Override
-    public String visitMethodCall(MethodKind methodCall, List<String> parameters) throws ExpressionVisitException,
+    public String visitMethodCall(final MethodKind methodCall, final List<String> parameters) throws ExpressionVisitException,
             ODataApplicationException {
         
         final StringBuilder sb = new StringBuilder();
@@ -248,7 +251,7 @@ public class VQLExpressionVisitor implements ExpressionVisitor<String> {
             break;
         case SUBSTRING:
             // In OData the first character is 0 while in the SUBSTR function of VQL, is 1 
-            int from = Integer.parseInt(parameters.get(1)) + 1;
+            final int from = Integer.parseInt(parameters.get(1)) + 1;
             sb.append("SUBSTR(").append(parameters.get(0)).append(',').append(from);
             
             if (parameters.size() > 2) { // optional parameter
@@ -326,37 +329,57 @@ public class VQLExpressionVisitor implements ExpressionVisitor<String> {
     }
     
     @Override
-    public String visitLambdaExpression(String lambdaFunction, String lambdaVariable, Expression expression)
+    public String visitLambdaExpression(final String lambdaFunction, final String lambdaVariable, final Expression expression)
             throws ExpressionVisitException, ODataApplicationException {
         throw new ODataApplicationException("Lambda functions not supported.", HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
     }
 
     @Override
-    public String visitLiteral(Literal literal) throws ExpressionVisitException, ODataApplicationException {
-        if (literal.getType() instanceof EdmDateTimeOffset) {
-            return " TIMESTAMP " + getLiteralSurroundedBySingleQuotes(getTimestampAsSQLStandard(literal.getText()));
-        } else if (literal.getType() instanceof EdmDate) {
-            return " DATE " + getLiteralSurroundedBySingleQuotes(literal.getText());
+    public String visitLiteral(final Literal literal) throws ExpressionVisitException, ODataApplicationException {
+        
+        final EdmElement property = findProperty(this.previousMember, this.entityType);
+        return PropertyUtils.toVDPLiteral(literal, property);
+
+    }
+    
+    private EdmElement findProperty(final String path, final EdmEntityType eType) {
+        
+        if (path == null) {
+            return null;
         }
-        return literal.getText();
+        
+        final String[] members = path.split("\\.");
+        EdmElement property = eType.getProperty(members[0]);
+        for (int i = 1; i < members.length; i++) {
+            if (property.getType().getKind() == EdmTypeKind.COMPLEX) {
+                final EdmComplexType complexType = (EdmComplexType) property.getType();
+                property = complexType.getProperty(members[i]);
+            }
+        }
+        
+        return property;
+        
     }
 
     @Override
-    public String visitMember(Member member) throws ExpressionVisitException, ODataApplicationException {
+    public String visitMember(final Member member) throws ExpressionVisitException, ODataApplicationException {
         
 
-        List<UriResource> uriResourceParts = member.getResourcePath().getUriResourceParts();
-        StringBuilder sb = new StringBuilder();
+        final List<UriResource> uriResourceParts = member.getResourcePath().getUriResourceParts();
+        final StringBuilder sb = new StringBuilder();
         if (uriResourceParts.get(0) instanceof UriResourceProperty) {
 
             if (uriResourceParts.size() == 1) {
                 // It is a simple property
                 sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(this.entityName)).append('.');
                 sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(uriResourceParts.get(0).getSegmentValue()));
+                
             } else {
                 // It is a property of a complex type
                 sb.append(getPropertyPath(member.getResourcePath(), this.entityName));
+                
             }
+            this.previousMember = getPropertyPathAsString(member.getResourcePath());
             return sb.toString();
         }
         
@@ -379,9 +402,9 @@ public class VQLExpressionVisitor implements ExpressionVisitor<String> {
 
         // A member expression node is inserted in the expression tree for any member operator ("/")
         // which is used to reference a property of an complex type or entity type.
-        List<UriResource> uriResourceParts = member.getUriResourceParts();
+        final List<UriResource> uriResourceParts = member.getUriResourceParts();
 
-        for (UriResource uriResource : uriResourceParts) {
+        for (final UriResource uriResource : uriResourceParts) {
             sb.append(uriResource.getSegmentValue());
             sb.append('.');
         }
@@ -415,43 +438,25 @@ public class VQLExpressionVisitor implements ExpressionVisitor<String> {
 
         return sb.toString();
     }
-    
-    private static String getLiteralSurroundedBySingleQuotes(final String s) {
-        StringBuilder sb = new StringBuilder().append("'").append(s).append("'");
-        return sb.toString();
-    }
-    
-    /*
-     * The SQL standard defines the following syntax for specifying timestamp literals:
-     * <timestamp literal> ::= TIMESTAMP 'date value <space> time value'
-     * TIMESTAMP 'yyyy-mm-dd hh:mm:ss[.[nnn]][ <time zone interval> ]'
-     * 
-     * VDP uses the same standard.
-     */
-    private static String getTimestampAsSQLStandard(final String date) {
-        String standardizedDate = date.replace("T", " ");
-        return standardizedDate;
-    }
 
     @Override
-    public String visitAlias(String aliasName) throws ExpressionVisitException, ODataApplicationException {
+    public String visitAlias(final String aliasName) throws ExpressionVisitException, ODataApplicationException {
         return this.uriInfo.getValueForAlias(aliasName);
     }
 
     @Override
-    public String visitTypeLiteral(EdmType type) throws ExpressionVisitException, ODataApplicationException {
+    public String visitTypeLiteral(final EdmType type) throws ExpressionVisitException, ODataApplicationException {
         throw new ODataApplicationException("Type literals not supported.", HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
     }
 
     @Override
-    public String visitLambdaReference(String variableName) throws ExpressionVisitException, ODataApplicationException {
+    public String visitLambdaReference(final String variableName) throws ExpressionVisitException, ODataApplicationException {
         throw new ODataApplicationException("Lambda references not supported.", HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
     }
 
     @Override
-    public String visitEnum(EdmEnumType type, List<String> enumValues) throws ExpressionVisitException, ODataApplicationException {
+    public String visitEnum(final EdmEnumType type, final List<String> enumValues) throws ExpressionVisitException, ODataApplicationException {
         throw new ODataApplicationException("Enums not supported.", HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
     }
-
 
 }

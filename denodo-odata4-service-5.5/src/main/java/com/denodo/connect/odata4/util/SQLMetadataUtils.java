@@ -24,7 +24,7 @@ package com.denodo.connect.odata4.util;
 import java.sql.ResultSetMetaData;
 import java.sql.Types;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 
 public final class SQLMetadataUtils {
@@ -84,6 +84,7 @@ public final class SQLMetadataUtils {
             case Types.TIME:
                 return EdmPrimitiveTypeKind.TimeOfDay;
             case Types.TIMESTAMP:
+            case VDPJDBCTypes.TIMESTAMP_WITH_TIMEZONE:
                 return EdmPrimitiveTypeKind.DateTimeOffset;
             case Types.VARBINARY:
                 return EdmPrimitiveTypeKind.Binary;
@@ -101,6 +102,12 @@ public final class SQLMetadataUtils {
                 return EdmPrimitiveTypeKind.String;
             case Types.STRUCT:
                 return null;
+            case VDPJDBCTypes.INTERVAL_DAY_SECOND:
+                return EdmPrimitiveTypeKind.Duration;
+            case VDPJDBCTypes.INTERVAL_YEAR_MONTH:
+                // as there is no OData type for intevals of year-month we treat it as a string 
+                // to display the interval as in the VDP Admin Tool
+                return EdmPrimitiveTypeKind.String;                
             default:
                 break;
         }
@@ -158,7 +165,7 @@ public final class SQLMetadataUtils {
      * OData is case-sensitive. Use french quotes in order to get element names (columns, views...)
      */
     public static String getStringSurroundedByFrenchQuotes(final String s) {
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
         
         sb.append('`').append(s).append('`');
         

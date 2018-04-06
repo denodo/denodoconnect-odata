@@ -1,6 +1,7 @@
 CURRENT_RELEASE
 ---------------
 - Fixed #36498 - Issues addressing individual properties and their values
+- Fixed #36827 - NPE when accessing the root of the OData 4 Service
 
 20180312
 --------

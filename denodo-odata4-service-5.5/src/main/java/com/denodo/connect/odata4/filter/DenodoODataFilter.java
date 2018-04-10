@@ -233,7 +233,7 @@ public class DenodoODataFilter implements Filter {
             final boolean dataBaseNameEncoded = StringUtils.indexOf(request.getRequestURI(), dataBaseName) == -1;
 
             if (StringUtils.isEmpty(dataBaseName)){  // we will get a collection name (or a $metadata) as a database name! (maybe check that?)
-                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
                 return;
             }
 

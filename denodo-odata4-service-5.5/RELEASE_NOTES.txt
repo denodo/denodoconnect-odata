@@ -1,7 +1,9 @@
-CURRENT_RELEASE
----------------
+20180410
+--------
 - Fixed #36498 - Issues addressing individual properties and their values
 - Fixed #36827 - NPE when accessing the root of the OData 4 Service
+- Fixed #36813 - If the OData service is deployed in the web container included with Denodo Platform,
+                 accessing its base URL will lead to a "too many redirects" error
 
 20180312
 --------

@@ -1,4 +1,4 @@
-CURRENT RELEASE
-----------------
+20180410
+--------
 - First version of the Denodo OData 4 Service for Denodo 7.0.
 

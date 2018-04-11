@@ -10,4 +10,4 @@ SET DENODO_HOME=..
 
 SET DENODO_CONF=%DENODO_HOME%\conf\vdp
 
-CALL "%DENODO_HOME%\bin\webcontainer" stop denodo-odata2-service-5.5
+CALL "%DENODO_HOME%\bin\webcontainer" stop denodo-odata2-service-${denodo.version}

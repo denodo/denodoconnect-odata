@@ -33,9 +33,13 @@
     <fileSet>
       <directory>${basedir}/src/main/scripts</directory>
       <outputDirectory>/scripts</outputDirectory>
+      <filtered>true</filtered>
       <includes>
         <include>*.*</include>
       </includes>
+      <excludes>
+        <exclude>*.xml</exclude>
+      </excludes>
     </fileSet>
     <fileSet>
       <directory>${project.build.directory}/</directory>
@@ -46,5 +50,13 @@
     </fileSet>
   </fileSets>
 
+    <files>
+        <file>
+            <source>${basedir}/src/main/scripts/denodo-odata2-service.xml</source>
+            <outputDirectory>/scripts</outputDirectory>
+            <filtered>true</filtered>
+            <destName>denodo-odata2-service-5.5.xml</destName>
+        </file>
+    </files>
 
 </assembly>

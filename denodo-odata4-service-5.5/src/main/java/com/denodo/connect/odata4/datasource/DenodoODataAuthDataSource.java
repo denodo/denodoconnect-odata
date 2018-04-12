@@ -162,15 +162,15 @@ public class DenodoODataAuthDataSource implements DataSource {
                      * credentials included in the data source configuration
                      * (JNDI resource).
                      */
-                    command = new StringBuilder("CONNECT ").append(" DATABASE ").append(getDataBaseName());
+                    command = new StringBuilder("CONNECT ").append(" DATABASE ").append(quoteIdentifier(DATA_BASE_NAME));
                 } else if (getParameter(USER_NAME) != null) {
 
-                    command = new StringBuilder("CONNECT USER ").append(getParameter(USER_NAME)).append(" PASSWORD ")
+                    command = new StringBuilder("CONNECT USER ").append(quoteIdentifier(USER_NAME)).append(" PASSWORD ")
                             .append("'").append(getParameter(PASSWORD_NAME)).append("'").append(" DATABASE ")
-                            .append(getDataBaseName());
+                            .append(quoteIdentifier(DATA_BASE_NAME));
                 } else {
                     command = new StringBuilder("CONNECT TOKEN '").append(getParameter(KERBEROS_CLIENT_TOKEN)).append("' DATABASE ")
-                            .append(getDataBaseName());
+                            .append(quoteIdentifier(DATA_BASE_NAME));
                 }
 
                 this.authenticatedConnection.set(connection);
@@ -230,11 +230,10 @@ public class DenodoODataAuthDataSource implements DataSource {
         return this.parameters.get().get(name);
     }
 
-    private String getDataBaseName() {
+    private String quoteIdentifier(final String paramName) {
         
-        final String dataBase = this.parameters.get().get(DATA_BASE_NAME);
-        // as ODdata URLs are case sensitive
-        return SQLMetadataUtils.getStringSurroundedByFrenchQuotes(dataBase);
+        final String value = getParameter(paramName);
+        return SQLMetadataUtils.getStringSurroundedByFrenchQuotes(value);
     }
 
     @Override

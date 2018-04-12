@@ -28,7 +28,7 @@
   <groupId>com.denodo.connect.odata4</groupId>
   <artifactId>denodo-odata4-service-7.0</artifactId>
   <name>${project.artifactId}</name>
-  <version>20180410</version>
+  <version>20180412</version>
   
   <organization>
     <name>Denodo Technologies</name>

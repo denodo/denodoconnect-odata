@@ -1,3 +1,8 @@
+CURRENT_RELEASE
+----------------
+
+Fix #36962 - Explain the required privileges for users in the user manual
+
 20180312
 ---------------
 - Fixed #36395 - OData 2 does not allow views without primary key

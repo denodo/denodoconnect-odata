@@ -1,6 +1,7 @@
 20180412
 --------
 Fixed #36961 - User names should be quoted in CONNECT statements
+Fixed #36935 - Explain the required privileges for users in the user manual
 
 20180410
 --------

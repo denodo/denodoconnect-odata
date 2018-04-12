@@ -263,8 +263,8 @@ public class DenodoCommonProcessor {
 
                                         valueType = ValueType.COLLECTION_COMPLEX;
                                     } catch (final EdmException e1) {
-                                        logger.error("Error getting property data: " + expandColumnNames.get(j) + e1);
-                                        throw new SQLException("Error getting property data: " + expandColumnNames.get(j) + e1);
+                                        logger.error("Error getting property data: " + expandColumnNames.get(j), e1);
+                                        throw new SQLException("Error getting property data: " + expandColumnNames.get(j), e1);
                                     }
                                 } else if (expValue instanceof Struct) {
 
@@ -276,8 +276,8 @@ public class DenodoCommonProcessor {
 
                                         valueType = ValueType.COMPLEX;
                                     } catch (final EdmException e2) {
-                                        logger.error("Error getting property data: " + expandColumnNames.get(j) + e2);
-                                        throw new SQLException("Error getting property data: " + expandColumnNames.get(j) + e2);
+                                        logger.error("Error getting property data: " + expandColumnNames.get(j), e2);
+                                        throw new SQLException("Error getting property data: " + expandColumnNames.get(j), e2);
                                     }
 
                                 }
@@ -441,8 +441,8 @@ public class DenodoCommonProcessor {
                 }
             }
         } catch (final EdmException e) {
-            logger.error("Error getting property data: " + propertyName + e);
-            throw new SQLException("Error getting property data: " + propertyName + e);
+            logger.error("Error getting property data: " + propertyName, e);
+            throw new SQLException("Error getting property data: " + propertyName, e);
         }
         
         return complexValue;

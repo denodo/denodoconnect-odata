@@ -56,7 +56,7 @@ public final class ProcessorUtils {
         
         if (uriInfo != null) {
             // Select System Query Option ($select)
-            SelectOption selectOption = uriInfo.getSelectOption();
+            final SelectOption selectOption = uriInfo.getSelectOption();
             if (selectOption != null) {
                 final List<SelectItem> selectedItems = selectOption.getSelectItems();
                 if (!selectedItems.isEmpty()) {
@@ -77,8 +77,8 @@ public final class ProcessorUtils {
                         // We also need to add the items that appear in the order by expression
                         // because vdp need them in the final schema
                         if (!selectedItemsAsString.isEmpty()) {
-                            for (String keyProperty : keyProperties) {
-                                StringBuilder keyName = new StringBuilder();
+                            for (final String keyProperty : keyProperties) {
+                                final StringBuilder keyName = new StringBuilder();
                                 keyName.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(responseEdmEntitySet.getName()))
                                     .append(".").append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(keyProperty));
                                 if (!selectedItemsAsString.contains(keyName.toString())) {
@@ -87,7 +87,7 @@ public final class ProcessorUtils {
                             }
                             try {
                                 addOrdersAsString(selectedItemsAsString, uriInfo);
-                            } catch (ExpressionVisitException e) {
+                            } catch (final ExpressionVisitException e) {
                                 throw new ODataApplicationException("Exception in filter expression", HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(),
                                         Locale.getDefault());
                             }
@@ -103,9 +103,9 @@ public final class ProcessorUtils {
     private static void addOrdersAsString(final List<String> selectedItemsAsString, final UriInfo uriInfo) throws ExpressionVisitException, ODataApplicationException {
         final OrderByOption orderByOption = uriInfo.getOrderByOption();
         if (orderByOption != null) {
-            List<OrderByItem> orders = orderByOption.getOrders();
-            for(OrderByItem order : orders) {
-                String expression = order.getExpression().accept(new VQLExpressionVisitor(uriInfo));
+            final List<OrderByItem> orders = orderByOption.getOrders();
+            for(final OrderByItem order : orders) {
+                final String expression = order.getExpression().accept(new VQLExpressionVisitor(uriInfo));
                 if (!selectedItemsAsString.contains(expression)) {
                     selectedItemsAsString.add(expression);
                 }
@@ -121,7 +121,7 @@ public final class ProcessorUtils {
             try {
 
                 final UriResource resource = item.getResourcePath().getUriResourceParts().get(0);
-                StringBuilder sb = new StringBuilder();
+                final StringBuilder sb = new StringBuilder();
                 if (resource instanceof UriResourceProperty) {
                     sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(responseEdmEntitySet.getName())).append('.');
                     sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(resource.getSegmentValue()));
@@ -132,7 +132,7 @@ public final class ProcessorUtils {
                 
 
             } catch (final EdmException e) {
-                logger.error(e);
+                logger.error("Error getting select values", e);
             }
         }
 
@@ -146,11 +146,11 @@ public final class ProcessorUtils {
         for (final UriParameter key : keyList) {
             
             // key
-            String keyName = key.getName();
+            final String keyName = key.getName();
             String keyText = key.getText();
             
             if (key.getExpression() instanceof StringLiteral) {
-                StringBuilder sb = new StringBuilder();
+                final StringBuilder sb = new StringBuilder();
                 sb.append('\'');
                 sb.append(keyText);
                 sb.append('\'');
@@ -190,8 +190,8 @@ public final class ProcessorUtils {
         
         EdmEntitySet currentStartEntitySet = startEdmEntitySet;
         
-        for (String navPropName : navigationNameList) {
-            EdmBindingTarget edmBindingTarget = currentStartEntitySet.getRelatedBindingTarget(navPropName);
+        for (final String navPropName : navigationNameList) {
+            final EdmBindingTarget edmBindingTarget = currentStartEntitySet.getRelatedBindingTarget(navPropName);
             
             if (edmBindingTarget == null) {
                 throw new ODataApplicationException("Not supported.", HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
@@ -211,9 +211,9 @@ public final class ProcessorUtils {
     
     
     private static List<String> getNavigationPropertyNames(final List<UriResourceNavigation> uriResourceNavigationList) {
-        List<String> navPropNames = new ArrayList<String>();
-        for (UriResourceNavigation uriResourceNavigation : uriResourceNavigationList) {
-            String navPropName = uriResourceNavigation.getProperty().getName();
+        final List<String> navPropNames = new ArrayList<String>();
+        for (final UriResourceNavigation uriResourceNavigation : uriResourceNavigationList) {
+            final String navPropName = uriResourceNavigation.getProperty().getName();
             navPropNames.add(navPropName);
         }
         return navPropNames;
@@ -222,14 +222,14 @@ public final class ProcessorUtils {
     
     public static List<UriResourceNavigation> getNavigationSegments(final UriInfo uriInfo) {
         
-        List<UriResource> resourceParts = uriInfo.getUriResourceParts();
-        int segmentCount = resourceParts.size();
+        final List<UriResource> resourceParts = uriInfo.getUriResourceParts();
+        final int segmentCount = resourceParts.size();
         
-        List<UriResourceNavigation> uriResourceNavigationList = new ArrayList<UriResourceNavigation>(segmentCount);
+        final List<UriResourceNavigation> uriResourceNavigationList = new ArrayList<UriResourceNavigation>(segmentCount);
 
-        for (UriResource segment : resourceParts) {
+        for (final UriResource segment : resourceParts) {
             if (segment instanceof UriResourceNavigation) {
-                UriResourceNavigation uriResourceNavigation = (UriResourceNavigation) segment;
+                final UriResourceNavigation uriResourceNavigation = (UriResourceNavigation) segment;
                 uriResourceNavigationList.add(uriResourceNavigation);
             }
         }
@@ -239,7 +239,7 @@ public final class ProcessorUtils {
     
     public static String getKeyForExpandDataByEntityAndNavigation(final String entitySetName, final String navigationPropertyName) {
         if (entitySetName != null && navigationPropertyName != null) {
-            StringBuilder sb = new StringBuilder(entitySetName).append("-").append(navigationPropertyName);
+            final StringBuilder sb = new StringBuilder(entitySetName).append("-").append(navigationPropertyName);
             return sb.toString();
         }
         return null;

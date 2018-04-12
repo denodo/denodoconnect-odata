@@ -268,7 +268,7 @@ public class DenodoODataFilter implements Filter {
                         return;
                     }
                 } catch (final Exception e) {
-                    logger.error("An exception was raised while obtaining connection in order to check Kerberos availability " + e.getLocalizedMessage());
+                    logger.error("An exception was raised while obtaining connection in order to check Kerberos availability ", e);
                     clearRequestAuthentication();
                 } finally {
                     this.checkedAvailabiltyKerberos = true;

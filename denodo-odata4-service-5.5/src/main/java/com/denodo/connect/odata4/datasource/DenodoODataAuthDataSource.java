@@ -200,23 +200,23 @@ public class DenodoODataAuthDataSource implements DataSource {
                     throw new DenodoODataResourceNotFoundException(e);
                 }
                 if (e.getMessage().matches(KERBEROS_DISABLED)) { // Check Kerberos availability
-                    logger.error(e);
+                    logger.error("Kerberos authentication is not enabled in VDP", e);
                     throw new DenodoODataKerberosDisabledException(e);
                 }
                 if (e.getMessage().matches(KERBEROS_INVALID_USER)) { // Check Kerberos authentication for the user
-                    logger.error(e);
+                    logger.error("No valid Kerberos authentication for user", e);
                     throw new DenodoODataKerberosInvalidUserException(e);
                 }
                 if (e.getMessage().matches(KERBEROS_ERROR)) { // Check Kerberos authentication
-                    logger.error(e);
+                    logger.error("Kerberos is unsupported by this VDP version", e);
                     throw new DenodoODataKerberosUnsupportedException(e);
                 }                
                 if (e.getMessage().matches(CONNECT_TOKEN_UNSUPPORTED)) { // Check connect token sentence unsupported
-                    logger.error(e);
+                    logger.error("Kerberos is unsupported by this VDP version", e);
                     throw new DenodoODataKerberosUnsupportedException(e);
                 }                
             }
-            logger.error(e);
+            logger.error("Error obtaining the connection", e);
             throw new DenodoODataConnectException(e, getParameter(DATA_BASE_NAME), getParameter(USER_NAME));
         } finally {
         	if (stmt != null) {

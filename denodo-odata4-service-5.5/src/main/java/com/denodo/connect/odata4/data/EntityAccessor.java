@@ -185,8 +185,8 @@ public class EntityAccessor {
                         try {
                             DenodoCommonProcessor.setExpandData(expandColumnKey, newEntityKeys, entity, expandData, value, baseURI, uriInfo);
                         } catch (final ODataApplicationException e) {
-                            logger.error("Error setting expand data: " + expandColumnKey + e);
-                            throw new SQLException("Error setting expand data: " + expandColumnKey + e);
+                            logger.error("Error setting expand data: " + expandColumnKey, e);
+                            throw new SQLException("Error setting expand data: " + expandColumnKey, e);
                         }
                     } else {
 
@@ -232,8 +232,8 @@ public class EntityAccessor {
 
                                     valueType = ValueType.COMPLEX;
                                 } catch (final EdmException e2) {
-                                    logger.error("Error getting property data: " + columnName + e2);
-                                    throw new SQLException("Error getting property data: " + columnName + e2);
+                                    logger.error("Error getting property data: " + columnName, e2);
+                                    throw new SQLException("Error getting property data: " + columnName, e2);
                                 }
                             } else {
                                 relationLinkValue = true;
@@ -712,7 +712,7 @@ public class EntityAccessor {
             return this.denodoTemplate.queryForObject(sqlStatement, Integer.class);
 
         } catch (final EdmException e) {
-            logger.error(e);
+            logger.error("Error building the SQL statement", e);
         } catch (final ExpressionVisitException e) {
             throw new ODataApplicationException("Exception in filter expression", HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(),
                     Locale.getDefault());

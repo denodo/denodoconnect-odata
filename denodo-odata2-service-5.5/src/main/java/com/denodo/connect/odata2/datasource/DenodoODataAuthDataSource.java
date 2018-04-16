@@ -144,7 +144,7 @@ public class DenodoODataAuthDataSource implements DataSource {
                 // and a database to initiate a
                 // new session in the server with a new profile.
 
-                if (Boolean.valueOf(this.parameters.get().get(DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION)).booleanValue()) {
+                if (Boolean.parseBoolean(getParameter(DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION))) {
                     /*
                      * ONLY FOR DEVELOPMENT
                      * 
@@ -157,12 +157,12 @@ public class DenodoODataAuthDataSource implements DataSource {
                      * credentials included in the data source configuration
                      * (JNDI resource).
                      */
-                    command = new StringBuilder("CONNECT ").append(" DATABASE ").append(getDataBaseName());
+                    command = new StringBuilder("CONNECT ").append(" DATABASE ").append(quoteIdentifier(DATA_BASE_NAME));
                 } else {
 
-                    command = new StringBuilder("CONNECT USER ").append(this.parameters.get().get(USER_NAME)).append(" PASSWORD ")
-                            .append("'").append(this.parameters.get().get(PASSWORD_NAME)).append("'").append(" DATABASE ")
-                            .append(getDataBaseName());
+                    command = new StringBuilder("CONNECT USER ").append(quoteIdentifier(USER_NAME)).append(" PASSWORD ")
+                            .append("'").append(getParameter(PASSWORD_NAME)).append("'").append(" DATABASE ")
+                            .append(quoteIdentifier(DATA_BASE_NAME));
                 }
 
                 this.authenticatedConnection.set(connection);
@@ -201,12 +201,17 @@ public class DenodoODataAuthDataSource implements DataSource {
         }
     }
     
-    private String getDataBaseName() {
-        
-        final String dataBase = this.parameters.get().get(DATA_BASE_NAME);
-        // as ODdata URLs are case sensitive
-        return SQLMetadataUtils.getStringSurroundedByFrenchQuotes(dataBase);
+    private String getParameter(final String name) {
+        return this.parameters.get().get(name);
     }
+
+    
+    private String quoteIdentifier(final String paramName) {
+        
+        final String value = getParameter(paramName);
+        return SQLMetadataUtils.getStringSurroundedByFrenchQuotes(value);
+    }
+
 
     @Override
     public Connection getConnection(final String username, final String password) throws SQLException {

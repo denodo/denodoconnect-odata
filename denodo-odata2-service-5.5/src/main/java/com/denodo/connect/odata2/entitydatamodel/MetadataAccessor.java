@@ -36,7 +36,6 @@ import java.util.Map;
 import java.util.StringTokenizer;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.edm.EdmMultiplicity;
 import org.apache.olingo.odata2.api.edm.EdmSimpleTypeKind;
 import org.apache.olingo.odata2.api.edm.FullQualifiedName;
@@ -52,6 +51,8 @@ import org.apache.olingo.odata2.api.edm.provider.PropertyRef;
 import org.apache.olingo.odata2.api.edm.provider.ReferentialConstraint;
 import org.apache.olingo.odata2.api.edm.provider.ReferentialConstraintRole;
 import org.apache.olingo.odata2.api.edm.provider.SimpleProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -69,7 +70,7 @@ import com.denodo.connect.odata2.util.SQLMetadataUtils;
 @Repository
 public class MetadataAccessor {
 
-    private static final Logger logger = Logger.getLogger(MetadataAccessor.class);
+    private static final Logger logger = LoggerFactory.getLogger(MetadataAccessor.class);
 
 
 

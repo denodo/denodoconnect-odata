@@ -2,6 +2,7 @@ CURRENT_RELEASE
 ---------------
 Fix #36962 - Explain the required privileges for users in the user manual
 Fix #36983 - Clean META-INF resources in distributions
+Fix #37021 - Replace Log4j by SLF4J
 
 20180312
 ---------------

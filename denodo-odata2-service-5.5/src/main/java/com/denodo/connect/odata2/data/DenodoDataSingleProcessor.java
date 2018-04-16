@@ -34,7 +34,6 @@ import java.util.Map;
 
 import org.apache.commons.lang3.Range;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.ODataCallback;
 import org.apache.olingo.odata2.api.ODataServiceVersion;
 import org.apache.olingo.odata2.api.commons.InlineCount;
@@ -87,6 +86,8 @@ import org.apache.olingo.odata2.api.uri.info.GetEntityUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetServiceDocumentUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetSimplePropertyUriInfo;
 import org.apache.olingo.odata2.core.edm.EdmDateTimeOffset;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.UncategorizedSQLException;
@@ -101,7 +102,7 @@ import com.denodo.connect.odata2.util.SQLMetadataUtils;
 @Component
 public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
-    private static final Logger logger = Logger.getLogger(DenodoDataSingleProcessor.class);
+    private static final Logger logger = LoggerFactory.getLogger(DenodoDataSingleProcessor.class);
     
     @Value("${odataserver.serviceRoot}")
     private String serviceRoot;
@@ -133,7 +134,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 this.serviceRoot = StringUtils.appendIfMissing(this.serviceRoot, "/");
             }
             return new URI(this.serviceRoot);
-        } catch (URISyntaxException e) {
+        } catch (final URISyntaxException e) {
             throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
         }
     }
@@ -178,7 +179,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             final Integer top = uriInfo.getTop();
 
             String skiptoken = uriInfo.getSkipToken();
-            InlineCount inlineCount = uriInfo.getInlineCount();
+            final InlineCount inlineCount = uriInfo.getInlineCount();
             
             Integer startPagination = skip;
             Integer pageElements = this.pageSize;
@@ -189,8 +190,8 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 skiptoken = "1";
             }
             
-            int endPagination = startPagination + this.pageSize;
-            Range<Integer> currentPage = Range.between(startPagination - skip, endPagination - skip);
+            final int endPagination = startPagination + this.pageSize;
+            final Range<Integer> currentPage = Range.between(startPagination - skip, endPagination - skip);
             if (top != null) { 
                 if (currentPage.contains(top) && !currentPage.isEndedBy(top)) { // Range is inclusive and our check is in an exclusive Range
                     pageElements = top % this.pageSize;
@@ -238,28 +239,28 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 final ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(getServiceRoot());
 
                 // Expand option
-                List<ArrayList<NavigationPropertySegment>> navigationPropertiesToExpand = uriInfo.getExpand();
-                Map<String, ODataCallback> callbacks = new HashMap<String, ODataCallback>();
+                final List<ArrayList<NavigationPropertySegment>> navigationPropertiesToExpand = uriInfo.getExpand();
+                final Map<String, ODataCallback> callbacks = new HashMap<String, ODataCallback>();
                 
                 try {
                     EdmEntitySet entitySetNavigate;
-                    Map<String, Map<Map<String,Object>,List<Map<String, Object>>>> expandData = new HashMap<String, Map<Map<String,Object>,List<Map<String,Object>>>>();
+                    final Map<String, Map<Map<String,Object>,List<Map<String, Object>>>> expandData = new HashMap<String, Map<Map<String,Object>,List<Map<String,Object>>>>();
                     List<Map<String, Object>> keysAsList = null;
                     
                     // Each element of the navigationPropertiesToExpand list is a navigation property but they are arrays
                     // and if you have a multilevel expand each level is an element of the array
-                    for (ArrayList<NavigationPropertySegment> npsarray : navigationPropertiesToExpand) {
+                    for (final ArrayList<NavigationPropertySegment> npsarray : navigationPropertiesToExpand) {
                         entitySetNavigate = entitySetTarget;
                         
                         // We should use the keys that we know that are necessary. We expand the first element  
                         keysAsList = null;
                         
                         // When npsarray.size() != 1 it means that we have a multilevel expand
-                        for (NavigationPropertySegment nvsegment : npsarray) {
-                            Map<Map<String,Object>, List<Map<String, Object>>> dataAsMap = this.entityAccessor.getEntitySetExpandData(entitySetNavigate.getEntityType(), 
+                        for (final NavigationPropertySegment nvsegment : npsarray) {
+                            final Map<Map<String,Object>, List<Map<String, Object>>> dataAsMap = this.entityAccessor.getEntitySetExpandData(entitySetNavigate.getEntityType(), 
                                     nvsegment.getTargetEntitySet().getEntityType(), nvsegment.getNavigationProperty(), keysAsList, 
                                     npsarray.size() == 1 ? filterExpressionString : null);
-                            StringBuilder sb = new StringBuilder(entitySetNavigate.getName()).append("-").append(nvsegment.getNavigationProperty().getName());
+                            final StringBuilder sb = new StringBuilder(entitySetNavigate.getName()).append("-").append(nvsegment.getNavigationProperty().getName());
                             expandData.put(sb.toString(), dataAsMap);
                             
                             // Use the keys of the previous expanded element in order to get a multilevel expand operation
@@ -269,10 +270,10 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                         }
                     }
                     
-                    for (ArrayList<NavigationPropertySegment> npsarray : navigationPropertiesToExpand) {
+                    for (final ArrayList<NavigationPropertySegment> npsarray : navigationPropertiesToExpand) {
                         callbacks.put(npsarray.get(0).getNavigationProperty().getName(), new WriterCallBack(getServiceRoot(), expandData));
                     }
-                } catch (UncategorizedSQLException e) {
+                } catch (final UncategorizedSQLException e) {
                     // Exception that will throw VDP with versions before 6.0. These versions don't have support for EXPAND
                     if (!(e.getCause() instanceof SQLException && e.getMessage().contains("Syntax error: Exception parsing query near '*'"))) {
                         throw new ODataApplicationException(e.getLocalizedMessage(), Locale.getDefault(), e);
@@ -290,7 +291,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 // Almost all system query options in the current request must be carried over to the URI for the "next" link,
                 // with the exception of $skiptoken.
                 if (hasMoreEntities(data, this.pageSize)) {
-                    String nextLink = getNextLink(skiptoken);
+                    final String nextLink = getNextLink(skiptoken);
                     propertiesBuilder.nextLink(nextLink);
                 }
 
@@ -313,7 +314,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
         } catch (final SQLException e) {
-            logger.error(e);
+            logger.error("Error accessing entities", e);
             throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
         }
 
@@ -324,9 +325,9 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         return entities != null && !entities.isEmpty() && entities.size() > pageSize.intValue();
     }
 
-    private String getNextLink(String skiptoken) throws ODataException {
+    private String getNextLink(final String skiptoken) throws ODataException {
         
-        StringBuilder nextLink = new StringBuilder();
+        final StringBuilder nextLink = new StringBuilder();
         
         final ODataContext context = this.getContext();
         String resourcePath = StringUtils.difference(context.getPathInfo().getServiceRoot().toString(), context.getPathInfo().getRequestUri().toString());
@@ -368,7 +369,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
             } catch (final SQLException e) {
-                logger.error(e);
+                logger.error("Error accessing entities", e);
                 throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
@@ -390,7 +391,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
             } catch (final SQLException e) {
-                logger.error(e);
+                logger.error("Error accessing entities", e);
                 throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
@@ -401,26 +402,26 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             final ODataEntityProviderPropertiesBuilder propertiesBuilder = EntityProviderWriteProperties.serviceRoot(getServiceRoot());
 
             // Expand option
-            List<ArrayList<NavigationPropertySegment>> navigationPropertiesToExpand = uriInfo.getExpand();
-            Map<String, ODataCallback> callbacks = new HashMap<String, ODataCallback>();
+            final List<ArrayList<NavigationPropertySegment>> navigationPropertiesToExpand = uriInfo.getExpand();
+            final Map<String, ODataCallback> callbacks = new HashMap<String, ODataCallback>();
             
             try {
                 EdmEntitySet entitySetNavigate;
-                Map<String, Map<Map<String,Object>,List<Map<String, Object>>>> expandData = new HashMap<String, Map<Map<String,Object>,List<Map<String,Object>>>>();
+                final Map<String, Map<Map<String,Object>,List<Map<String, Object>>>> expandData = new HashMap<String, Map<Map<String,Object>,List<Map<String,Object>>>>();
                 
                 // Each element of the navigationPropertiesToExpand list is a navigation property but they are arrays
                 // and if you have a multilevel expand each level is an element of the array
-                for (ArrayList<NavigationPropertySegment> npsarray : navigationPropertiesToExpand) {
+                for (final ArrayList<NavigationPropertySegment> npsarray : navigationPropertiesToExpand) {
                     entitySetNavigate = entitySetToWrite;
-                    Map<String, Object> keysToExpand = new HashMap<String, Object>(keys);
+                    final Map<String, Object> keysToExpand = new HashMap<String, Object>(keys);
                     
                     //We should use the keys that we know that are necessary
                     List<Map<String, Object>> keysAsList =  Arrays.asList(keysToExpand);
                     
-                    for (NavigationPropertySegment nvsegment : npsarray) {
-                        Map<Map<String,Object>, List<Map<String, Object>>> dataAsMap = this.entityAccessor.getEntityExpandData(entitySetNavigate.getEntityType(), 
+                    for (final NavigationPropertySegment nvsegment : npsarray) {
+                        final Map<Map<String,Object>, List<Map<String, Object>>> dataAsMap = this.entityAccessor.getEntityExpandData(entitySetNavigate.getEntityType(), 
                                 nvsegment.getTargetEntitySet().getEntityType(), nvsegment.getNavigationProperty(), keysAsList);
-                        StringBuilder sb = new StringBuilder(entitySetNavigate.getName()).append("-").append(nvsegment.getNavigationProperty().getName());
+                        final StringBuilder sb = new StringBuilder(entitySetNavigate.getName()).append("-").append(nvsegment.getNavigationProperty().getName());
                         expandData.put(sb.toString(), dataAsMap);
     
                         // Use the keys of the previous expanded element in order to get a multilevel expand operation
@@ -430,10 +431,10 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                     }
                 }
                 
-                for (ArrayList<NavigationPropertySegment> npsarray : navigationPropertiesToExpand) {
+                for (final ArrayList<NavigationPropertySegment> npsarray : navigationPropertiesToExpand) {
                     callbacks.put(npsarray.get(0).getNavigationProperty().getName(), new WriterCallBack(getServiceRoot(), expandData));
                 }
-            } catch (UncategorizedSQLException e) {
+            } catch (final UncategorizedSQLException e) {
                 // Exception that will throw VDP with versions before 6.0. These versions don't have support for EXPAND
                 if (!(e.getCause() instanceof SQLException && e.getMessage().contains("Syntax error: Exception parsing query near '*'"))) {
                     throw new ODataApplicationException(e.getLocalizedMessage(), Locale.getDefault(), e);
@@ -491,7 +492,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
             } catch (final SQLException e) {
-                logger.error(e);
+                logger.error("Error accessing entities", e);
                 throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
@@ -522,7 +523,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
             } catch (final SQLException e) {
-                logger.error(e);
+                logger.error("Error accessing entities", e);
                 throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
@@ -558,7 +559,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
             } catch (final SQLException e) {
-                logger.error(e);
+                logger.error("Error accesing entities", e);
                 throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
@@ -589,7 +590,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
             } catch (final SQLException e) {
-                logger.error(e);
+                logger.error("Error accessing entities", e);
                 throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
@@ -625,7 +626,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
             } catch (final SQLException e) {
-                logger.error(e);
+                logger.error("Error accessing entities", e);
                 throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
@@ -654,7 +655,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
             } catch (final SQLException e) {
-                logger.error(e);
+                logger.error("Error accesing entities", e);
                 throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
@@ -687,7 +688,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
             } catch (final SQLException e) {
-                logger.error(e);
+                logger.error("Error accessing entities", e);
                 throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
@@ -753,7 +754,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
         } catch (final SQLException e) {
-            logger.error(e);
+            logger.error("Error accessing entities", e);
             throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
         }
 
@@ -794,7 +795,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
         } catch (final SQLException e) {
-            logger.error(e);
+            logger.error("Error accessing entities", e);
             throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
         }
         
@@ -833,7 +834,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             if (filterExpression.getExpression() instanceof BinaryExpression) {
                 filterExpressionString = processBinaryExpression((BinaryExpression) filterExpression.getExpression(), uriInfo.getStartEntitySet().getName());
             } else if (filterExpression.getExpression() instanceof UnaryExpression) {
-                StringBuilder sb = new StringBuilder();
+                final StringBuilder sb = new StringBuilder();
                 sb.append(((UnaryExpression)filterExpression.getExpression()).getOperator().toString());
                 sb.append(" (");
                 if (((UnaryExpression)filterExpression.getExpression()).getOperand() instanceof BinaryExpression) {
@@ -976,7 +977,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             try {
                 selectValues.add(item.getProperty().getName());
             } catch (final EdmException e) {
-                logger.error(e);
+                logger.error("Error accessing the name selected", e);
             }
         }
 
@@ -1055,8 +1056,8 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         final OrderByExpression orderByExpression = uriInfo.getOrderBy();
         if (orderByExpression != null) {
             final List<OrderExpression> orders = orderByExpression.getOrders();
-            for(OrderExpression order : orders) {
-                String orderItem = order.getExpression().getUriLiteral();
+            for(final OrderExpression order : orders) {
+                final String orderItem = order.getExpression().getUriLiteral();
                 if (!selectedItemsAsString.contains(orderItem)) {
                     selectedItemsAsString.add(orderItem);
                 }

@@ -18,6 +18,8 @@ SET DENODO_JRE_HOME=%DENODO_HOME%\jre
 SET DENODO_JAVA_HOME=$DENODO_JAVA_HOME
 
 
+SET JAVA_BIN=%DENODO_JRE_HOME%\bin\javaw.exe
+if exist "%JAVA_BIN%" goto configuredjavabin
 
 SET JAVA_BIN=%DENODO_JAVA_HOME%\jre\bin\java.exe
 if exist "%JAVA_BIN%" goto configuredjavabin

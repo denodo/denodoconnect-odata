@@ -40,8 +40,9 @@ import javax.ws.rs.core.SecurityContext;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.core.commons.Encoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 
@@ -50,7 +51,7 @@ import com.denodo.connect.odata2.datasource.DenodoODataAuthDataSource;
 
 public class DenodoODataFilter implements Filter {
 
-    private static final Logger logger = Logger.getLogger("com.denodo.connect.odata2.auth");
+    private static final Logger logger = LoggerFactory.getLogger(DenodoODataFilter.class);
 
     // HTTP convenience constants
     private static final String CHARACTER_ENCODING = "UTF-8";

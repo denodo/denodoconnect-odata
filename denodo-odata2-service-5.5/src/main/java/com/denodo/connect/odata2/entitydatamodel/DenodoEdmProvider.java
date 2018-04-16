@@ -26,7 +26,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
-import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.edm.FullQualifiedName;
 import org.apache.olingo.odata2.api.edm.provider.Association;
@@ -48,6 +47,8 @@ import org.apache.olingo.odata2.api.exception.ODataException;
 import org.apache.olingo.odata2.api.exception.ODataForbiddenException;
 import org.apache.olingo.odata2.api.exception.ODataInternalServerErrorException;
 import org.apache.olingo.odata2.api.exception.ODataNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -61,7 +62,7 @@ import com.denodo.connect.odata2.exceptions.ODataUnauthorizedException;
 @Component
 public class DenodoEdmProvider extends EdmProvider {
 
-    private static final Logger logger = Logger.getLogger(DenodoEdmProvider.class);
+    private static final Logger logger = LoggerFactory.getLogger(DenodoEdmProvider.class);
 
     private static final String NAMESPACE_DENODO = "com.denodo.odata2";
     private static final String ENTITY_CONTAINER_DENODO = "DenodoOData2EntityContainer";

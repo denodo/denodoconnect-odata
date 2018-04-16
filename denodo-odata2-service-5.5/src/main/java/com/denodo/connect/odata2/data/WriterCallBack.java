@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
 import org.apache.olingo.odata2.api.ODataCallback;
 import org.apache.olingo.odata2.api.edm.EdmEntitySet;
 import org.apache.olingo.odata2.api.edm.EdmException;
@@ -42,12 +41,14 @@ import org.apache.olingo.odata2.api.ep.callback.WriteFeedCallbackContext;
 import org.apache.olingo.odata2.api.ep.callback.WriteFeedCallbackResult;
 import org.apache.olingo.odata2.api.exception.ODataApplicationException;
 import org.apache.olingo.odata2.api.uri.ExpandSelectTreeNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class WriterCallBack implements OnWriteEntryContent, OnWriteFeedContent {
 
     
-    private static final Logger logger = Logger.getLogger(WriterCallBack.class);
+    private static final Logger logger = LoggerFactory.getLogger(WriterCallBack.class);
     
     private URI serviceRoot;
     private Map<String, Map<Map<String,Object>,List<Map<String, Object>>>> data;
@@ -67,44 +68,44 @@ public class WriterCallBack implements OnWriteEntryContent, OnWriteFeedContent {
      */
     
     @Override
-    public WriteFeedCallbackResult retrieveFeedResult(WriteFeedCallbackContext context) throws ODataApplicationException {
+    public WriteFeedCallbackResult retrieveFeedResult(final WriteFeedCallbackContext context) throws ODataApplicationException {
         
-        WriteFeedCallbackResult result = new WriteFeedCallbackResult();
+        final WriteFeedCallbackResult result = new WriteFeedCallbackResult();
          
         try {
       
-            EdmEntitySet sourceEntitySet = context.getSourceEntitySet();
-            EdmNavigationProperty navigationProperty = context.getNavigationProperty();
+            final EdmEntitySet sourceEntitySet = context.getSourceEntitySet();
+            final EdmNavigationProperty navigationProperty = context.getNavigationProperty();
             
-            Map<String, Object> keys = context.extractKeyFromEntryData();
+            final Map<String, Object> keys = context.extractKeyFromEntryData();
             
-            StringBuilder feedKeyName = new StringBuilder(sourceEntitySet.getEntityType().getName()).append("-")
+            final StringBuilder feedKeyName = new StringBuilder(sourceEntitySet.getEntityType().getName()).append("-")
                     .append(navigationProperty.getName());
             
-            List<Map<String, Object>> feedData = this.data.get(feedKeyName.toString()).get(keys);
+            final List<Map<String, Object>> feedData = this.data.get(feedKeyName.toString()).get(keys);
             result.setFeedData(feedData);
             
-            ExpandSelectTreeNode currentExpandTreeNode = context.getCurrentExpandSelectTreeNode();
+            final ExpandSelectTreeNode currentExpandTreeNode = context.getCurrentExpandSelectTreeNode();
             
-            Map<String, ODataCallback> callbacks = new HashMap<String, ODataCallback>();
+            final Map<String, ODataCallback> callbacks = new HashMap<String, ODataCallback>();
             
             if (currentExpandTreeNode.getLinks().size() > 0) {
-                for (String navigationPropertyName : currentExpandTreeNode.getLinks().keySet()) {
+                for (final String navigationPropertyName : currentExpandTreeNode.getLinks().keySet()) {
                     callbacks.put(navigationPropertyName, new WriterCallBack(this.serviceRoot, this.data));
                 }
             }
-            EntityProviderWriteProperties inlineProperties = EntityProviderWriteProperties.serviceRoot(this.serviceRoot)
+            final EntityProviderWriteProperties inlineProperties = EntityProviderWriteProperties.serviceRoot(this.serviceRoot)
                     .expandSelectTree(context.getCurrentExpandSelectTreeNode()).callbacks(callbacks)
                     .selfLink(context.getSelfLink())
                     .build();
             
             result.setInlineProperties(inlineProperties);
                   
-        } catch (EntityProviderException e) {
-            logger.error(e);
+        } catch (final EntityProviderException e) {
+            logger.error("Error retrieving feed result", e);
             throw new ODataApplicationException(e.getLocalizedMessage(), Locale.getDefault(), e);
-        } catch (EdmException e) {
-            logger.error(e);
+        } catch (final EdmException e) {
+            logger.error("Error retrieving feed result", e);
             throw new ODataApplicationException(e.getLocalizedMessage(), Locale.getDefault(), e);
         }
         
@@ -119,48 +120,48 @@ public class WriterCallBack implements OnWriteEntryContent, OnWriteFeedContent {
      * 
      */
     @Override
-    public WriteEntryCallbackResult retrieveEntryResult(WriteEntryCallbackContext context) throws ODataApplicationException {
+    public WriteEntryCallbackResult retrieveEntryResult(final WriteEntryCallbackContext context) throws ODataApplicationException {
         
-        WriteEntryCallbackResult result = new WriteEntryCallbackResult();
+        final WriteEntryCallbackResult result = new WriteEntryCallbackResult();
         
         try {
 
-            EdmEntitySet sourceEntitySet = context.getSourceEntitySet();
-            EdmNavigationProperty navigationProperty = context.getNavigationProperty();
+            final EdmEntitySet sourceEntitySet = context.getSourceEntitySet();
+            final EdmNavigationProperty navigationProperty = context.getNavigationProperty();
                 
-            Map<String, Object> keys = context.extractKeyFromEntryData();
+            final Map<String, Object> keys = context.extractKeyFromEntryData();
             
-            StringBuilder entryKeyName = new StringBuilder(sourceEntitySet.getEntityType().getName()).append("-")
+            final StringBuilder entryKeyName = new StringBuilder(sourceEntitySet.getEntityType().getName()).append("-")
                     .append(navigationProperty.getName());
 
-            List<Map<String, Object>> entryData = this.data.get(entryKeyName.toString()).get(keys);
+            final List<Map<String, Object>> entryData = this.data.get(entryKeyName.toString()).get(keys);
             Map<String, Object> data = new HashMap<String, Object>();
             if (!entryData.isEmpty()) {
                 data = entryData.get(0);
             }
             result.setEntryData(data);
             
-            ExpandSelectTreeNode currentExpandTreeNode = context.getCurrentExpandSelectTreeNode();
+            final ExpandSelectTreeNode currentExpandTreeNode = context.getCurrentExpandSelectTreeNode();
             
-            Map<String, ODataCallback> callbacks = new HashMap<String, ODataCallback>();
+            final Map<String, ODataCallback> callbacks = new HashMap<String, ODataCallback>();
             
             if (currentExpandTreeNode.getLinks().size() > 0) {
-                for (String navigationPropertyName : currentExpandTreeNode.getLinks().keySet()) {
+                for (final String navigationPropertyName : currentExpandTreeNode.getLinks().keySet()) {
                     callbacks.put(navigationPropertyName, new WriterCallBack(this.serviceRoot, this.data));
                 }
             }
             
-            EntityProviderWriteProperties inlineProperties = EntityProviderWriteProperties.serviceRoot(this.serviceRoot)
+            final EntityProviderWriteProperties inlineProperties = EntityProviderWriteProperties.serviceRoot(this.serviceRoot)
                     .expandSelectTree(context.getCurrentExpandSelectTreeNode()).callbacks(callbacks)
                     .build();
             
             result.setInlineProperties(inlineProperties);
 
-        } catch (EntityProviderException e) {
-            logger.error(e);
+        } catch (final EntityProviderException e) {
+            logger.error("Error retrieving entry result", e);
             throw new ODataApplicationException(e.getLocalizedMessage(), Locale.getDefault(), e);
-        } catch (EdmException e) {
-            logger.error(e);
+        } catch (final EdmException e) {
+            logger.error("Error retrieving entry result", e);
             throw new ODataApplicationException(e.getLocalizedMessage(), Locale.getDefault(), e);
         }
         

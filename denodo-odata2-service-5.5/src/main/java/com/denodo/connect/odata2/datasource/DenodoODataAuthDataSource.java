@@ -30,7 +30,8 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.support.JdbcUtils;
@@ -39,7 +40,7 @@ import com.denodo.connect.odata2.util.SQLMetadataUtils;
 
 public class DenodoODataAuthDataSource implements DataSource {
 
-    private static final Logger logger = Logger.getLogger(DenodoODataAuthDataSource.class);
+    private static final Logger logger = LoggerFactory.getLogger(DenodoODataAuthDataSource.class);
 
     @Autowired
     @Qualifier("vdpDataSource")
@@ -191,7 +192,7 @@ public class DenodoODataAuthDataSource implements DataSource {
                     throw new DenodoODataResourceNotFoundException(e);
                 }
             }
-            logger.error(e);
+            logger.error("Error obtaining connection", e);
             throw e;
         } finally {
         	if (stmt != null) {

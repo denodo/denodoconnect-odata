@@ -20,7 +20,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 /**
  * 
@@ -30,22 +32,22 @@ import org.apache.log4j.Logger;
  */
 public class DenodoODataConnectionWrapper implements Connection {
 
-    private static final Logger logger = Logger.getLogger(DenodoODataConnectionWrapper.class);
+    private static final Logger logger = LoggerFactory.getLogger(DenodoODataConnectionWrapper.class);
     
     private Connection connection;
 
-    public DenodoODataConnectionWrapper(Connection connection) {
+    public DenodoODataConnectionWrapper(final Connection connection) {
         super();
         this.connection = connection;
     }
 
     @Override
-    public boolean isWrapperFor(Class<?> arg0) throws SQLException {
+    public boolean isWrapperFor(final Class<?> arg0) throws SQLException {
         return this.connection.isWrapperFor(arg0);
     }
 
     @Override
-    public <T> T unwrap(Class<T> arg0) throws SQLException {
+    public <T> T unwrap(final Class<T> arg0) throws SQLException {
         return this.connection.unwrap(arg0);
     }
 
@@ -65,9 +67,9 @@ public class DenodoODataConnectionWrapper implements Connection {
         if (this.connection != null && !this.connection.isClosed()) {
             //CLOSE: allows the previous session to be reestablished after having established a new session with the CONNECT command
             try {
-                Statement  stmt = this.connection.createStatement();
+                final Statement  stmt = this.connection.createStatement();
                 stmt.execute("CLOSE");
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 logger.warn("Could not close JDBC Connection", e);
                 // Close statement throws an exception when the CONNECT command failed due to e.g. invalid credentials.
                 // Ignore this error because close method must be invoked to release the connection to the pool.
@@ -83,7 +85,7 @@ public class DenodoODataConnectionWrapper implements Connection {
     }
 
     @Override
-    public Array createArrayOf(String typeName, Object[] elements) throws SQLException {
+    public Array createArrayOf(final String typeName, final Object[] elements) throws SQLException {
         return this.connection.createArrayOf(typeName, elements);
     }
 
@@ -113,17 +115,17 @@ public class DenodoODataConnectionWrapper implements Connection {
     }
 
     @Override
-    public Statement createStatement(int resultSetType, int resultSetConcurrency) throws SQLException {
+    public Statement createStatement(final int resultSetType, final int resultSetConcurrency) throws SQLException {
         return this.connection.createStatement(resultSetType, resultSetConcurrency);
     }
 
     @Override
-    public Statement createStatement(int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
+    public Statement createStatement(final int resultSetType, final int resultSetConcurrency, final int resultSetHoldability) throws SQLException {
         return this.connection.createStatement(resultSetType, resultSetConcurrency, resultSetHoldability);
     }
 
     @Override
-    public Struct createStruct(String typeName, Object[] attributes) throws SQLException {
+    public Struct createStruct(final String typeName, final Object[] attributes) throws SQLException {
         return this.connection.createStruct(typeName, attributes);
     }
 
@@ -143,7 +145,7 @@ public class DenodoODataConnectionWrapper implements Connection {
     }
 
     @Override
-    public String getClientInfo(String name) throws SQLException {
+    public String getClientInfo(final String name) throws SQLException {
         return this.connection.getClientInfo(name);
     }
 
@@ -183,64 +185,64 @@ public class DenodoODataConnectionWrapper implements Connection {
     }
 
     @Override
-    public boolean isValid(int timeout) throws SQLException {
+    public boolean isValid(final int timeout) throws SQLException {
         return this.connection.isValid(timeout);
     }
 
     @Override
-    public String nativeSQL(String sql) throws SQLException {
+    public String nativeSQL(final String sql) throws SQLException {
         return this.connection.nativeSQL(sql);
     }
 
     @Override
-    public CallableStatement prepareCall(String sql) throws SQLException {
+    public CallableStatement prepareCall(final String sql) throws SQLException {
         return this.connection.prepareCall(sql);
     }
 
     @Override
-    public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency) throws SQLException {
+    public CallableStatement prepareCall(final String sql, final int resultSetType, final int resultSetConcurrency) throws SQLException {
         return this.connection.prepareCall(sql, resultSetType, resultSetConcurrency);
     }
 
     @Override
-    public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability)
+    public CallableStatement prepareCall(final String sql, final int resultSetType, final int resultSetConcurrency, final int resultSetHoldability)
             throws SQLException {
         return this.connection.prepareCall(sql, resultSetType, resultSetConcurrency, resultSetHoldability);
     }
 
     @Override
-    public PreparedStatement prepareStatement(String sql) throws SQLException {
+    public PreparedStatement prepareStatement(final String sql) throws SQLException {
         return this.connection.prepareStatement(sql);
     }
 
     @Override
-    public PreparedStatement prepareStatement(String sql, int autoGeneratedKeys) throws SQLException {
+    public PreparedStatement prepareStatement(final String sql, final int autoGeneratedKeys) throws SQLException {
         return this.connection.prepareStatement(sql, autoGeneratedKeys);
     }
 
     @Override
-    public PreparedStatement prepareStatement(String sql, int[] columnIndexes) throws SQLException {
+    public PreparedStatement prepareStatement(final String sql, final int[] columnIndexes) throws SQLException {
         return this.connection.prepareStatement(sql, columnIndexes);
     }
 
     @Override
-    public PreparedStatement prepareStatement(String sql, String[] columnNames) throws SQLException {
+    public PreparedStatement prepareStatement(final String sql, final String[] columnNames) throws SQLException {
         return this.connection.prepareStatement(sql, columnNames);
     }
 
     @Override
-    public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency) throws SQLException {
+    public PreparedStatement prepareStatement(final String sql, final int resultSetType, final int resultSetConcurrency) throws SQLException {
         return this.connection.prepareStatement(sql, resultSetType, resultSetConcurrency);
     }
 
     @Override
-    public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability)
+    public PreparedStatement prepareStatement(final String sql, final int resultSetType, final int resultSetConcurrency, final int resultSetHoldability)
             throws SQLException {
         return this.connection.prepareStatement(sql, resultSetType, resultSetConcurrency, resultSetHoldability);
     }
 
     @Override
-    public void releaseSavepoint(Savepoint savepoint) throws SQLException {
+    public void releaseSavepoint(final Savepoint savepoint) throws SQLException {
         this.connection.releaseSavepoint(savepoint);
     }
 
@@ -250,37 +252,37 @@ public class DenodoODataConnectionWrapper implements Connection {
     }
 
     @Override
-    public void rollback(Savepoint savepoint) throws SQLException {
+    public void rollback(final Savepoint savepoint) throws SQLException {
         this.connection.rollback(savepoint);
     }
 
     @Override
-    public void setAutoCommit(boolean autoCommit) throws SQLException {
+    public void setAutoCommit(final boolean autoCommit) throws SQLException {
         this.connection.setAutoCommit(autoCommit);
     }
 
     @Override
-    public void setCatalog(String catalog) throws SQLException {
+    public void setCatalog(final String catalog) throws SQLException {
         this.connection.setCatalog(catalog);
     }
 
     @Override
-    public void setClientInfo(Properties properties) throws SQLClientInfoException {
+    public void setClientInfo(final Properties properties) throws SQLClientInfoException {
         this.connection.setClientInfo(properties);
     }
 
     @Override
-    public void setClientInfo(String name, String value) throws SQLClientInfoException {
+    public void setClientInfo(final String name, final String value) throws SQLClientInfoException {
         this.connection.setClientInfo(name, value);
     }
 
     @Override
-    public void setHoldability(int holdability) throws SQLException {
+    public void setHoldability(final int holdability) throws SQLException {
         this.connection.setHoldability(holdability);
     }
 
     @Override
-    public void setReadOnly(boolean readOnly) throws SQLException {
+    public void setReadOnly(final boolean readOnly) throws SQLException {
         this.connection.setReadOnly(readOnly);
     }
 
@@ -290,37 +292,42 @@ public class DenodoODataConnectionWrapper implements Connection {
     }
 
     @Override
-    public Savepoint setSavepoint(String name) throws SQLException {
+    public Savepoint setSavepoint(final String name) throws SQLException {
         return this.connection.setSavepoint(name);
     }
 
     @Override
-    public void setTransactionIsolation(int level) throws SQLException {
+    public void setTransactionIsolation(final int level) throws SQLException {
         this.connection.setTransactionIsolation(level);
     }
 
     @Override
-    public void setTypeMap(Map<String, Class<?>> map) throws SQLException {
+    public void setTypeMap(final Map<String, Class<?>> map) throws SQLException {
         this.connection.setTypeMap(map);
     }
 
+    @Override
     public int getNetworkTimeout() throws SQLException {
         throw new SQLFeatureNotSupportedException("Connection#getNetworkTimeout() not supported");
     }
     
-    public void setNetworkTimeout(Executor executor, int milliseconds) throws SQLException {
+    @Override
+    public void setNetworkTimeout(final Executor executor, final int milliseconds) throws SQLException {
         throw new SQLFeatureNotSupportedException("Connection#setNetworkTimeout() not supported");
     }
     
-    public void abort(Executor executor) throws SQLException {
+    @Override
+    public void abort(final Executor executor) throws SQLException {
         throw new SQLFeatureNotSupportedException("Connection#abort() not supported");
     }
     
+    @Override
     public String getSchema() throws SQLException {
         throw new SQLFeatureNotSupportedException("Connection#getSchema() not supported");
     }
     
-    public void setSchema(String schema) throws SQLException {
+    @Override
+    public void setSchema(final String schema) throws SQLException {
         throw new SQLFeatureNotSupportedException("Connection#setSchema() not supported");
     }
 }

@@ -189,7 +189,7 @@ public class DenodoODataFilter implements Filter {
 
 
             final String dataBaseName = retrieveDataBaseNameFromUrl(request.getPathInfo(), this.serverAddress);
-            final boolean dataBaseNameEncoded = request.getRequestURI().indexOf(dataBaseName) == -1;
+            final boolean dataBaseNameEncoded =  StringUtils.indexOf(request.getRequestURI(), dataBaseName) == -1;
             
             if (StringUtils.isEmpty(dataBaseName)){  // TODO This will never really happen - we will get a collection name (or a $metadata) as a database name! (maybe check that?)
                 response.sendError(HttpServletResponse.SC_NOT_FOUND);
@@ -253,10 +253,8 @@ public class DenodoODataFilter implements Filter {
      */
     private static String retrieveDataBaseNameFromUrl(final String pathInfo, final String serverAddress){
         
-        String database = StringUtils.removeStart(pathInfo, "/");
-        database = StringUtils.removeStart(database, serverAddress); 
-        
-        return StringUtils.substringBefore(database, "/"); 
+        final String pathWithoutServerAddress = StringUtils.substringAfter(pathInfo, serverAddress);
+        return StringUtils.substringBefore(pathWithoutServerAddress, "/");
     }
 
 
@@ -272,8 +270,8 @@ public class DenodoODataFilter implements Filter {
         final String decoded = new String(Base64.decodeBase64(credentialsString), CHARACTER_ENCODING);
         
         final String[] credentials =new String[2];
-        credentials[0]= decoded.substring(0, decoded.indexOf(':'));
-        credentials[1]= decoded.substring(decoded.indexOf(':') + 1);
+        credentials[0] = decoded.substring(0, decoded.indexOf(':'));
+        credentials[1] = decoded.substring(decoded.indexOf(':') + 1);
         return credentials;
     }
 

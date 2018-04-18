@@ -68,15 +68,10 @@ import org.apache.olingo.odata2.api.uri.NavigationSegment;
 import org.apache.olingo.odata2.api.uri.SelectItem;
 import org.apache.olingo.odata2.api.uri.UriInfo;
 import org.apache.olingo.odata2.api.uri.UriParser;
-import org.apache.olingo.odata2.api.uri.expression.BinaryExpression;
-import org.apache.olingo.odata2.api.uri.expression.CommonExpression;
+import org.apache.olingo.odata2.api.uri.expression.ExceptionVisitExpression;
 import org.apache.olingo.odata2.api.uri.expression.FilterExpression;
-import org.apache.olingo.odata2.api.uri.expression.MemberExpression;
-import org.apache.olingo.odata2.api.uri.expression.MethodExpression;
 import org.apache.olingo.odata2.api.uri.expression.OrderByExpression;
 import org.apache.olingo.odata2.api.uri.expression.OrderExpression;
-import org.apache.olingo.odata2.api.uri.expression.PropertyExpression;
-import org.apache.olingo.odata2.api.uri.expression.UnaryExpression;
 import org.apache.olingo.odata2.api.uri.info.GetComplexPropertyUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntityLinkUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntitySetCountUriInfo;
@@ -85,7 +80,6 @@ import org.apache.olingo.odata2.api.uri.info.GetEntitySetUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetEntityUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetServiceDocumentUriInfo;
 import org.apache.olingo.odata2.api.uri.info.GetSimplePropertyUriInfo;
-import org.apache.olingo.odata2.core.edm.EdmDateTimeOffset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -97,7 +91,7 @@ import com.denodo.connect.odata2.datasource.DenodoODataAuthenticationException;
 import com.denodo.connect.odata2.datasource.DenodoODataAuthorizationException;
 import com.denodo.connect.odata2.datasource.DenodoODataConnectException;
 import com.denodo.connect.odata2.exceptions.ODataUnauthorizedException;
-import com.denodo.connect.odata2.util.SQLMetadataUtils;
+import com.denodo.connect.odata2.util.VQLExpressionVisitor;
 
 @Component
 public class DenodoDataSingleProcessor extends ODataSingleProcessor {
@@ -803,170 +797,26 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
     }
 
 
-    private static String getOrderByExpresion( final UriInfo uriInfo) throws EdmException{
+    private static String getOrderByExpresion( final UriInfo uriInfo) throws EdmException, ExceptionVisitExpression, ODataApplicationException{
 
-        // Orderby System Query Option ($orderby)
         final OrderByExpression orderByExpression = uriInfo.getOrderBy();
         String orderByExpressionString = null;
         if (orderByExpression != null) {
-            final StringBuilder sb = new StringBuilder();
-            final List<OrderExpression> orders = orderByExpression.getOrders();
-            for (final OrderExpression order : orders) {
-                sb.append(processExpressionToComplexRepresentation(order.getExpression(), uriInfo.getTargetEntitySet().getName()));
-                sb.append(" ");
-                sb.append(order.getSortOrder().toString());
-                sb.append(",");
-            }
-            // remove the last extra comma
-            sb.deleteCharAt(sb.length()-1);
-
-            orderByExpressionString = sb.toString();
+            orderByExpressionString = (String) orderByExpression.accept(new VQLExpressionVisitor(uriInfo));
         }
+        
         return orderByExpressionString;
     }
 
-    private static String getFilterExpresion(final UriInfo uriInfo) throws EdmException{
+    private static String getFilterExpresion(final UriInfo uriInfo) throws ExceptionVisitExpression, ODataApplicationException, EdmException {
 
-        // Filter System Query Option ($filter)
         final FilterExpression filterExpression = uriInfo.getFilter();
         String filterExpressionString = null;
         if (filterExpression != null) {
-            if (filterExpression.getExpression() instanceof BinaryExpression) {
-                filterExpressionString = processBinaryExpression((BinaryExpression) filterExpression.getExpression(), uriInfo.getStartEntitySet().getName());
-            } else if (filterExpression.getExpression() instanceof UnaryExpression) {
-                final StringBuilder sb = new StringBuilder();
-                sb.append(((UnaryExpression)filterExpression.getExpression()).getOperator().toString());
-                sb.append(" (");
-                if (((UnaryExpression)filterExpression.getExpression()).getOperand() instanceof BinaryExpression) {
-                    sb.append(processBinaryExpression((BinaryExpression)((UnaryExpression)filterExpression.getExpression()).getOperand(), uriInfo.getStartEntitySet().getName()));
-                } else {
-                    sb.append(processExpressionToComplexRepresentation(((UnaryExpression)filterExpression.getExpression()).getOperand(), uriInfo.getStartEntitySet().getName()));
-                }
-                sb.append(")");
-                filterExpressionString = sb.toString();
-            } else {
-                filterExpressionString = filterExpression.getExpressionString();
-            }
+            filterExpressionString = (String) filterExpression.accept(new VQLExpressionVisitor(uriInfo));
         }
+        
         return filterExpressionString;
-    }
-
-    private static String processBinaryExpression(final BinaryExpression binaryExpression, final String view) {
-
-        final StringBuilder sb = new StringBuilder();
-
-        sb.append(processExpressionToComplexRepresentation(binaryExpression.getLeftOperand(), view));
-
-        sb.append(" ");
-
-        sb.append(binaryExpression.getOperator().toString());
-
-        sb.append(" ");
-
-        sb.append(processExpressionToComplexRepresentation(binaryExpression.getRightOperand(), view));
-
-        return sb.toString();
-    }
-
-    private static String processExpressionToComplexRepresentation(final CommonExpression operand, final String view) {
-
-        final StringBuilder sb = new StringBuilder();
-
-        if (operand instanceof MemberExpression) {
-            // It is a property of a complex type
-            sb.append(getPropertyPath(operand));
-        } else if (operand instanceof BinaryExpression) {
-            sb.append('(').append(processBinaryExpression((BinaryExpression) operand, view)).append(')');
-        } else {
-            if (operand instanceof MethodExpression) {
-                // Leave the string: method(param1, param2, param3,...)
-                sb.append(((MethodExpression) operand).getMethod());
-                final List<CommonExpression> params = ((MethodExpression) operand).getParameters();
-                sb.append("(");
-                for (final CommonExpression p : params) {
-                    sb.append(processExpressionToComplexRepresentation(p, view));
-                    sb.append(",");
-                }
-
-                // remove the last extra comma
-                sb.deleteCharAt(sb.length()-1);
-
-                sb.append(")");
-            } else {
-                if (operand instanceof PropertyExpression) {
-                    sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(view)).append(".");
-                    sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(operand.getUriLiteral()));
-                } else if (operand instanceof UnaryExpression) {
-                    sb.append(((UnaryExpression)operand).getOperator().toString());
-                    sb.append(" (");
-                    sb.append(processExpressionToComplexRepresentation(((UnaryExpression)operand).getOperand(), view));
-                    sb.append(")");
-                } else if (operand.getEdmType() instanceof EdmDateTimeOffset) {
-                    // All our dates are Edm.DateTimeOffset
-                    sb.append(" TIMESTAMP ").append(getTimestampAsSQLStandard(operand.getUriLiteral()));
-                } else {
-                    sb.append(operand.getUriLiteral());
-                }
-            }
-        }
-
-        return sb.toString();
-    }
-
-    private static String getPropertyPath(final CommonExpression expression) {
-
-        String propertyPathAsString = getPropertyPathAsString(expression);
-        // Get the representation in order to access using VDP
-        propertyPathAsString = transformComplexProperties(propertyPathAsString);
-
-        return propertyPathAsString;
-    }
-
-    // Change the property path with elements separated with points ".".
-    // The correct representation has the first item between parentheses.
-    private  static String transformComplexProperties(final String propertyPathAsString) {
-        final StringBuilder sb = new StringBuilder();
-
-        final String[] propertyPathAsArray = propertyPathAsString.split("\\.");
-
-        for (int i=0; i < propertyPathAsArray.length; i++) {
-            if (i == 0) {
-                sb.append("(");
-            }
-            sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(propertyPathAsArray[i]));
-            if (i == 0) {
-                sb.append(")");
-            }
-            if (i != propertyPathAsArray.length-1) {
-                sb.append(".");
-            }
-        }
-
-        return sb.toString();
-    }
-
-    private static String getPropertyPathAsString (final CommonExpression expression) {
-
-        final StringBuilder sb = new StringBuilder();
-
-        // A member expression node is inserted in the expression tree for any member operator ("/")
-        // which is used to reference a property of an complex type or entity type.
-        if (expression instanceof MemberExpression) {
-            // It has two parts: path and property.
-            if (!(((MemberExpression) expression).getPath() instanceof PropertyExpression)) {
-                sb.append(getPropertyPathAsString(((MemberExpression) expression).getPath()));
-            } else {
-                sb.append(((PropertyExpression) ((MemberExpression) expression).getPath()).getPropertyName());
-            }
-            sb.append(".");
-            if (!(((MemberExpression) expression).getProperty() instanceof PropertyExpression)) {
-                sb.append(getPropertyPathAsString(((MemberExpression) expression).getProperty()));
-            } else {
-                sb.append(((PropertyExpression) ((MemberExpression) expression).getProperty()).getPropertyName());
-            }
-        }
-
-        return sb.toString();
     }
 
     private static List<String> getSelectOptionValues(final List<SelectItem> selectedItems) {
@@ -986,9 +836,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
     }
 
 
-    private static  List<String> getSelectedItems( final GetEntityUriInfo uriInfo,
-            final List<String> keyProperties)
-                    throws SQLException, ODataException {
+    private static List<String> getSelectedItems(final GetEntityUriInfo uriInfo, final List<String> keyProperties) {
 
         List<String> selectedItemsAsString = new ArrayList<String>();
         if (uriInfo != null) {
@@ -1018,8 +866,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         return selectedItemsAsString;
     }
 
-    private static List<String> getSelectedItems(final GetEntitySetUriInfo uriInfo, final List<String> keyProperties) throws SQLException,
-            ODataException {
+    private static List<String> getSelectedItems(final GetEntitySetUriInfo uriInfo, final List<String> keyProperties) {
 
         List<String> selectedItemsAsString = new ArrayList<String>();
         if (uriInfo != null) {
@@ -1065,16 +912,4 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         }
     }
     
-    /*
-     * The SQL standard defines the following syntax for specifying timestamp literals:
-     * <timestamp literal> ::= TIMESTAMP 'date value <space> time value'
-     * TIMESTAMP 'yyyy-mm-dd hh:mm:ss[.[nnn]][ <time zone interval> ]'
-     * 
-     * VDP uses the same standard.
-     */
-    private static String getTimestampAsSQLStandard(final String date) {
-        String standardizedDate = date.replace("T", " ");
-        standardizedDate = standardizedDate.toUpperCase().replace("DATETIMEOFFSET", "");
-        return standardizedDate;
-    }
 }

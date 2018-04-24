@@ -26,11 +26,14 @@ import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang3.Range;
 import org.apache.commons.lang3.StringUtils;
@@ -41,9 +44,7 @@ import org.apache.olingo.odata2.api.commons.ODataHttpHeaders;
 import org.apache.olingo.odata2.api.edm.Edm;
 import org.apache.olingo.odata2.api.edm.EdmEntitySet;
 import org.apache.olingo.odata2.api.edm.EdmException;
-import org.apache.olingo.odata2.api.edm.EdmLiteralKind;
 import org.apache.olingo.odata2.api.edm.EdmProperty;
-import org.apache.olingo.odata2.api.edm.EdmSimpleType;
 import org.apache.olingo.odata2.api.ep.EntityProvider;
 import org.apache.olingo.odata2.api.ep.EntityProviderWriteProperties;
 import org.apache.olingo.odata2.api.ep.EntityProviderWriteProperties.ODataEntityProviderPropertiesBuilder;
@@ -201,8 +202,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             
             final String orderByExpressionString = getOrderByExpresion((UriInfo) uriInfo);
             final String filterExpressionString =  getFilterExpresion((UriInfo) uriInfo);
-            List<String> selectedItemsAsString;
-            selectedItemsAsString = getSelectedItems(uriInfo, keyProperties);
+            final Collection<String> selectedItemsAsString = getSelectedItems(uriInfo, keyProperties);
             Integer count = null;          
             List<Map<String, Object>> data = null;
             
@@ -216,7 +216,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 
             } else if (uriInfo.getNavigationSegments().size() == 1) {
                 // navigation first level
-                final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+                final LinkedHashMap<String, String> keys = getKeyValues(uriInfo.getKeyPredicates());
                 final List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
 
                 data = this.entityAccessor.getEntitySetByAssociation(entitySetStart.getEntityType(), keys,
@@ -290,7 +290,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 }
 
                 // Remove the extra element of data that we use to know if we need to set the "next" link
-                if (data != null && data.size() == pageElements.intValue()) {
+                if (data.size() == pageElements.intValue()) {
                     data.remove(data.size()-1);
                 }
                 
@@ -307,9 +307,6 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             throw new ODataUnauthorizedException(e);
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-        } catch (final SQLException e) {
-            logger.error("Error accessing entities", e);
-            throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
         }
 
         throw new ODataNotImplementedException();
@@ -339,7 +336,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         EdmEntitySet entitySetToWrite = null;
         Map<String, Object> data = null;
         
-        final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+        final LinkedHashMap<String, String> keys = getKeyValues(uriInfo.getKeyPredicates());
         
         if (uriInfo.getNavigationSegments().size() == 0) {
             final EdmEntitySet entitySet = uriInfo.getStartEntitySet();
@@ -354,7 +351,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             }
 
             try {
-                final List <String> selectedItemsAsString = getSelectedItems(uriInfo, keyProperties);
+                final Collection <String> selectedItemsAsString = getSelectedItems(uriInfo, keyProperties);
                 data = this.entityAccessor.getEntity(entitySet.getEntityType(), keys, selectedItemsAsString, null);
             } catch (final DenodoODataConnectException e) {
                 throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
@@ -362,9 +359,6 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 throw new ODataUnauthorizedException(e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-            } catch (final SQLException e) {
-                logger.error("Error accessing entities", e);
-                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
         } else if (uriInfo.getNavigationSegments().size() >= 1) {
@@ -384,9 +378,6 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 throw new ODataUnauthorizedException(e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-            } catch (final SQLException e) {
-                logger.error("Error accessing entities", e);
-                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
         }
@@ -446,14 +437,15 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
     }
 
-    private static LinkedHashMap<String, Object> getKeyValues(final List<KeyPredicate> keyList) throws ODataException {
-        final LinkedHashMap<String, Object> keys = new LinkedHashMap<String, Object>();
+    private static LinkedHashMap<String, String> getKeyValues(final List<KeyPredicate> keyList) throws ODataException {
+        
+        final LinkedHashMap<String, String> keys = new LinkedHashMap<String, String>();
         for (final KeyPredicate key : keyList) {
             final EdmProperty property = key.getProperty();
-            final EdmSimpleType type = (EdmSimpleType) property.getType();
-            final Object value = type.valueOfString(key.getLiteral(), EdmLiteralKind.DEFAULT, property.getFacets(), Object.class);
+            final String value = key.getLiteral();
             keys.put(property.getName(), value);
         }
+        
         return keys;
     }
     
@@ -471,7 +463,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             // If it is a simple property this list should have only one element, otherwise
             // each element is the path to a simple element of a register
             final List<EdmProperty> propertyPath = uriInfo.getPropertyPath();
-            final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+            final LinkedHashMap<String, String> keys = getKeyValues(uriInfo.getKeyPredicates());
             try {
                 final Map<String, Object> data = this.entityAccessor.getEntity(entitySet.getEntityType(), keys, null, propertyPath);
                 if (data != null) {
@@ -485,9 +477,6 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 throw new ODataUnauthorizedException(e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-            } catch (final SQLException e) {
-                logger.error("Error accessing entities", e);
-                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
 
@@ -496,7 +485,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             // If it is a simple property this list should have only one element, otherwise
             // each element is the path to a simple element of a register
             final List<EdmProperty> propertyPath = uriInfo.getPropertyPath();
-            final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+            final LinkedHashMap<String, String> keys = getKeyValues(uriInfo.getKeyPredicates());
             final List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
             final EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
             final EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
@@ -516,9 +505,6 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 throw new ODataUnauthorizedException(e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-            } catch (final SQLException e) {
-                logger.error("Error accessing entities", e);
-                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
         }
@@ -539,7 +525,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             // If it is a simple property this list should have only one element, otherwise
             // each element is the path to a simple element of a register
             final List<EdmProperty> propertyPath = uriInfo.getPropertyPath();
-            final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+            final LinkedHashMap<String, String> keys = getKeyValues(uriInfo.getKeyPredicates());
             try {
                 final Map<String, Object> data = this.entityAccessor.getEntity(entitySet.getEntityType(), keys, null, propertyPath);
                 if (data != null ) {
@@ -552,9 +538,6 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 throw new ODataUnauthorizedException(e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-            } catch (final SQLException e) {
-                logger.error("Error accesing entities", e);
-                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
 
@@ -563,7 +546,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             // If it is a simple property this list should have only one element, otherwise
             // each element is the path to a simple element of a register
             final List<EdmProperty> propertyPath = uriInfo.getPropertyPath();
-            final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+            final LinkedHashMap<String, String> keys = getKeyValues(uriInfo.getKeyPredicates());
             final List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
             final EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
             final EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
@@ -583,9 +566,6 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 throw new ODataUnauthorizedException(e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-            } catch (final SQLException e) {
-                logger.error("Error accessing entities", e);
-                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
         }
@@ -606,7 +586,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             // If it is a simple property this list should have only one element, otherwise
             // each element is the path to a simple element of a register
             final List<EdmProperty> propertyPath = uriInfo.getPropertyPath();
-            final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+            final LinkedHashMap<String, String> keys = getKeyValues(uriInfo.getKeyPredicates());
             try {
                 final Map<String, Object> data = this.entityAccessor.getEntity(entitySet.getEntityType(), keys, null, propertyPath);
                 if (data != null ) {
@@ -619,9 +599,6 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 throw new ODataUnauthorizedException(e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-            } catch (final SQLException e) {
-                logger.error("Error accessing entities", e);
-                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
         } else if (uriInfo.getNavigationSegments().size() >= 1) {
@@ -629,7 +606,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             // If it is a simple property this list should have only one element, otherwise
             // each element is the path to a simple element of a register
             final List<EdmProperty> propertyPath = uriInfo.getPropertyPath();
-            final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+            final LinkedHashMap<String, String> keys = getKeyValues(uriInfo.getKeyPredicates());
             final List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
             final EdmEntitySet entitySetTarget = uriInfo.getTargetEntitySet();
             final EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
@@ -648,9 +625,6 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 throw new ODataUnauthorizedException(e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-            } catch (final SQLException e) {
-                logger.error("Error accesing entities", e);
-                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
         }
@@ -671,7 +645,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         if (uriInfo.getNavigationSegments().size() == 0) {
             entitySet = uriInfo.getStartEntitySet();
             try {
-                final Integer count = this.entityAccessor.getCountEntitySet(entitySet, uriInfo);
+                final Integer count = this.entityAccessor.getCountEntitySet(entitySet);
                 if (count != null ) {
                     return EntityProvider.writeText(count.toString());
                 }
@@ -681,15 +655,12 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                 throw new ODataUnauthorizedException(e);
             } catch (final DenodoODataAuthorizationException e) {
                 throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-            } catch (final SQLException e) {
-                logger.error("Error accessing entities", e);
-                throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
             }
 
 
         } else if (uriInfo.getNavigationSegments().size() == 1) {
             // navigation first level
-            final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+            final LinkedHashMap<String, String> keys = getKeyValues(uriInfo.getKeyPredicates());
             final List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
 
             final EdmEntitySet entitySetStart = uriInfo.getStartEntitySet();
@@ -726,7 +697,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
             if (uriInfo.getNavigationSegments().size() >= 1) {
 
-                final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+                final LinkedHashMap<String, String> keys = getKeyValues(uriInfo.getKeyPredicates());
                 final List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
 
                 // Query option $select cannot be applied
@@ -747,9 +718,6 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             throw new ODataUnauthorizedException(e);
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-        } catch (final SQLException e) {
-            logger.error("Error accessing entities", e);
-            throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
         }
 
         throw new ODataNotImplementedException();
@@ -766,7 +734,7 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
 
             if (uriInfo.getNavigationSegments().size() >= 1) {
 
-                final LinkedHashMap<String, Object> keys = getKeyValues(uriInfo.getKeyPredicates());
+                final LinkedHashMap<String, String> keys = getKeyValues(uriInfo.getKeyPredicates());
                 final List<NavigationSegment> navigationSegments = uriInfo.getNavigationSegments();
 
                 // Query option $select cannot be applied
@@ -788,9 +756,6 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
             throw new ODataUnauthorizedException(e);
         } catch (final DenodoODataAuthorizationException e) {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
-        } catch (final SQLException e) {
-            logger.error("Error accessing entities", e);
-            throw new ODataNotFoundException(ODataNotFoundException.ENTITY);
         }
         
 
@@ -819,9 +784,9 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         return filterExpressionString;
     }
 
-    private static List<String> getSelectOptionValues(final List<SelectItem> selectedItems) {
+    private static Set<String> getSelectOptionValues(final Collection<SelectItem> selectedItems) {
 
-        final List<String> selectValues = new ArrayList<String>();
+        final Set<String> selectValues = new LinkedHashSet<String>();
 
         for (final SelectItem item : selectedItems) {
             try {
@@ -836,9 +801,9 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
     }
 
 
-    private static List<String> getSelectedItems(final GetEntityUriInfo uriInfo, final List<String> keyProperties) {
+    private static Set<String> getSelectedItems(final GetEntityUriInfo uriInfo, final List<String> keyProperties) {
 
-        List<String> selectedItemsAsString = new ArrayList<String>();
+        Set<String> selectedItemsAsString = new LinkedHashSet<String>();
         if (uriInfo != null) {
             // Select System Query Option ($select)
             final List<SelectItem> selectedItems = uriInfo.getSelect();
@@ -866,9 +831,9 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         return selectedItemsAsString;
     }
 
-    private static List<String> getSelectedItems(final GetEntitySetUriInfo uriInfo, final List<String> keyProperties) {
+    private static Collection<String> getSelectedItems(final GetEntitySetUriInfo uriInfo, final List<String> keyProperties) {
 
-        List<String> selectedItemsAsString = new ArrayList<String>();
+        Set<String> selectedItemsAsString = new LinkedHashSet<String>();
         if (uriInfo != null) {
             // Select System Query Option ($select)
             final List<SelectItem> selectedItems = uriInfo.getSelect();
@@ -899,7 +864,8 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
         return selectedItemsAsString;
     }
     
-    private static void addOrdersAsString(final List<String> selectedItemsAsString, final GetEntitySetUriInfo uriInfo) {
+    private static void addOrdersAsString(final Set<String> selectedItemsAsString, final GetEntitySetUriInfo uriInfo) {
+        
         final OrderByExpression orderByExpression = uriInfo.getOrderBy();
         if (orderByExpression != null) {
             final List<OrderExpression> orders = orderByExpression.getOrders();

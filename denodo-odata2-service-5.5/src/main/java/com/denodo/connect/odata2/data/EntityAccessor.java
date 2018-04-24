@@ -28,6 +28,8 @@ import java.sql.SQLException;
 import java.sql.Struct;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -42,11 +44,13 @@ import org.apache.olingo.odata2.api.edm.EdmNavigationProperty;
 import org.apache.olingo.odata2.api.edm.EdmProperty;
 import org.apache.olingo.odata2.api.edm.EdmSimpleType;
 import org.apache.olingo.odata2.api.edm.EdmStructuralType;
+import org.apache.olingo.odata2.api.edm.EdmType;
 import org.apache.olingo.odata2.api.edm.EdmTyped;
 import org.apache.olingo.odata2.api.exception.ODataException;
 import org.apache.olingo.odata2.api.uri.KeyPredicate;
 import org.apache.olingo.odata2.api.uri.NavigationSegment;
-import org.apache.olingo.odata2.api.uri.info.GetEntitySetCountUriInfo;
+import org.apache.olingo.odata2.core.edm.EdmDateTime;
+import org.apache.olingo.odata2.core.edm.EdmDateTimeOffset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,12 +58,16 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
+import com.denodo.connect.odata2.util.DateTimeUtils;
 import com.denodo.connect.odata2.util.FilterQueryOptionsUtils;
+import com.denodo.connect.odata2.util.PropertyUtils;
 import com.denodo.connect.odata2.util.SQLMetadataUtils;
+import com.denodo.connect.odata2.util.VDPJDBCTypes;
 
 
 @Repository
 public class EntityAccessor {
+
 
     @Autowired
     JdbcTemplate denodoTemplate;
@@ -67,125 +75,140 @@ public class EntityAccessor {
     
     
     public List<Map<String, Object>> getEntitySet(final EdmEntityType edmEntityType, final String orderByExpressionString, final Integer top,
-            final Integer skip, final String filterExpression, final List<String> selectedItems) throws SQLException, ODataException {
+            final Integer skip, final String filterExpression, final Collection<String> selectedItems) throws ODataException {
         return getEntityData(edmEntityType, null, orderByExpressionString, top, skip, filterExpression, selectedItems, null, null, null);
     }
     
 
-    public Map<String, Object> getEntity(final EdmEntityType edmEntityType, final LinkedHashMap<String, Object> keys, final List<String> selectedItems,
-            final List<EdmProperty> propertyPath) throws SQLException, ODataException {
+    public Map<String, Object> getEntity(final EdmEntityType edmEntityType, final LinkedHashMap<String, String> keys, final Collection<String> selectedItems,
+            final List<EdmProperty> propertyPath) throws ODataException {
         final List<Map<String, Object>> entities= getEntityData(edmEntityType, keys, null, null, null, null, selectedItems, null, null, propertyPath);
         if(entities!=null && !entities.isEmpty()){
             return entities.get(0); 
-        }else {
-            return null;
         }
+        return null;
 
     }
 
     
-    public Map<String, Object> getEntityByAssociation(final EdmEntityType edmEntityType, final LinkedHashMap<String, Object> keys,
-            final List<NavigationSegment> navigationSegments, final EdmEntityType edmEntityTypeTarget, final List<EdmProperty> propertyPath) throws SQLException, ODataException {
+    public Map<String, Object> getEntityByAssociation(final EdmEntityType edmEntityType, final LinkedHashMap<String, String> keys,
+            final List<NavigationSegment> navigationSegments, final EdmEntityType edmEntityTypeTarget, final List<EdmProperty> propertyPath) throws ODataException {
         final List<Map<String, Object>> entities= getEntityData(edmEntityType, keys, null, null, null, null, null, navigationSegments, edmEntityTypeTarget, propertyPath);
         if(entities!=null && !entities.isEmpty()){
             return entities.get(0); 
-        }else {
-            return null;
         }
+        return null;
     }
 
-    public Map<String, Object> getEntityByAssociation(final EdmEntityType edmEntityType, final LinkedHashMap<String, Object> keys,
-            final List<NavigationSegment> navigationSegments, final EdmEntityType edmEntityTypeTarget) throws SQLException, ODataException {
+    public Map<String, Object> getEntityByAssociation(final EdmEntityType edmEntityType, final LinkedHashMap<String, String> keys,
+            final List<NavigationSegment> navigationSegments, final EdmEntityType edmEntityTypeTarget) throws ODataException {
         final List<Map<String, Object>> entities=getEntityData(edmEntityType, keys, null, null, null, null, null, navigationSegments, edmEntityTypeTarget, null);
         if(entities!=null && !entities.isEmpty()){
             return entities.get(0); 
-        }else {
-            return null;
         }
+        return null;
     }
 
     
-    public List<Map<String, Object>> getEntitySetByAssociation(final EdmEntityType edmEntityType, final LinkedHashMap<String, Object> keys,
+    public List<Map<String, Object>> getEntitySetByAssociation(final EdmEntityType edmEntityType, final LinkedHashMap<String, String> keys,
             final List<NavigationSegment> navigationSegments, final EdmEntityType edmEntityTypeTarget, final String orderByExpressionString, final Integer top,
-            final Integer skip, final String filterExpression, final List<String> selectedItems) throws SQLException, ODataException {
+            final Integer skip, final String filterExpression, final Collection<String> selectedItems) throws ODataException {
 
         return getEntityData(edmEntityType, keys, orderByExpressionString, top, skip, filterExpression, selectedItems, navigationSegments, edmEntityTypeTarget, null);
     }
     
     
     public Map<Map<String,Object>,List<Map<String, Object>>> getEntitySetExpandData(final EdmEntityType edmEntityType, final EdmEntityType edmEntityTypeTarget,
-            final EdmNavigationProperty navigationProperty, final List<Map<String, Object>> entityKeys, final String filterExpression) throws ODataException {
+            final EdmNavigationProperty navigationProperty, final List<Map<String, Object>> entityKeys, final String filterExpression) {
         return getExpandData(edmEntityType, edmEntityTypeTarget, navigationProperty, entityKeys, filterExpression);
     }
     
     
     public Map<Map<String,Object>,List<Map<String, Object>>> getEntityExpandData(final EdmEntityType edmEntityType, final EdmEntityType edmEntityTypeTarget, 
-            final EdmNavigationProperty navigationProperty, final List<Map<String, Object>> entityKeys) throws ODataException {
+            final EdmNavigationProperty navigationProperty, final List<Map<String, Object>> entityKeys) {
         return getExpandData(edmEntityType, edmEntityTypeTarget, navigationProperty, entityKeys, null);
     }
     
     
-    private List<Map<String, Object>> getEntityData(final EdmEntityType edmEntityType, final LinkedHashMap<String, Object> keys,
+    private List<Map<String, Object>> getEntityData(final EdmEntityType edmEntityType, final LinkedHashMap<String, String> keys,
             final String orderByExpression, final Integer top, final Integer skip, final String filterExpression,
-            final List<String> selectedItems, final List<NavigationSegment> navigationSegments, final EdmEntityType edmEntityTypeTarget,
-            final List<EdmProperty> propertyPath) throws SQLException, ODataException {
+            final Collection<String> selectedItems, final List<NavigationSegment> navigationSegments, final EdmEntityType edmEntityTypeTarget,
+            final List<EdmProperty> propertyPath) throws ODataException {
 
 
         final String filterExpressionAdapted = FilterQueryOptionsUtils.getFilterExpression(filterExpression, edmEntityType);
         
-        String sqlStatement = getSQLStatement(edmEntityType.getName(), keys, filterExpressionAdapted, selectedItems, navigationSegments,
+        String sqlStatement = getSQLStatement(edmEntityType, keys, filterExpressionAdapted, selectedItems, navigationSegments,
                 propertyPath, Boolean.FALSE);
         sqlStatement = addOrderByExpression(sqlStatement, orderByExpression);
         sqlStatement = addSkipTopOption(sqlStatement, skip, top);
         logger.debug("Executing query: " + sqlStatement);
 
-        return getEntitySetData(sqlStatement, edmEntityType, edmEntityTypeTarget);
+        return getEntitySetData(sqlStatement, edmEntityType, edmEntityTypeTarget, propertyPath);
     }
     
     
-    private List<Map<String, Object>> getEntitySetData(final String sqlStatement, final EdmEntityType edmEntityType, 
-            final EdmEntityType edmEntityTypeTarget) {
+    private List<Map<String, Object>> getEntitySetData(final String sqlStatement, final EdmEntityType edmEntityType,
+            final EdmEntityType edmEntityTypeTarget, final List<EdmProperty> propertyPath) {
+        
         List<Map<String, Object>> entitySetData = new ArrayList<Map<String, Object>>();
 
-        entitySetData=this.denodoTemplate.query(sqlStatement, 
-                new RowMapper<Map<String, Object>>(){
+        entitySetData = this.denodoTemplate.query(sqlStatement, new RowMapper<Map<String, Object>>() {
 
-        @Override
-        public Map<String, Object> mapRow(final ResultSet resultSet, final int rowNum) throws SQLException {
-            final ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
-            final Map<String, Object> rowData = new HashMap<String, Object>();
-            
-            final EdmEntityType edmEntityTypeActual = edmEntityTypeTarget != null ? edmEntityTypeTarget : edmEntityType;
-            
-            for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
-                final String columnName = resultSetMetaData.getColumnName(i);
-                
-                boolean relationLinkValue = false;
-                Object value = resultSet.getObject(i);
-                if (value instanceof Array) {
-                    value = value.toString();
-                } else if (value instanceof Struct) {
-                    // This is because select_navigational queries return some additional fields 
-                    // in addition to the ones specified in the SELECT clause
-                    if (((Struct) value).getSQLTypeName().compareTo("relation_link") != 0) {
-                        final Object[] structValues = ((Struct) value).getAttributes();
+            @Override
+            public Map<String, Object> mapRow(final ResultSet resultSet, final int rowNum) throws SQLException {
 
-                        try {
-                            final EdmTyped edmTyped = edmEntityTypeActual.getProperty(columnName);
-                            value = getStructAsMaps(edmTyped, columnName, structValues);
-                        } catch (final EdmException e2) {
-                            logger.error("Error getting property data: " + columnName, e2);
-                            throw new SQLException("Error getting property data: " + columnName, e2);
-                        }
+                final int vdpVersion = resultSet.getStatement().getConnection().getMetaData().getDatabaseMajorVersion();
+                final ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+                final Map<String, Object> rowData = new HashMap<String, Object>();
+
+                final EdmEntityType edmEntityTypeActual = edmEntityTypeTarget != null ? edmEntityTypeTarget
+                        : edmEntityType;
+
+                for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
+                    final String columnName = resultSetMetaData.getColumnName(i);
+
+                    boolean relationLinkValue = false;
+                    Object value = getObject(resultSet, i, resultSetMetaData.getColumnType(i));
+                    if (value instanceof Array) {
+                        value = value.toString();
+                    } else if (value instanceof Struct) {
+                        // This is because select_navigational queries return
+                        // some additional fields
+                        // in addition to the ones specified in the SELECT
+                        // clause
+                        if (((Struct) value).getSQLTypeName().compareTo("relation_link") != 0) {
+                            final Object[] structValues = ((Struct) value).getAttributes();
+
+                            try {
+                                final EdmTyped edmTyped = edmEntityTypeActual.getProperty(columnName);
+                                value = getStructAsMaps(edmTyped, columnName, structValues, vdpVersion);
+                            } catch (final EdmException e2) {
+                                logger.error("Error getting property data: " + columnName, e2);
+                                throw new SQLException("Error getting property data: " + columnName, e2);
+                            }
                         } else {
                             relationLinkValue = true;
                         }
                     }
-                
+
                     if (!relationLinkValue) {
+                        EdmTyped property = null;
+                        try {
+                            if (propertyPath != null) {
+                                property = propertyPath.get(propertyPath.size() - 1);
+                            } else {
+                                property = edmEntityTypeActual.getProperty(columnName);
+                            }
+                            value = fixDateTime(property, value, vdpVersion);
+                        } catch (final EdmException e) {
+                            logger.warn("Error getting property date: " + columnName, e);
+                        }
+                        
                         rowData.put(columnName, value);
                     }
                 }
+
                 return rowData;
             }
         });
@@ -193,9 +216,28 @@ public class EntityAccessor {
         return entitySetData;
     }
 
+    private Object getObject(final ResultSet resultSet, final int index, final int sqlType) throws SQLException {
+
+        Object object;
+        switch (sqlType) {            
+                
+            case VDPJDBCTypes.INTERVAL_YEAR_MONTH:
+            case VDPJDBCTypes.INTERVAL_DAY_SECOND:
+                // as getObject for VDP intervals return longs we retrieve the string format to easily compare
+                // VDP intervals with other db intervals that have a string representation for
+                // their custom objects, e.g. oracle.sql.INTERVALYM
+                object = resultSet.getString(index); 
+                break;            
+            default:
+                object = resultSet.getObject(index);
+        }
+
+        return object;
+    }
+
     
-    private static String getSelectSection(final String viewName, final List<String> selectedProperties, 
-            final List<EdmProperty> propertyPath, final Boolean count, final LinkedHashMap<String, Object> keys, 
+    private static String getSelectSection(final EdmEntityType entityType, final Collection<String> selectedProperties, 
+            final List<EdmProperty> propertyPath, final Boolean count, final LinkedHashMap<String, String> keys, 
             final List<NavigationSegment> navigationSegments) throws EdmException {
         final StringBuilder sb = new StringBuilder();
 
@@ -224,22 +266,22 @@ public class EntityAccessor {
             sb.append("* ");
         }
         sb.append("FROM ");
-        sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(viewName));
+        sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(entityType.getName()));
 
         // If there is navigation, the keys are implicit in the query (e.g. SELECT_NAVIGATIONAL * FROM film/1;)
-        sb.append(getSelectNavigation(keys, navigationSegments));
+        sb.append(getSelectNavigation(entityType, keys, navigationSegments));
         
         return sb.toString();
     }
 
     
-    private static String getSQLStatement(final String viewName, final LinkedHashMap<String, Object> keys, final String filterExpression,
-            final List<String> selectedProperties, final List<NavigationSegment> navigationSegments,
+    private static String getSQLStatement(final EdmEntityType edmEntityType, final LinkedHashMap<String, String> keys, final String filterExpression,
+            final Collection<String> selectedProperties, final List<NavigationSegment> navigationSegments,
             final List<EdmProperty> propertyPath, final Boolean count) throws ODataException {
 
         final StringBuilder sb = new StringBuilder();
 
-        sb.append(getSelectSection(viewName, selectedProperties, propertyPath, count, keys, navigationSegments));
+        sb.append(getSelectSection(edmEntityType, selectedProperties, propertyPath, count, keys, navigationSegments));
 
         boolean whereClause = false;
         // If there is navigation, the keys are implicit in the query (e.g. SELECT_NAVIGATIONAL * FROM film/1;)
@@ -248,20 +290,19 @@ public class EntityAccessor {
             whereClause = true;
             sb.append(" WHERE ");
             boolean first = true;
-            for (final Entry<String, Object> entry : keys.entrySet()) {
+            for (final Entry<String, String> entry : keys.entrySet()) {
                 if (!first) {
                     sb.append(" AND ");
                 }
 
-                sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(entry.getKey()));
+                final String keyName = entry.getKey();
+                sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(keyName));
                 sb.append("=");
-                if (entry.getValue() instanceof String) {
-                    sb.append("'");
-                    sb.append(entry.getValue());
-                    sb.append("'");
-                } else {
-                    sb.append(entry.getValue());
-                }
+                String value = entry.getValue();
+                final EdmProperty edmProperty = (EdmProperty) edmEntityType.getProperty(keyName);
+                value = PropertyUtils.toVDPLiteral(value, edmProperty);
+                sb.append(value);
+                    
                 first = false;
             }
         }
@@ -333,7 +374,7 @@ public class EntityAccessor {
     
    
 
-    private static String getSelectOption(final List<String> selectedItems) {
+    private static String getSelectOption(final Collection<String> selectedItems) {
         final StringBuilder sb = new StringBuilder();
 
         if (selectedItems != null) {
@@ -350,14 +391,14 @@ public class EntityAccessor {
     }
     
 
-    public Integer getCountEntitySet(final EdmEntitySet entitySet, final LinkedHashMap<String, Object> keys, final String filterExpression, 
+    public Integer getCountEntitySet(final EdmEntitySet entitySet, final LinkedHashMap<String, String> keys, final String filterExpression, 
             final List<NavigationSegment> navigationSegments) throws ODataException{
 
         try {
             
             final String filterExpressionAdapted = FilterQueryOptionsUtils.getFilterExpression(filterExpression, entitySet.getEntityType());
             
-            final String sqlStatement = getSQLStatement(entitySet.getName(), keys, filterExpressionAdapted, null, navigationSegments,
+            final String sqlStatement = getSQLStatement(entitySet.getEntityType(), keys, filterExpressionAdapted, null, navigationSegments,
                     null, Boolean.TRUE);
             logger.debug("Executing query: " + sqlStatement);
 
@@ -371,14 +412,14 @@ public class EntityAccessor {
     }
     
 
-    public Integer getCountEntitySet(final EdmEntitySet entitySet, final GetEntitySetCountUriInfo uriInfo) throws SQLException, ODataException {
+    public Integer getCountEntitySet(final EdmEntitySet entitySet) throws ODataException {
         return getCountEntitySet(entitySet,null, null, null);
     }
     
 
     // Structs data should be represented as maps where the key is the name of the property
     Map<String, Object> getStructAsMaps(final EdmTyped edmTyped, final String propertyName, 
-            final Object[] structValues) throws SQLException {
+            final Object[] structValues, final int vdpVersion) throws SQLException {
         
         final Map<String, Object> structAsMap = new HashMap<String, Object>();
         
@@ -395,8 +436,12 @@ public class EntityAccessor {
                     Object value = structValues[i];
                     if (value instanceof Struct) {
                         final Object[] newStructValues = ((Struct) value).getAttributes();
-                        value = getStructAsMaps(edmStructuralType.getProperty(propertyNames.get(i)), propertyNames.get(i), newStructValues);
+                        value = getStructAsMaps(edmStructuralType.getProperty(propertyNames.get(i)),
+                                propertyNames.get(i), newStructValues, vdpVersion);
                     }
+                    
+                    final EdmTyped property = edmStructuralType.getProperty(propertyNames.get(i));
+                    value = fixDateTime(property, value, vdpVersion);
                     structAsMap.put(propertyNames.get(i), value);
                 }
             }
@@ -406,6 +451,30 @@ public class EntityAccessor {
         }
         
         return structAsMap;
+    }
+    
+    private Object fixDateTime(final EdmTyped property, final Object value, final int vdpVersion) throws EdmException {
+        
+        Object result = value;
+        final EdmType type = property.getType();
+        
+        if (result instanceof Date) {
+            final Date datetime = (Date) value;
+            final boolean dateTypesWithTimeZone = SQLMetadataUtils.dateTypesWithTimeZone(vdpVersion);
+            
+            if (type instanceof EdmDateTimeOffset) {
+                if (dateTypesWithTimeZone) {
+                    result = DateTimeUtils.toDefaultTimeZone(datetime.getTime(), !dateTypesWithTimeZone);
+                } else {
+                    result = DateTimeUtils.toUTC(datetime.getTime());
+                }
+        
+            } else if (type instanceof EdmDateTime) {
+                result = DateTimeUtils.toDefaultTimeZone(datetime.getTime(), !dateTypesWithTimeZone);
+            }
+        }
+        
+        return result;
     }
     
     
@@ -443,7 +512,7 @@ public class EntityAccessor {
     }
     
     
-    private static String getSelectNavigation (final LinkedHashMap<String, Object> keys, 
+    private static String getSelectNavigation (final EdmEntityType entityType, final LinkedHashMap<String, String> keys, 
             final List<NavigationSegment> navigationSegments) throws EdmException {
         
         final StringBuilder sb = new StringBuilder();
@@ -452,44 +521,40 @@ public class EntityAccessor {
         if (navigationSegments != null && !navigationSegments.isEmpty()) {
             if (keys != null && !keys.isEmpty()) {
                 sb.append("/");
-                for (final Map.Entry<String, Object> key : keys.entrySet()) {
-                    final boolean isString = key.getValue() instanceof String;
-                    if (isString) {
-                        sb.append("'");
-                    }
-                    sb.append(key.getValue().toString());
-                    if (isString) {
-                        sb.append("'");
-                    }
+                for (final Entry<String, String> entry : keys.entrySet()) {
+                    final String keyName = entry.getKey();
+                    String value = entry.getValue();
+                    final EdmProperty edmProperty = (EdmProperty) entityType.getProperty(keyName);
+                    value = PropertyUtils.toVDPLiteral(value, edmProperty);
+                    sb.append(value);
                     sb.append(",");
                 }
                 
                 // remove the last extra comma
                 sb.deleteCharAt(sb.length()-1);
                 
-                if (navigationSegments != null && !navigationSegments.isEmpty()) {
-                    for (final NavigationSegment ns : navigationSegments) {
-                        sb.append("/");
-                        sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(ns.getNavigationProperty().getToRole()));
-                        sb.append("/");
-                        for (final KeyPredicate key : ns.getKeyPredicates()) {
-                            final EdmProperty prop = key.getProperty();
-                            final EdmSimpleType type = (EdmSimpleType) prop.getType();
-                            final Object value = type.valueOfString(key.getLiteral(), EdmLiteralKind.DEFAULT, prop.getFacets(), Object.class);
-                            final boolean isString = value instanceof String;
-                            if (isString) {
-                                sb.append("'");
-                            }
-                            sb.append(value.toString());
-                            if (isString) {
-                                sb.append("'");
-                            }
-                            sb.append(",");
+                for (final NavigationSegment ns : navigationSegments) {
+                    sb.append("/");
+                    sb.append(SQLMetadataUtils.getStringSurroundedByFrenchQuotes(ns.getNavigationProperty().getToRole()));
+                    sb.append("/");
+                    for (final KeyPredicate key : ns.getKeyPredicates()) {
+                        final EdmProperty prop = key.getProperty();
+                        final EdmSimpleType type = (EdmSimpleType) prop.getType();
+                        final Object value = type.valueOfString(key.getLiteral(), EdmLiteralKind.DEFAULT,
+                                prop.getFacets(), Object.class);
+                        final boolean isString = value instanceof String;
+                        if (isString) {
+                            sb.append("'");
                         }
-                        
-                        // remove the last extra comma
-                        sb.deleteCharAt(sb.length()-1);
+                        sb.append(value.toString());
+                        if (isString) {
+                            sb.append("'");
+                        }
+                        sb.append(",");
                     }
+
+                    // remove the last extra comma
+                    sb.deleteCharAt(sb.length() - 1);
                 }
             }
         }
@@ -499,7 +564,7 @@ public class EntityAccessor {
  
     private Map<Map<String,Object>,List<Map<String, Object>>> getExpandData(final EdmEntityType edmEntityType,
             final EdmEntityType edmEntityTypeTarget, final EdmNavigationProperty navigationProperty, 
-            final List<Map<String, Object>> entityKeys, final String filterExpression) throws ODataException {
+            final List<Map<String, Object>> entityKeys, final String filterExpression) {
         
         String sqlStatement;
         
@@ -588,102 +653,116 @@ public class EntityAccessor {
      * The value is the list of the rows returned for the key. Each element of the list is a map
      * with the column name of the expanded element and the value for this column.
      */
-    private Map<Map<String,Object>,List<Map<String, Object>>> getEntityExpandData(final String sqlStatement, final EdmEntityType edmEntityType, 
-            final String navigationPropertyName, final EdmEntityType edmEntityTypeTarget) throws EdmException {
-        List<Map<String, Object>> entitySetData = new ArrayList<Map<String,Object>>();
+    private Map<Map<String, Object>, List<Map<String, Object>>> getEntityExpandData(final String sqlStatement,
+            final EdmEntityType edmEntityType, final String navigationPropertyName,
+            final EdmEntityType edmEntityTypeTarget) throws EdmException {
+        List<Map<String, Object>> entitySetData = new ArrayList<Map<String, Object>>();
 
-        
         final List<String> keys = edmEntityType.getKeyPropertyNames();
-        
+
         final List<String> expandColumnNames = edmEntityTypeTarget.getPropertyNames();
-        
-        entitySetData=this.denodoTemplate.query(sqlStatement, 
-                new RowMapper<Map<String, Object>>(){
 
-        @Override
-        public Map<String, Object> mapRow(final ResultSet resultSet, final int rowNum) throws SQLException {
-            /*
-             * We only need the columns with the key values and the column of the navigation property
-             * that will have an array with all the columns of the expanded element.
-             */
-            
-            final ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
-            final Map<String, Object> data = new HashMap<String, Object>();
-            Map<String, Object> rowData;
-         
-            for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
-                final String columnName = resultSetMetaData.getColumnName(i);
-                if (columnName.equals(navigationPropertyName)) {
-                    
-                    final Object value = resultSet.getObject(i);
-                                  
-                    if (value instanceof Array) {
-                        final List<Object> objList = new ArrayList<Object>(Arrays.asList((Object[])((Array) value).getArray()));
-                        final List<Map<String,Object>> rows = new ArrayList<Map<String,Object>>(); 
-                        
-                        boolean allNull = true;
-                        
-                        for (final Object obj : objList) {
-                            // It must be a struct because in VDP elements of arrays are structs
-                            if (obj instanceof Struct) {
-                                final List<Object> attributes = new ArrayList<Object>(Arrays.asList(((Struct) obj).getAttributes()));
-                                if (expandColumnNames.size() == attributes.size()) {
-                                    rowData = new HashMap<String, Object>();
-                                    for (int j = 0; j < attributes.size(); j++) {
-                                        Object expValue = attributes.get(j);
-                                        if (expValue instanceof Array) {
-                                            expValue = value.toString();
-                                        } else if (expValue instanceof Struct) {
+        entitySetData = this.denodoTemplate.query(sqlStatement, new RowMapper<Map<String, Object>>() {
 
-                                            final Object[] structValues = ((Struct) expValue).getAttributes();
-            
-                                            try {
-                                                final EdmTyped edmTyped = edmEntityTypeTarget.getProperty(expandColumnNames.get(j));
-                                                expValue = getStructAsMaps(edmTyped, expandColumnNames.get(j), structValues);
-                                            } catch (final EdmException e2) {
-                                                logger.error("Error getting property data: " + expandColumnNames.get(j), e2);
-                                                throw new SQLException("Error getting property data: " + expandColumnNames.get(j), e2);
+            @Override
+            public Map<String, Object> mapRow(final ResultSet resultSet, final int rowNum) throws SQLException {
+                /*
+                 * We only need the columns with the key values and the column
+                 * of the navigation property that will have an array with all
+                 * the columns of the expanded element.
+                 */
+
+                final ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+                final int vdpVersion = resultSet.getStatement().getConnection().getMetaData().getDatabaseMajorVersion();
+                final Map<String, Object> data = new HashMap<String, Object>();
+                Map<String, Object> rowData;
+
+                for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
+                    final String columnName = resultSetMetaData.getColumnName(i);
+                    if (columnName.equals(navigationPropertyName)) {
+
+                        final Object value = getObject(resultSet, i, resultSetMetaData.getColumnType(i));
+
+                        if (value instanceof Array) {
+                            final List<Object> objList = new ArrayList<Object>( Arrays.asList((Object[]) ((Array) value).getArray()));
+                            final List<Map<String, Object>> rows = new ArrayList<Map<String, Object>>();
+
+                            boolean allNull = true;
+
+                            for (final Object obj : objList) {
+                                // It must be a struct because in VDP elements
+                                // of arrays are structs
+                                if (obj instanceof Struct) {
+                                    final List<Object> attributes = new ArrayList<Object>(Arrays.asList(((Struct) obj).getAttributes()));
+                                    if (expandColumnNames.size() == attributes.size()) {
+                                        rowData = new HashMap<String, Object>();
+                                        for (int j = 0; j < attributes.size(); j++) {
+                                            Object expValue = attributes.get(j);
+                                            if (expValue instanceof Array) {
+                                                expValue = value.toString();
+                                            } else if (expValue instanceof Struct) {
+
+                                                final Object[] structValues = ((Struct) expValue).getAttributes();
+
+                                                try {
+                                                    final EdmTyped edmTyped = edmEntityTypeTarget.getProperty(expandColumnNames.get(j));
+                                                    expValue = getStructAsMaps(edmTyped, expandColumnNames.get(j), structValues, vdpVersion);
+                                                } catch (final EdmException e2) {
+                                                    logger.error("Error getting property data: " + expandColumnNames.get(j), e2);
+                                                    throw new SQLException("Error getting property data: " + expandColumnNames.get(j), e2);
+                                                }
+
                                             }
-                                                
+                                            try {
+
+                                                final EdmTyped property = edmEntityTypeTarget.getProperty(expandColumnNames.get(j));
+                                                expValue = fixDateTime(property, expValue, vdpVersion);
+                                            } catch (final EdmException e) {
+                                                logger.warn("Error getting property date: " + expandColumnNames.get(j), e);
+                                            }
+                                            rowData.put(expandColumnNames.get(j), expValue);
+
+                                            if (expValue != null) {
+                                                allNull = false;
+                                            }
                                         }
-                                        
-                                        rowData.put(expandColumnNames.get(j), expValue);
-                                        
-                                        if (expValue != null) {
-                                            allNull = false;
+                                        // When there is no data to expand VDP  returns an array with null values.
+                                        // This will have to be changed for future releases because this solution
+                                        // is not valid for OData v4.0 where you can select fields in the expand option.
+                                        if (!allNull) {
+                                            rows.add(rowData);
                                         }
-                                    }
-                                    // When there is no data to expand VDP returns an array with null values.
-                                    // This will have to be changed for future releases because this solution is not valid
-                                    // for OData v4.0 where you can select fields in the expand option.
-                                    if (!allNull) {
-                                        rows.add(rowData);
                                     }
                                 }
                             }
+                            data.put(columnName, rows);
                         }
-                        data.put(columnName, rows);
+                    }
+                    if (keys.contains(columnName)) {
+                        Object value = getObject(resultSet, i, resultSetMetaData.getColumnType(i));
+                        try {
+                        
+                            final EdmTyped property = edmEntityType.getProperty(columnName);
+                            value = fixDateTime(property, value, vdpVersion);
+                        } catch (final EdmException e) {
+                            logger.warn("Error getting property date: " + columnName, e);
+                        }
+                        
+                        data.put(columnName, value);
+
                     }
                 }
-                if (keys.contains(columnName)) {
-                    final Object value = resultSet.getObject(i);
+                return data;
 
-                    data.put(columnName, value);
-                        
-                }
             }
-            return data;
-                
-        }
         });
-        
-        return getExpandDataByKey(edmEntityType, entitySetData, navigationPropertyName);
+
+        return getExpandDataByKey(entitySetData, navigationPropertyName);
     }
        
     
     @SuppressWarnings("unchecked")
-    private static Map<Map<String,Object>,List<Map<String, Object>>> getExpandDataByKey(final EdmEntityType edmEntityType, 
-            final List<Map<String, Object>> entitySetData, final String navigationPropertyName) throws EdmException {
+    private static Map<Map<String,Object>,List<Map<String, Object>>> getExpandDataByKey(final List<Map<String, Object>> entitySetData, final String navigationPropertyName) {
         
         final Map<Map<String,Object>,List<Map<String, Object>>> data = new HashMap<Map<String,Object>, List<Map<String,Object>>>();
         

@@ -26,7 +26,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.denodo.connect.odata2</groupId>
-  <artifactId>denodo-odata2-service-5.5</artifactId>
+  <artifactId>denodo-odata2-service-7.0</artifactId>
   <name>${project.artifactId}</name>
   <version>20180424</version>
   
@@ -43,30 +43,32 @@
     <version.commonscodec>1.10</version.commonscodec>
     <version.commonsdbcp>1.4</version.commonsdbcp>
     <version.commonslang>3.7</version.commonslang>
+    <version.denodovdpjdbcdriver>7.0.0</version.denodovdpjdbcdriver>
     <version.cxf>3.1.0</version.cxf>
-    <version.denodovdpjdbcdriver>5.5.0_9</version.denodovdpjdbcdriver>
+    <version.log4j2>2.11.0</version.log4j2>
     <version.olingo>2.0.10</version.olingo>
     <version.slf4j>1.7.1</version.slf4j>
     <version.springframework>3.2.14.RELEASE</version.springframework>
+    <classifier.denodovdpjdbcdriver>full</classifier.denodovdpjdbcdriver>
   </properties>
 
   <build>
 
     <finalName>${project.artifactId}</finalName>
 
-    <resources>
+    <resources>      
+      <resource>
+        <directory>${basedir}/../denodo-odata2-service-5.5/src/main/resources</directory>
+        <excludes>
+            <exclude>log4j.properties</exclude>
+        </excludes>
+      </resource>
       <resource>
         <directory>src/main/resources</directory>
       </resource>
-      <resource>
-        <directory>src/main/java</directory>
-        <includes>
-          <include>**/*.properties</include>
-          <include>**/*.xml</include>
-          <include>**/*.html</include>
-        </includes>
-      </resource>
     </resources>
+
+    <sourceDirectory>${basedir}/../denodo-odata2-service-5.5/src/main/java</sourceDirectory>
 
     <pluginManagement>
       <plugins>
@@ -91,7 +93,6 @@
               </manifestEntries>                
             </archive>
           </configuration>
-          
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -107,8 +108,8 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
-          <source>1.6</source>
-          <target>1.6</target>
+          <source>1.8</source>
+          <target>1.8</target>
         </configuration>
       </plugin>
 
@@ -148,7 +149,7 @@
             </goals>
             <configuration>
               <filters>
-               <filter>${basedir}/src/main/assembly/filter.properties</filter>
+                <filter>${basedir}/src/main/assembly/filter.properties</filter>
               </filters>              
               <descriptors>
                 <descriptor>${basedir}/src/main/assembly/dist.xml</descriptor>
@@ -171,7 +172,7 @@
     <dependency>
       <groupId>javax.servlet</groupId>
       <artifactId>servlet-api</artifactId>
-      <version>2.4</version>
+      <version>2.5</version>
       <scope>provided</scope>
     </dependency>
     
@@ -278,23 +279,32 @@
       <version>${version.slf4j}</version>
     </dependency>
     <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-log4j12</artifactId>
-      <version>${version.slf4j}</version>
-      <exclusions>
-        <exclusion>
-          <!-- log4j should be provided by VDP or the (non-basic) VDP JDBC driver, so we should -->
-          <!-- exclude it here in order to avoid version clashes.                               -->
-          <groupId>log4j</groupId>
-          <artifactId>log4j</artifactId>
-        </exclusion>
-      </exclusions>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-slf4j-impl</artifactId>
+      <version>${version.log4j2}</version>
     </dependency>
+  <dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-api</artifactId>
+    <version>${version.log4j2}</version>
+  </dependency>
+  <dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-core</artifactId>
+    <version>${version.log4j2}</version>
+  </dependency>    
+  
+    <dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-web</artifactId>
+    <version>${version.log4j2}</version>
+  </dependency>
 
     <dependency>
-      <groupId>com.denodo.vdp</groupId>
-      <artifactId>denodo-vdp-jdbcdriver</artifactId>
+      <groupId>com.denodo.vdp.jdbc</groupId>
+      <artifactId>denodo-vdp-jdbcdriver-dist</artifactId>
       <version>${version.denodovdpjdbcdriver}</version>
+      <classifier>${classifier.denodovdpjdbcdriver}</classifier>
       <scope>provided</scope>
     </dependency>
 

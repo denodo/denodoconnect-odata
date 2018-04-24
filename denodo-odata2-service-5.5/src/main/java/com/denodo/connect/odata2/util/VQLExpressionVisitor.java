@@ -24,7 +24,6 @@ package com.denodo.connect.odata2.util;
 import java.sql.Time;
 import java.util.List;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.edm.EdmLiteral;
 import org.apache.olingo.odata2.api.edm.EdmSimpleType;
@@ -119,18 +118,20 @@ public class VQLExpressionVisitor implements ExpressionVisitor {
         
         
         final EdmSimpleType type = edmLiteral.getType();
-        if (type instanceof EdmDateTimeOffset) {
-            return " TIMESTAMP " + toVQLTimestamp(edmLiteral.getLiteral());
+        if (type instanceof EdmDateTimeOffset || type instanceof EdmDateTime) {
+            return DateTimeUtils.timestampToVQL(edmLiteral.getLiteral());
+        }
+        
+        if (type instanceof Time) {
+            return DateTimeUtils.timeToVQL(edmLiteral.getLiteral());
         }
         
         if (type instanceof EdmBinary
-                || type instanceof EdmDateTime
                 || type instanceof EdmDecimal
                 || type instanceof EdmDouble
                 || type instanceof EdmGuid
                 || type instanceof EdmInt64
-                || type instanceof EdmSingle
-                || type instanceof Time) {
+                || type instanceof EdmSingle) {
             
             return edmLiteral.getLiteral();
         }
@@ -238,19 +239,6 @@ public class VQLExpressionVisitor implements ExpressionVisitor {
         return sb.toString();
     }
     
-    /*
-     * The SQL standard defines the following syntax for specifying timestamp literals:
-     * <timestamp literal> ::= TIMESTAMP 'date value <space> time value'
-     * TIMESTAMP 'yyyy-mm-dd hh:mm:ss[.[nnn]][ <time zone interval> ]'
-     * 
-     * VDP uses the same standard.
-     */
-    private static String toVQLTimestamp(final String datetime) {
-        
-        final String literal = datetime.replace("T", " ");
-        
-        return StringUtils.wrap(literal, "'");
-        
-    }
+
 
 }

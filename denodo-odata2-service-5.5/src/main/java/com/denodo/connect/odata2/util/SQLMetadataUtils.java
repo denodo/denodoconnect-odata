@@ -29,8 +29,10 @@ import org.apache.olingo.odata2.api.edm.EdmSimpleTypeKind;
 
 public final class SQLMetadataUtils {
 
+    private static final int VDP_VERSION_NEW_DATETIME_TYPES = 7;
+    
 
-    public static EdmSimpleTypeKind sqlTypeToODataType(final int type) {
+    public static EdmSimpleTypeKind sqlTypeToODataType(final int type, final int vdpVersion) {
 
         switch (type) {
             case Types.BOOLEAN:
@@ -42,7 +44,13 @@ public final class SQLMetadataUtils {
             case Types.TINYINT:
                 return EdmSimpleTypeKind.Byte;
             case Types.DATE:
-                return EdmSimpleTypeKind.DateTimeOffset;
+                if (dateTypesWithTimeZone(vdpVersion)) {
+                    return EdmSimpleTypeKind.DateTimeOffset;                    
+                }
+                
+                return EdmSimpleTypeKind.DateTime;
+                
+                
             case Types.DECIMAL:
                 return EdmSimpleTypeKind.Decimal;
             case Types.NUMERIC:
@@ -80,7 +88,12 @@ public final class SQLMetadataUtils {
             case Types.TIME:
                 return EdmSimpleTypeKind.Time;
             case Types.TIMESTAMP:
-                return EdmSimpleTypeKind.DateTimeOffset;
+                if (dateTypesWithTimeZone(vdpVersion)) {
+                    return EdmSimpleTypeKind.DateTimeOffset;                    
+                }
+                
+                return EdmSimpleTypeKind.DateTime;
+                
             case Types.VARBINARY:
                 return EdmSimpleTypeKind.Binary;
             case Types.ARRAY:
@@ -103,12 +116,25 @@ public final class SQLMetadataUtils {
                 return EdmSimpleTypeKind.String;
             case Types.STRUCT:
                 return null;
+            case VDPJDBCTypes.TIMESTAMP_WITH_TIMEZONE:
+                return EdmSimpleTypeKind.DateTimeOffset;
+            case VDPJDBCTypes.INTERVAL_DAY_SECOND:
+            case VDPJDBCTypes.INTERVAL_YEAR_MONTH:
+                // as there is no OData type for intevals we treat it as a string 
+                // to display the interval as in the VDP Admin Tool
+                return EdmSimpleTypeKind.String; 
+                
             default:
                 break;
         }
 
         return EdmSimpleTypeKind.String;
 
+    }
+    
+    // since VDP 7.0 locadate and timestamp types have no timezone info
+    public static boolean dateTypesWithTimeZone(final int vdpVersion) {
+        return vdpVersion < VDP_VERSION_NEW_DATETIME_TYPES; 
     }
 
     public static boolean isArrayType(final int type) {
@@ -160,7 +186,7 @@ public final class SQLMetadataUtils {
      * OData is case-sensitive. Use french quotes in order to get element names (columns, views...)
      */
     public static String getStringSurroundedByFrenchQuotes(final String s) {
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
         
         sb.append("`").append(s).append("`");
         

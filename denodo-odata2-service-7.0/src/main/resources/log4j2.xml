@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+
+    <Appenders>
+
+        <RollingFile name="FILEOUT" fileName="../logs/denodo-data2-service.log"
+                                    filePattern="../logs/denodo-data2-service.log.%i">
+            <Policies>
+                <SizeBasedTriggeringPolicy size="10 MB" />
+            </Policies>
+            <DefaultRolloverStrategy max="7" />
+            <PatternLayout pattern="%-4r [%t] %-5p %d{yyyy-MM-dd'T'HH:mm:ss.SSS} %c{1} %x - %enc{%m}  %n" />
+        </RollingFile>
+
+    </Appenders>
+
+    <Loggers>
+
+        <Logger name="com.denodo" level="WARN" />
+
+        <Root level="WARN">
+            <AppenderRef ref="FILEOUT" />
+        </Root>
+
+    </Loggers>
+
+</Configuration>

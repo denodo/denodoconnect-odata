@@ -1,4 +1,4 @@
-20180424
+20180426
 --------
 Fix #36962 - Explain the required privileges for users in the user manual
 Fix #36983 - Clean META-INF resources in distributions

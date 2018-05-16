@@ -23,7 +23,7 @@
     </fileSet>
     
     <fileSet>
-      <directory>${basedir}/../denodo-odata2-wrapper-5.0/doc/</directory>
+      <directory>${basedir}/../denodo-odata4-wrapper-5.0/doc/</directory>
       <outputDirectory>/doc</outputDirectory>
       <includes>
         <include>**/*.pdf</include>

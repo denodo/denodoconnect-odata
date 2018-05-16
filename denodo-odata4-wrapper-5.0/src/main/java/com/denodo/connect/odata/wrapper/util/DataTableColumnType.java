@@ -95,6 +95,7 @@ public enum DataTableColumnType {
                 return DATE;
             case Types.TIME:
             case Types.TIMESTAMP:
+            case Types.TIMESTAMP_WITH_TIMEZONE:
                 return DATETIME;
         }
         return TEXT;

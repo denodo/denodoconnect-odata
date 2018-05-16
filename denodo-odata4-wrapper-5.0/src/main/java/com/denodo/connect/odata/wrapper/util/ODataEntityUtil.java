@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.sql.Types;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -71,7 +70,6 @@ import org.apache.olingo.commons.core.edm.primitivetype.EdmString;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmTimeOfDay;
 
 import com.denodo.connect.odata.wrapper.exceptions.PropertyNotFoundException;
-import com.denodo.vdb.catalog.metadata.vo.InvalidCustomElementParametersException.CustomElement;
 import com.denodo.vdb.engine.customwrapper.CustomWrapperException;
 import com.denodo.vdb.engine.customwrapper.CustomWrapperSchemaParameter;
 
@@ -154,14 +152,17 @@ public class ODataEntityUtil {
 
 
     private static int mapODataSimpleType(EdmType edmType, Boolean loadBlobObjects) {
-        if (edmType instanceof EdmBoolean) {
+        
+    	boolean onlyTimestamp = Versions.ARTIFACT_ID < Versions.MINOR_ARTIFACT_ID_SUPPORT_DIFFERENT_FORMAT_DATES;
+    	
+    	if (edmType instanceof EdmBoolean) {
             return Types.BOOLEAN;
         } else if (edmType instanceof EdmBinary) {
             return Types.BINARY;
         } else if (edmType instanceof EdmDate) {
-            return Types.TIMESTAMP;
+            return onlyTimestamp ? Types.TIMESTAMP : Types.DATE;
         } else if (edmType instanceof EdmDateTimeOffset) {
-            return Types.TIMESTAMP;
+        	return onlyTimestamp ? Types.TIMESTAMP : Types.TIMESTAMP_WITH_TIMEZONE;
         } else if (edmType instanceof EdmDecimal) {
             return Types.DOUBLE;
         } else if (edmType instanceof EdmDouble) {
@@ -183,7 +184,7 @@ public class ODataEntityUtil {
         } else if (edmType instanceof EdmGuid) {
             return Types.VARCHAR;
         } else if (edmType instanceof EdmTimeOfDay) {
-            return Types.TIMESTAMP;
+        	return onlyTimestamp ? Types.TIMESTAMP : Types.TIME;
         } else if (edmType instanceof EdmStream) {
             return loadBlobObjects != null && loadBlobObjects.booleanValue() ? Types.BLOB : Types.VARCHAR;
         } else if (edmType instanceof EdmString) {
@@ -195,6 +196,12 @@ public class ODataEntityUtil {
 
     public static Object getOutputValue(ClientProperty property) throws CustomWrapperException {
         logger.trace("returning value :" + property.toString());
+        
+		if (property.hasPrimitiveValue()
+				&& property.getPrimitiveValue().getType() instanceof EdmTimeOfDay) {			
+			return java.sql.Time.valueOf(property.getValue().toString());
+		}
+        
         if (property.hasPrimitiveValue()) {
             return property.getValue().asPrimitive().toValue();
         }

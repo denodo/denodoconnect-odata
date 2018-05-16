@@ -27,7 +27,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.denodo.connect.odata</groupId>
   <artifactId>denodo-odata4-wrapper-6.0</artifactId>
-  <version>20171030</version>
+  <version>20180515</version>
   <packaging>jar</packaging>
   <name>denodo-odata4-wrapper-6.0</name>
 
@@ -42,6 +42,16 @@
         <includes>
           <include>**/*.properties</include>
         </includes>
+        <excludes>
+          <exclude>**/version.properties</exclude>
+        </excludes>
+      </resource>
+      <resource>
+        <directory>../denodo-odata4-wrapper-5.0/src/main/resources</directory>
+        <includes>
+          <include>**/version.properties</include>
+        </includes>
+        <filtering>true</filtering>
       </resource>
       <resource>
         <directory>../denodo-odata4-wrapper-5.0/src/main/java</directory>

@@ -77,7 +77,10 @@ public class ODataEntityUtil {
     }
 
     private static int mapODataSimpleType(@SuppressWarnings("rawtypes") EdmSimpleType edmType) {
-        if (edmType.equals(EdmSimpleType.BOOLEAN)) {
+        
+    	boolean onlyTimestamp = Versions.ARTIFACT_ID < Versions.MINOR_ARTIFACT_ID_SUPPORT_DIFFERENT_FORMAT_DATES;
+    	
+    	if (edmType.equals(EdmSimpleType.BOOLEAN)) {
             return Types.BOOLEAN;
         } else if (edmType.equals(EdmSimpleType.BINARY)) {
             return Types.BINARY;
@@ -96,7 +99,9 @@ public class ODataEntityUtil {
         } else if (edmType.equals(EdmSimpleType.SINGLE)) {
             return Types.FLOAT;
         } else if (edmType.equals(EdmSimpleType.TIME)) {
-            return Types.TIMESTAMP;
+        	return onlyTimestamp ? Types.TIMESTAMP : Types.TIME;
+        } else if (edmType.equals(EdmSimpleType.DATETIMEOFFSET)) {
+        	return onlyTimestamp ? Types.TIMESTAMP : Types.TIMESTAMP_WITH_TIMEZONE;
         }
         return Types.VARCHAR;
     }
@@ -109,6 +114,10 @@ public class ODataEntityUtil {
                 return ((LocalDateTime)p.getValue()).toDateTime().toCalendar(new Locale("en_US")).getTime();
             }  else if (p.getValue() instanceof Guid) {
                 return p.getValue().toString();
+            } else if (p.getType().equals(EdmSimpleType.TIME)) {
+            	return p.getValue().toString();
+            } else if (p.getType().equals(EdmSimpleType.DATETIMEOFFSET)) {
+            	return p.getValue().toString();
             }
             return p.getValue();
         } 

@@ -21,6 +21,7 @@
  */
 package com.denodo.connect.odata.wrapper;
 
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -266,6 +267,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
         }
     }
 
+    @Override
     public void run(final CustomWrapperConditionHolder condition,
             final List<CustomWrapperFieldExpression> projectedFields, final CustomWrapperResult result,
             final Map<String, String> inputValues) throws CustomWrapperException {
@@ -419,7 +421,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                         + field.isFunctionExpression() + "/" + field.isSimpleExpression() + "/"
                         + field.hasSubFields());
                 OProperty<?> prop;
-                if (type != 2002) {
+                if (type != Types.STRUCT) {
                     prop = OProperties.parseSimple(
                             field.getStringRepresentation(),
                             DataTableColumnType.fromJDBCType(type).getEdmSimpleType(),
@@ -482,7 +484,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                 + field.isFunctionExpression() + "/" + field.isSimpleExpression());
 
                         OProperty<?> prop;
-                        if (type != 2002) {
+                        if (type != Types.STRUCT) {
                             prop = OProperties.parseSimple(
                                     field.getStringRepresentation(),
                                     DataTableColumnType.fromJDBCType(type).getEdmSimpleType(),

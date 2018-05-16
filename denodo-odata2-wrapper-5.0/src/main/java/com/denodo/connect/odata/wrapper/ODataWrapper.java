@@ -689,10 +689,22 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_NTLM_DOMAIN).getValue())) {
                 domain = (String) getInputParameterValue(INPUT_PARAMETER_NTLM_DOMAIN).getValue();
             }
-            props.setProperty(USE_NTLM_AUTH, Boolean.TRUE.toString());
-            props.setProperty(NTLM_USER, user);
-            props.setProperty(NTLM_PASS, password);
-            props.setProperty(NTLM_DOMAIN, domain);
+            
+            if (checkIfAddToSystemProperties(props, USE_NTLM_AUTH, Boolean.TRUE.toString())) {
+                props.setProperty(USE_NTLM_AUTH, Boolean.TRUE.toString());
+            }
+            
+            if (checkIfAddToSystemProperties(props, NTLM_USER, user)) {
+                props.setProperty(NTLM_USER, user);
+            }
+            
+            if (checkIfAddToSystemProperties(props, NTLM_PASS, password)) {
+                props.setProperty(NTLM_PASS, password);
+            }
+            
+            if (checkIfAddToSystemProperties(props, NTLM_DOMAIN, domain)) {
+                props.setProperty(NTLM_DOMAIN, domain);
+            }
         }
         
         if ((getInputParameterValue(INPUT_PARAMETER_PROXY_HOST) != null)
@@ -702,27 +714,37 @@ public class ODataWrapper extends AbstractCustomWrapper {
             if ((getInputParameterValue(INPUT_PARAMETER_PROXY_USER) != null)
                     && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_PROXY_USER).getValue())) {
                 proxyUser = (String) getInputParameterValue(INPUT_PARAMETER_PROXY_USER).getValue();
-                props.setProperty(HTTP_PROXY_USER, proxyUser);
+                if (checkIfAddToSystemProperties(props, HTTP_PROXY_USER, proxyUser)) {
+                    props.setProperty(HTTP_PROXY_USER, proxyUser);
+                }
             } else {
                 props.remove(HTTP_PROXY_USER);
             }
             if ((getInputParameterValue(INPUT_PARAMETER_PROXY_PASSWORD) != null)
                     && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_PROXY_PASSWORD).getValue())) {
                 proxyPassword = (String) getInputParameterValue(INPUT_PARAMETER_PROXY_PASSWORD).getValue();
-                props.setProperty(HTTP_PROXY_PASSWORD, proxyPassword);
+                if (checkIfAddToSystemProperties(props, HTTP_PROXY_PASSWORD, proxyPassword)) {
+                    props.setProperty(HTTP_PROXY_PASSWORD, proxyPassword);
+                }
             } else {
                 props.remove(HTTP_PROXY_PASSWORD);
             }
             logger.info("Setting PROXY: " + proxyHost + ":" + proxyPort);
-            props.setProperty(HTTP_PROXY_HOST, proxyHost);
-            props.setProperty(HTTP_PROXY_PORT, proxyPort);
+            if (checkIfAddToSystemProperties(props, HTTP_PROXY_HOST, proxyHost)) {
+                props.setProperty(HTTP_PROXY_HOST, proxyHost);
+            }
+            if (checkIfAddToSystemProperties(props, HTTP_PROXY_PORT, proxyPort)) {
+                props.setProperty(HTTP_PROXY_PORT, proxyPort);
+            }
 
         } else {
             props.remove(HTTP_PROXY_HOST);
             props.remove(HTTP_PROXY_PORT);
         }
         if (getInputParameterValue(INPUT_PARAMETER_TIMEOUT) != null) {
-            props.setProperty(TIMEOUT, getInputParameterValue(INPUT_PARAMETER_TIMEOUT).getValue().toString());
+        	if (checkIfAddToSystemProperties(props, TIMEOUT, getInputParameterValue(INPUT_PARAMETER_TIMEOUT).getValue().toString())) {
+        	    props.setProperty(TIMEOUT, getInputParameterValue(INPUT_PARAMETER_TIMEOUT).getValue().toString());
+        	}
         }
         
         System.setProperties(props);
@@ -861,4 +883,12 @@ public class ODataWrapper extends AbstractCustomWrapper {
         return key.toString();
     }
     
+    private boolean checkIfAddToSystemProperties(Properties properties, String key, String value) {
+    	
+        // To avoid a potential stack overflow, a property only can be added to the system properties
+        // iff the key is not on the system properties or if the key is on the system properties but its
+        // value is different
+        return properties.getProperty(key) == null
+                || (properties.getProperty(key) != null && !properties.getProperty(key).equals(value));
+    }
 }

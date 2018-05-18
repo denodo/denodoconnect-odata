@@ -1,3 +1,7 @@
+20180516
+========
+- #37483 - OData 2 Wrapper contains code that can lead to a StackOverflowError
+
 20170706
 ========
 #33141 - entity sets not being correctly identified at EdmDataServices.findEdmEntitySet(...) when the

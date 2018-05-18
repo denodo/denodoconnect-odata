@@ -1,3 +1,7 @@
+20180516
+========
+- #37483 - OData 2 Wrapper contains code that can lead to a StackOverflowError
+
 20180228
 ========
 #36217 - Improve parsing of responses with errors that contain no body.

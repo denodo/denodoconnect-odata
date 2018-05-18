@@ -1,3 +1,4 @@
 20180516
 ========
 - Created first version of this component for Denodo 7.0
+- #37483 - OData 2 Wrapper contains code that can lead to a StackOverflowError

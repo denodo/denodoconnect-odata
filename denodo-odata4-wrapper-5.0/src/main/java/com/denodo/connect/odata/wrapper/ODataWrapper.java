@@ -34,10 +34,13 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.apache.olingo.client.api.ODataClient;
 import org.apache.olingo.client.api.communication.ODataServerErrorException;
+import org.apache.olingo.client.api.communication.request.ODataRequest;
+import org.apache.olingo.client.api.communication.request.cud.ODataDeleteRequest;
 import org.apache.olingo.client.api.communication.request.cud.ODataEntityCreateRequest;
 import org.apache.olingo.client.api.communication.request.cud.ODataEntityUpdateRequest;
 import org.apache.olingo.client.api.communication.request.cud.UpdateType;
@@ -120,6 +123,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
     private final static String INPUT_PARAMETER_OAUTH2 = "Use OAuth2";
     private final static String INPUT_PARAMETER_TOKEN_ENDPOINT_URL = "Token Endpoint URL";
     private final static String INPUT_PARAMETER_CUSTOM_QUERY_OPTIONS = "Custom Query Options";
+    private final static String INPUT_PARAMETER_HTTP_HEADERS = "HTTP Headers";
     
     public final static String PAGINATION_FETCH = "fetch_size";
     public final static String PAGINATION_OFFSET = "offset_size";
@@ -206,6 +210,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
             new CustomWrapperInputParameter(INPUT_PARAMETER_CLIENT_SECRET, "Client Secret for OAuth2 authentication", false,
                                     CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_TOKEN_ENDPOINT_URL, "Token endpoint URL for OAuth2 authentication", false,
+                    CustomWrapperInputParameterTypeFactory.stringType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_HTTP_HEADERS, "Custom headers to be used in the underlying HTTP client", false,
                     CustomWrapperInputParameterTypeFactory.stringType())
     };
 
@@ -252,11 +258,15 @@ public class ODataWrapper extends AbstractCustomWrapper {
                    
             final ODataClient client =  getClient();
             String uri = (String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT).getValue();
+            String headers = null;
+            if (getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS) != null) {
+                headers = (String) getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS).getValue();
+            }
             Map<String, EdmEntitySet> entitySets = new HashMap<String, EdmEntitySet>();
             logger.info("Used uri: "+uri);
             EdmMetadataRequest request = client.getRetrieveRequestFactory().getMetadataRequest(uri);
+            addCustomHeaders(request, headers);
             logger.info("Request metadata: "+request.getURI().toString());
-     
 
             ODataRetrieveResponse<Edm> response = request.execute();
 
@@ -268,7 +278,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
             String entityCollection = getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION).toString();
             String uriKeyCache = getUriKeyCache(uri, entityCollection);
            
-            String entityCollectionNameMetadata = getEntityCollectionNameMetadata(client, uri, entityCollection);
+            String entityCollectionNameMetadata = getEntityCollectionNameMetadata(client, uri, entityCollection, headers);
             String collectionNameMetadata = entityCollectionNameMetadata == null ? entityCollection : entityCollectionNameMetadata;
             
             EdmEntitySet entitySet = entitySets.get(collectionNameMetadata);
@@ -378,6 +388,11 @@ public class ODataWrapper extends AbstractCustomWrapper {
         try {
             
             Boolean loadBlobObjects = (Boolean) getInputParameterValue(INPUT_PARAMETER_LOAD_MEDIA_LINK_RESOURCES).getValue();
+            
+            String headers = null;
+            if (getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS) != null) {
+                headers = (String) getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS).getValue();
+            }
 
             final String entityCollection = (String) getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION)
                     .getValue();   
@@ -396,7 +411,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 //obtaining metadata               
                 
                 EdmMetadataRequest request = client.getRetrieveRequestFactory().getMetadataRequest(uri);
-
+                addCustomHeaders(request, headers);
+                
                 ODataRetrieveResponse<Edm> response = request.execute();
                 
                 Edm edm = response.getBody();
@@ -406,7 +422,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 BaseViewMetadata baseViewMetadata = metadataMap.get(uriKeyCache);
                 
                 if (baseViewMetadata == null) {
-                    addMetadataCache(uri, entityCollection, client, loadBlobObjects);
+                    addMetadataCache(uri, entityCollection, client, loadBlobObjects, headers);
                     baseViewMetadata = metadataMap.get(uriKeyCache);
                 }
                 
@@ -459,7 +475,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
             }
             
             final URI finalURI = getURI(uri, entityCollection, rels, client, condition, projectedFields,
-                    inputValues, SELECT_OPERATION, loadBlobObjects, customQueryOption);
+                    inputValues, SELECT_OPERATION, loadBlobObjects, customQueryOption, headers);
             logger.debug("URI query: "+finalURI);
             URI nextLink = finalURI;
             
@@ -469,6 +485,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                         client.getRetrieveRequestFactory().getEntitySetIteratorRequest(nextLink);
 
                 ODataRetrieveResponse<ClientEntitySetIterator <ClientEntitySet, ClientEntity>> response;
+                addCustomHeaders(request, headers);
                 try{
                     response= request.execute();
                 }catch (ODataServerErrorException oe){
@@ -510,7 +527,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                 URIBuilder uribuilder = client.newURIBuilder(uri);
                                 uribuilder.appendSingletonSegment(clientLink.getLink().getRawPath());
                                 ODataMediaRequest request2 = client.getRetrieveRequestFactory().getMediaRequest(uribuilder.build());
-    
+                                addCustomHeaders(request2, headers);
+                                
                                 ODataRetrieveResponse<InputStream> response2 = request2.execute();
                                 
                                 value = IOUtils.toByteArray(response2.getBody());
@@ -541,7 +559,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                     //MediaContentType has to be specified by the service odata. In other case the client will obtain Unsupported Media Type Exception
                                     streamRequest.setFormat(ContentType.parse(product.getMediaContentType()));
                                 }
-
+                                addCustomHeaders(streamRequest, headers);
+                                
                                 final ODataRetrieveResponse<InputStream> streamResponse = streamRequest.execute();
                                 value = IOUtils.toByteArray(streamResponse.getBody());
                                 params[index] = value;
@@ -611,6 +630,10 @@ public class ODataWrapper extends AbstractCustomWrapper {
         if(getInputParameterValue(INPUT_PARAMETER_CUSTOM_QUERY_OPTIONS)!=null){
             customQueryOption = (String) getInputParameterValue(INPUT_PARAMETER_CUSTOM_QUERY_OPTIONS).getValue();
         }
+        String headers = null;
+        if (getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS) != null) {
+            headers = (String) getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS).getValue();
+        }
         logger.info("Inserting entity: " + entityCollection);
         String uriKeyCache=getUriKeyCache(endPoint, entityCollection);
         ODataClient client;
@@ -619,7 +642,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
             client = getClient();
             if(baseViewMetadata==null){
                 Boolean loadBlobObjects = (Boolean) getInputParameterValue(INPUT_PARAMETER_LOAD_MEDIA_LINK_RESOURCES).getValue();
-                addMetadataCache(endPoint, entityCollection, client, loadBlobObjects);
+                addMetadataCache(endPoint, entityCollection, client, loadBlobObjects, headers);
                 baseViewMetadata = metadataMap.get(uriKeyCache);
             }
 
@@ -632,7 +655,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
             //Request to obtain the fullqualifiedName of the collection , where we want insert
             Map<String, EdmEntitySet> entitySets= new HashMap<String, EdmEntitySet>();
             EdmMetadataRequest requestMetadata = client.getRetrieveRequestFactory().getMetadataRequest(endPoint);
-
+            addCustomHeaders(requestMetadata, headers);
+            
             ODataRetrieveResponse<Edm> responseMetadata = requestMetadata.execute();
             Edm edm = responseMetadata.getBody();     
             entitySets = getEntitySetMap(edm);    
@@ -722,8 +746,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
             
             logger.debug("New object: "+newObject.toString());
             logger.debug("Insert uri: "+uri.toString());
-            final ODataEntityCreateRequest<ClientEntity> request = client.getCUDRequestFactory().getEntityCreateRequest(uri, newObject);
-
+            final ODataEntityCreateRequest<ClientEntity> request = client.getCUDRequestFactory().getEntityCreateRequest(uri, newObject);            
+            addCustomHeaders(request, headers);
+            
             ODataEntityCreateResponse<ClientEntity> res = request.execute();
             if (res.getStatusCode()==201) {
                 return 1;//Created
@@ -758,9 +783,13 @@ public class ODataWrapper extends AbstractCustomWrapper {
             String uriKeyCache=getUriKeyCache(serviceRoot, entityCollection);
             BaseViewMetadata baseViewMetadata = metadataMap.get(uriKeyCache);
             Boolean loadBlobObjects = (Boolean) getInputParameterValue(INPUT_PARAMETER_LOAD_MEDIA_LINK_RESOURCES).getValue();
+            String headers = null;
+            if (getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS) != null) {
+                headers = (String) getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS).getValue();
+            }
             if(baseViewMetadata==null){
                
-                addMetadataCache(serviceRoot, entityCollection, client, loadBlobObjects);
+                addMetadataCache(serviceRoot, entityCollection, client, loadBlobObjects, headers);
                 baseViewMetadata = metadataMap.get(uriKeyCache);
             }
             
@@ -772,7 +801,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
                 //Searching the entities that match with the conditions of the where(1 query)
                 //TODO check if there is a way to filter and delete in the same query. 
-                URI productsUri = getURI(serviceRoot, entityCollection, rels, client, conditions, null, inputValues, UPDATE_OPERATION, loadBlobObjects, customQueryOption);
+                URI productsUri = getURI(serviceRoot, entityCollection, rels, client, conditions, null, 
+                        inputValues, UPDATE_OPERATION, loadBlobObjects, customQueryOption, headers);
 
                 Map<String, EdmProperty> edmProperties = baseViewMetadata.getProperties();
                 
@@ -782,7 +812,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     logger.trace("Next link: " + nextLink);
                     ODataRetrieveRequest<ClientEntitySetIterator<ClientEntitySet, ClientEntity>> request = 
                             client.getRetrieveRequestFactory().getEntitySetIteratorRequest(nextLink);
-
+                    addCustomHeaders(request, headers);
+                    
                     ODataRetrieveResponse<ClientEntitySetIterator <ClientEntitySet, ClientEntity>> response = request.execute();
                     ClientEntitySetIterator<ClientEntitySet, ClientEntity> iterator = response.getBody();
                     
@@ -869,8 +900,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
                             logger.debug("Content type request: "+req.getContentType().toString());
                             if(product.getETag()!=null && !product.getETag().isEmpty() ){
                                 req.addCustomHeader("If-Match", product.getETag());
-                            }
-    
+                            }    
+                            addCustomHeaders(req, headers);
+
                             ODataEntityUpdateResponse<ClientEntity> res = req.execute();
                             if (res.getStatusCode()==204) {
                                 logger.debug("Updated entity");
@@ -919,12 +951,19 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 String uriKeyCache=getUriKeyCache(serviceRoot, entityCollection);
                 BaseViewMetadata baseViewMetadata = metadataMap.get(uriKeyCache);
                 Boolean loadBlobObjects = (Boolean) getInputParameterValue(INPUT_PARAMETER_LOAD_MEDIA_LINK_RESOURCES).getValue();
+                
+                String headers = null;
+                if (getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS) != null) {
+                    headers = (String) getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS).getValue();
+                }
+                
                 if(baseViewMetadata==null){
                    
-                    addMetadataCache(serviceRoot, entityCollection, client, loadBlobObjects);
+                    addMetadataCache(serviceRoot, entityCollection, client, loadBlobObjects, headers);
                     baseViewMetadata = metadataMap.get(uriKeyCache);
                 }
-                URI productsUri = getURI(serviceRoot, entityCollection, rels, client, conditions, null, inputValues, DELETE_OPERATION, loadBlobObjects, customQueryOption);
+                URI productsUri = getURI(serviceRoot, entityCollection, rels, client, conditions, null, 
+                        inputValues, DELETE_OPERATION, loadBlobObjects, customQueryOption, headers);
                 
                 URI nextLink = productsUri;
                 
@@ -932,7 +971,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     logger.trace("Next link: " + nextLink);
                     ODataRetrieveRequest<ClientEntitySetIterator<ClientEntitySet, ClientEntity>> request = 
                             client.getRetrieveRequestFactory().getEntitySetIteratorRequest(nextLink);
-
+                    addCustomHeaders(request, headers);
+                    
                     ODataRetrieveResponse<ClientEntitySetIterator <ClientEntitySet, ClientEntity>> response = request.execute();
                     ClientEntitySetIterator<ClientEntitySet, ClientEntity> iterator = response.getBody();
             
@@ -951,8 +991,11 @@ public class ODataWrapper extends AbstractCustomWrapper {
                         }
                         logger.info("Deleting entity: "+uri.toString());
                         logger.debug("etag:  "+product.getETag());
-                        ODataDeleteResponse deleteRes = client.getCUDRequestFactory()
-                                .getDeleteRequest(uri).execute();
+                        
+                        ODataDeleteRequest req = client.getCUDRequestFactory().getDeleteRequest(uri);
+                        addCustomHeaders(req, headers);
+                        
+                        ODataDeleteResponse deleteRes = req.execute();
     
                         if (deleteRes.getStatusCode()==204) {
                             deleted++;
@@ -970,10 +1013,10 @@ public class ODataWrapper extends AbstractCustomWrapper {
         }
     }
 
-    private URI getURI(String endPoint, final String entityCollection, final String[] rels,
-            final ODataClient client,
+    private URI getURI(String endPoint, final String entityCollection, final String[] rels, final ODataClient client,
             final CustomWrapperConditionHolder condition, final List<CustomWrapperFieldExpression> projectedFields,
-            final Map<String, String> inputValues,String operation,  Boolean loadBlobObjects, String customQueryOption) throws CustomWrapperException, URISyntaxException, UnsupportedEncodingException {
+            final Map<String, String> inputValues, String operation, Boolean loadBlobObjects, String customQueryOption,
+            String headers) throws CustomWrapperException, URISyntaxException, UnsupportedEncodingException {
        
         //Build the Uri
 
@@ -983,7 +1026,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
         String uriKeyCache=getUriKeyCache(endPoint, entityCollection);
         BaseViewMetadata baseViewMetadata = metadataMap.get(uriKeyCache);
         if(baseViewMetadata==null){
-            addMetadataCache(endPoint, entityCollection, client, loadBlobObjects);
+            addMetadataCache(endPoint, entityCollection, client, loadBlobObjects, headers);
             baseViewMetadata = metadataMap.get(uriKeyCache);
         }
 
@@ -1468,14 +1511,17 @@ public class ODataWrapper extends AbstractCustomWrapper {
         logger.info("PROXY DATA->  HTTP_PROXY_HOST: " + proxyHost + ", HTTP_PROXY_HOST: " + proxyPort);
     }
     
-    public static void addMetadataCache(String uri, String entityCollection, ODataClient client, Boolean loadBlobObjects) throws CustomWrapperException {
+    public static void addMetadataCache(String uri, String entityCollection, ODataClient client, Boolean loadBlobObjects, String headers) 
+            throws CustomWrapperException {
+        
         try {
            
             Map<String, EdmEntitySet> entitySets= new HashMap<String, EdmEntitySet>();
             EdmMetadataRequest request = client.getRetrieveRequestFactory().getMetadataRequest(uri);
+            addCustomHeaders(request, headers);
             ODataRetrieveResponse<Edm> response = request.execute();
 
-            String entityCollectionNameMetadata = getEntityCollectionNameMetadata(client, uri, entityCollection);
+            String entityCollectionNameMetadata = getEntityCollectionNameMetadata(client, uri, entityCollection, headers);
             String collectionNameMetadata = entityCollectionNameMetadata == null? entityCollection : entityCollectionNameMetadata;
             
             Edm edm = response.getBody();     
@@ -1543,9 +1589,12 @@ public class ODataWrapper extends AbstractCustomWrapper {
     }
     
     
-    private static String getEntityCollectionNameMetadata(final ODataClient client, final String uri, final String entityCollectionName) {
+    private static String getEntityCollectionNameMetadata(final ODataClient client, final String uri, 
+            final String entityCollectionName, final String headers) throws CustomWrapperException {
+        
         // Service document data 
         ODataServiceDocumentRequest requestServiceDocument = client.getRetrieveRequestFactory().getServiceDocumentRequest(uri);
+        addCustomHeaders(requestServiceDocument, headers);
         ODataRetrieveResponse<ClientServiceDocument> responseServiceDocument = requestServiceDocument.execute();
         ClientServiceDocument clientServiceDocument = responseServiceDocument.getBody();
         
@@ -1560,5 +1609,56 @@ public class ODataWrapper extends AbstractCustomWrapper {
         return null;
     }
     
-   
+    private static void addCustomHeaders(ODataRequest request, String input) throws CustomWrapperException {
+
+        if (input != null && !StringUtils.isBlank(input)) {
+
+            final Map<String, String> headers = getHttpHeaders(input);
+
+            if (headers != null) {
+
+                for (final Entry<String, String> entry : headers.entrySet()) {
+                    request.addCustomHeader(entry.getKey(), entry.getValue());
+                    logger.info("HTTP Header - " + entry.getKey() + ": " + entry.getValue());
+                }
+            }
+        }
+    }
+    
+    private static Map<String, String> getHttpHeaders(String httpHeaders) throws CustomWrapperException {
+        
+        Map<String, String> map = new HashMap<String, String>();
+        
+        // Unescape JavaScript backslash escape character
+        httpHeaders = StringEscapeUtils.unescapeJavaScript(httpHeaders);
+        
+        // Headers are introduced with the following format: field1="value1";field2="value2";...;fieldn="valuen";
+        // They are splitted by the semicolon character (";") to get pairs field="value"
+        String[] headers = httpHeaders.split(";(?=([^\"]*\"[^\"]*\")*[^\"]*$)");
+        for (String header : headers) {
+            
+            // Once the split has been done, each header must have this format: field="value"
+            // In order to get the header and its value, split by the first equals character ("=")
+            String[] parts = header.split("=", 2);
+            
+            if (parts.length != 2 
+                    || (parts.length == 2 && parts[1].length() < 1 )) {
+                throw new CustomWrapperException("HTTP headers must be defined with the format name=\"value\"");
+            }
+
+            String key = parts[0].trim();
+            String value = parts[1].trim();
+            
+            if (!value.startsWith("\"") || !value.endsWith("\"")) {
+                throw new CustomWrapperException("HTTP headers must be defined with the format name=\"value\"");
+            }
+
+            // Remove initial and final double quotes
+            value = value.replaceAll("^\"|\"$", "");
+            
+            map.put(key, value);
+        }
+        
+        return map;
+    }
 }

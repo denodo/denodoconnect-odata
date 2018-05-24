@@ -31,6 +31,7 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.core4j.Enumerable;
@@ -94,7 +95,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
     private final static String INPUT_PARAMETER_PROXY_PASSWORD = "Proxy Password";
     private final static String INPUT_PARAMETER_NTLM_DOMAIN = "NTLM Domain";
     private final static String INPUT_PARAMETER_TIMEOUT = "Timeout";
-
+    private final static String INPUT_PARAMETER_HTTP_HEADERS = "HTTP Headers";
+    
     public final static String PAGINATION_FETCH = "fetch_size";
     public final static String PAGINATION_OFFSET = "offset_size";
     public final static String USE_NTLM_AUTH = "http.ntlm.auth";
@@ -175,7 +177,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
             new CustomWrapperInputParameter(INPUT_PARAMETER_NTLM_DOMAIN, "Domain used for NTLM authentication", false,
                     CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_TIMEOUT, "Timeout for the service(milliseconds)", false,
-                    CustomWrapperInputParameterTypeFactory.integerType())
+                    CustomWrapperInputParameterTypeFactory.integerType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_HTTP_HEADERS, "Custom headers to be used in the underlying HTTP client", false,
+                    CustomWrapperInputParameterTypeFactory.stringType())
     };
 
     @Override
@@ -557,7 +561,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
     private List<OEntity> getEntities(final String entityCollection, final List<String> rels,
             final ODataConsumer consumer,
             final CustomWrapperConditionHolder condition, final List<CustomWrapperFieldExpression> projectedFields,
-            final Map<String, String> inputValues) {
+            final Map<String, String> inputValues) throws CustomWrapperException {
         ODataConsumer consumerLocal;
         if (consumer == null) {
             consumerLocal = getConsumer();
@@ -656,7 +660,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
         return requestUpdated.toList();
     }
 
-    private ODataConsumer getConsumer() {
+    private ODataConsumer getConsumer() throws CustomWrapperException {
 
         String uri = (String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT)
                         .getValue();
@@ -787,6 +791,29 @@ public class ODataWrapper extends AbstractCustomWrapper {
             logger.info("FORMAT: " + FormatType.ATOM);
         }
 
+        if ((getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS) != null)
+                && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS).getValue())) {
+            
+            final Map<String, String> headers = getHttpHeaders((String) getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS).getValue());
+            
+            if (headers != null) {
+
+                builder.setClientBehaviors(new OClientBehavior() {
+                    
+                    @Override
+                    public ODataClientRequest transform(ODataClientRequest request) {
+                        
+                        for (final Entry<String, String> entry : headers.entrySet()) {
+                            request.header(entry.getKey(), entry.getValue());
+                            logger.info("HTTP Header - " + entry.getKey() + ": " + entry.getValue());
+                        }
+                        
+                        return request;
+                    }
+                });                
+            }
+        }
+        
         return builder.build();
     }
 
@@ -881,6 +908,43 @@ public class ODataWrapper extends AbstractCustomWrapper {
         key.append(collectionName);
         
         return key.toString();
+    }
+    
+    private static Map<String, String> getHttpHeaders(String httpHeaders) throws CustomWrapperException {
+        
+        Map<String, String> map = new HashMap<String, String>();
+
+        // Unescape JavaScript backslash escape character
+        httpHeaders = StringEscapeUtils.unescapeJavaScript(httpHeaders);
+        
+        // Headers are introduced with the following format: field1="value1";field2="value2";...;fieldn="valuen";
+        // They are splitted by the semicolon character (";") to get pairs field="value"
+        String[] headers = httpHeaders.split(";(?=([^\"]*\"[^\"]*\")*[^\"]*$)");
+        for (String header : headers) {
+            
+            // Once the split has been done, each header must have this format: field="value"
+            // In order to get the header and its value, split by the first equals character ("=")
+            String[] parts = header.split("=", 2);
+            
+            if (parts.length != 2 
+                    || (parts.length == 2 && parts[1].length() < 1 )) {
+                throw new CustomWrapperException("HTTP headers must be defined with the format name=\"value\"");
+            }
+
+            String key = parts[0].trim();
+            String value = parts[1].trim();
+            
+            if (!value.startsWith("\"") || !value.endsWith("\"")) {
+                throw new CustomWrapperException("HTTP headers must be defined with the format name=\"value\"");
+            }
+
+            // Remove initial and final double quotes
+            value = value.replaceAll("^\"|\"$", "");
+            
+            map.put(key, value);
+        }
+        
+        return map;
     }
     
     private boolean checkIfAddToSystemProperties(Properties properties, String key, String value) {

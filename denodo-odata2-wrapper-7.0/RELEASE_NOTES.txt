@@ -1,4 +1,8 @@
+20180529
+========
+#35770 - Custom header support for OData 2 Wrapper
+
 20180516
 ========
 - Created first version of this component for Denodo 7.0
-- #37483 - OData 2 Wrapper contains code that can lead to a StackOverflowError
+#37483 - OData 2 Wrapper contains code that can lead to a StackOverflowError

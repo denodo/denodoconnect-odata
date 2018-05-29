@@ -1,3 +1,8 @@
+20180529
+========
+#29882 - Add service format configuration in OData 4 Wrapper
+#35771 - Custom header support for OData 4 Wrapper
+
 20171030
 ========
 #29881 - OAuth2 support in OData4 wrapper

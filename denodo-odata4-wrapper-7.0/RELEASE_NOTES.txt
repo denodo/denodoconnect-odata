@@ -1,3 +1,8 @@
+20180529
+========
+#29882 - Add service format configuration in OData 4 Wrapper
+#35771 - Custom header support for OData 4 Wrapper
+
 20180516
 ========
 - Created first version of this component for Denodo 7.0

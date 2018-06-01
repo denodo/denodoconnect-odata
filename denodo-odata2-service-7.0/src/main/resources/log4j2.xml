@@ -3,8 +3,8 @@
 
     <Appenders>
 
-        <RollingFile name="FILEOUT" fileName="../logs/denodo-data2-service.log"
-                                    filePattern="../logs/denodo-data2-service.log.%i">
+        <RollingFile name="FILEOUT" fileName="../logs/denodo-odata2-service.log"
+                                    filePattern="../logs/denodo-odata2-service.log.%i">
             <Policies>
                 <SizeBasedTriggeringPolicy size="10 MB" />
             </Policies>

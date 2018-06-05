@@ -48,8 +48,9 @@
     <version.olingo>4.4.0</version.olingo>
     <version.servlet.api>2.4</version.servlet.api>
     <version.slf4j>1.7.1</version.slf4j>
-    <version.springframework>3.2.14.RELEASE</version.springframework>
+    <version.springframework>3.2.18.RELEASE</version.springframework>
     <classifier.denodovdpjdbcdriver>full</classifier.denodovdpjdbcdriver>
+    <version.log4j2>2.11.0</version.log4j2>
   </properties>
 
   <build>
@@ -312,6 +313,12 @@
       <version>${version.denodovdpjdbcdriver}</version>
       <classifier>${classifier.denodovdpjdbcdriver}</classifier>
       <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-web</artifactId>
+      <version>${version.log4j2}</version>
     </dependency>
 
   </dependencies>

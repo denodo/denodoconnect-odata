@@ -47,8 +47,9 @@
     <version.denodovdpjdbcdriver>6.0.10</version.denodovdpjdbcdriver>
     <version.olingo>2.0.10</version.olingo>
     <version.slf4j>1.7.1</version.slf4j>
-    <version.springframework>3.2.14.RELEASE</version.springframework>
+    <version.springframework>4.3.17.RELEASE</version.springframework>
     <classifier.denodovdpjdbcdriver>full</classifier.denodovdpjdbcdriver>
+    <version.servlet.api>2.4</version.servlet.api>
   </properties>
 
   <build>
@@ -170,7 +171,7 @@
     <dependency>
       <groupId>javax.servlet</groupId>
       <artifactId>servlet-api</artifactId>
-      <version>2.4</version>
+      <version>${version.servlet.api}</version>
       <scope>provided</scope>
     </dependency>
     

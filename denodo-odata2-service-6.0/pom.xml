@@ -59,6 +59,20 @@
     <resources>      
       <resource>
         <directory>${basedir}/../denodo-odata2-service-5.5/src/main/resources</directory>
+        <includes>
+          <include>**/*.properties</include>
+          <include>**/*.xml</include>
+        </includes>
+        <excludes>
+          <exclude>**/version.properties</exclude>
+        </excludes>
+      </resource>
+      <resource>
+        <directory>${basedir}/../denodo-odata2-service-5.5/src/main/resources</directory>
+        <includes>
+          <include>**/version.properties</include>
+        </includes>
+        <filtering>true</filtering>
       </resource>
     </resources>
 

@@ -47,7 +47,7 @@ import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 
 import com.denodo.connect.odata2.datasource.DenodoODataAuthDataSource;
-
+import com.denodo.connect.odata2.util.Versions;
 
 public class DenodoODataFilter implements Filter {
 
@@ -57,7 +57,8 @@ public class DenodoODataFilter implements Filter {
     private static final String CHARACTER_ENCODING = "UTF-8";
     private static final String AUTH_KEYWORD = "Authorization";
     private static final String BASIC_AUTH_KEYWORD = "Basic ";
-
+    private static final String USER_AGENT_KEYWORD = "User-Agent";
+    private static final String SERVICE_NAME_KEYWORD = "OData2";
 
     // OData AUTH convenience constants
     private static final String AUTHORIZATION_CHALLENGE_ATTRIBUTE = "WWW-AUTHENTICATE";
@@ -65,27 +66,20 @@ public class DenodoODataFilter implements Filter {
     private static final String AUTHORIZATION_CHALLENGE_BASIC = SecurityContext.BASIC_AUTH + " realm=\""
             + AUTHORIZATION_CHALLENGE_REALM + "\", accept-charset=\"" + CHARACTER_ENCODING + "\"";
 
-
     private ServletContext servletContext = null;
     private String serviceRoot = null;
     private String serverAddress = null;
     private DenodoODataAuthDataSource authDataSource = null;
     private boolean allowAdminUser;
     
-    
     public DenodoODataFilter() {
         super();
     }
-
-
 
     @Override
     public void init(final FilterConfig filterConfig) throws ServletException {
         this.servletContext = filterConfig.getServletContext();
     }
-
-
-
 
     private void ensureInitialized() throws ServletException {
 
@@ -196,11 +190,25 @@ public class DenodoODataFilter implements Filter {
                 return;
             }
 
-            final UserAuthenticationInfo userAuthInfo = new UserAuthenticationInfo(login, password, dataBaseName);
-
+            boolean supportUserAgent = Versions.ARTIFACT_ID >= Versions.MINOR_ARTIFACT_ID_SUPPORT_USER_AGENT;
+            
+            String userAgent = null;
+            String serviceName = null;
+            String intermediateIp = null;
+            String clientIp = null;
+            
+            if (supportUserAgent) {
+                userAgent = request.getHeader(USER_AGENT_KEYWORD);
+                serviceName = SERVICE_NAME_KEYWORD;
+                intermediateIp = request.getLocalAddr();
+                clientIp = request.getLocalAddr();                
+            }
+            
+            final UserAuthenticationInfo userAuthInfo = new UserAuthenticationInfo(login, password, 
+                    dataBaseName, userAgent, serviceName, intermediateIp, clientIp);
 
             // Set connection parameters
-            this.authDataSource.setParameters(fillParametersMap(userAuthInfo, developmentModeDangerousBypassAuthentication));
+            this.authDataSource.setParameters(fillParametersMap(userAuthInfo, supportUserAgent, developmentModeDangerousBypassAuthentication));
 
             logger.trace("Acquired data source: " + this.authDataSource);
 
@@ -235,15 +243,12 @@ public class DenodoODataFilter implements Filter {
         // Do nothing
     }
 
-
-
     private static void showLogin(final HttpServletResponse response, final String msg) throws IOException {
         // Set AUTH challenge in request
         response.setHeader(AUTHORIZATION_CHALLENGE_ATTRIBUTE, AUTHORIZATION_CHALLENGE_BASIC);
         response.setCharacterEncoding(CHARACTER_ENCODING);
         response.sendError(HttpServletResponse.SC_UNAUTHORIZED, msg);
     }
-
 
     /**
      * This method extracts from an Odata-like URL the name of data source.
@@ -256,7 +261,6 @@ public class DenodoODataFilter implements Filter {
         final String pathWithoutServerAddress = StringUtils.substringAfter(pathInfo, serverAddress);
         return StringUtils.substringBefore(pathWithoutServerAddress, "/");
     }
-
 
     /**
      * This method extracts the credentials from the AUTH HTTP request segment
@@ -275,18 +279,27 @@ public class DenodoODataFilter implements Filter {
         return credentials;
     }
 
-
     /**
      * This method fills a map with data required to get an authorized connection to VDP
-     * @param userAuthenticationInfo required user/pass to access a data base.
-     * @return
+     * @param userAuthenticationInfo required data to access a data base.
+     * @param supportUserAgent indicates if the service version supports the user-agent field
+     * @param developmentModeDangerousBypassAuthentication indicates if the service is using 
+     *        the dangerous mode by passing the authentication
+     * @return map with data required to get an authorized connection to VDP
      */
     private static Map<String,String> fillParametersMap(final UserAuthenticationInfo userAuthenticationInfo,
-            final String developmentModeDangerousBypassAuthentication){
+            final boolean supportUserAgent, final String developmentModeDangerousBypassAuthentication) {
+        
         final Map<String,String> parameters = new HashMap<String,String>();
         parameters.put(DenodoODataAuthDataSource.DATA_BASE_NAME, userAuthenticationInfo.getDatabaseName());
         parameters.put(DenodoODataAuthDataSource.USER_NAME, userAuthenticationInfo.getLogin());
         parameters.put(DenodoODataAuthDataSource.PASSWORD_NAME, userAuthenticationInfo.getPassword());
+        if (supportUserAgent) {
+            parameters.put(DenodoODataAuthDataSource.USER_AGENT, userAuthenticationInfo.getUserAgent());
+            parameters.put(DenodoODataAuthDataSource.SERVICE_NAME, userAuthenticationInfo.getServiceName());
+            parameters.put(DenodoODataAuthDataSource.INTERMEDIATE_IP, userAuthenticationInfo.getIntermediateIp());
+            parameters.put(DenodoODataAuthDataSource.CLIENT_IP, userAuthenticationInfo.getClientIp());
+        }
         
         /*
          * Property that ONLY should be true in development mode, 
@@ -301,5 +314,4 @@ public class DenodoODataFilter implements Filter {
 
         return parameters;
     }
-
 }

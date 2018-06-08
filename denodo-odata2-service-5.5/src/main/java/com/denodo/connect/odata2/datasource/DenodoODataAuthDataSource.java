@@ -50,6 +50,10 @@ public class DenodoODataAuthDataSource implements DataSource {
     public final static String PASSWORD_NAME = "password";
     public final static String DATA_BASE_NAME = "databaseName";
     public final static String DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION = "developmentModeDangerousBypassAuthentication";
+    public final static String USER_AGENT = "userAgent";
+    public final static String SERVICE_NAME = "serviceName";
+    public final static String INTERMEDIATE_IP = "intermediateIP";
+    public final static String CLIENT_IP = "clientIP";
 
     // ERRORS
     private static final String AUTHENTICATION_ERROR = "The username or password is incorrect";
@@ -163,6 +167,22 @@ public class DenodoODataAuthDataSource implements DataSource {
                     command = new StringBuilder("CONNECT USER ").append(quoteIdentifier(USER_NAME)).append(" PASSWORD ")
                             .append("'").append(getParameter(PASSWORD_NAME)).append("'").append(" DATABASE ")
                             .append(quoteIdentifier(DATA_BASE_NAME));
+                }
+                
+                if (getParameter(USER_AGENT) != null) {
+                    command.append(" USER_AGENT ").append("'").append(getParameter(USER_AGENT)).append("'");
+                }
+                
+                if (getParameter(SERVICE_NAME) != null) {
+                    command.append(" SERVICE_NAME ").append("'").append(getParameter(SERVICE_NAME)).append("'");
+                }
+                
+                if (getParameter(INTERMEDIATE_IP) != null) {
+                    command.append(" INTERMEDIATE_IP ").append("'").append(getParameter(INTERMEDIATE_IP)).append("'");
+                }
+                
+                if (getParameter(CLIENT_IP) != null) {
+                    command.append(" CLIENT_IP ").append("'").append(getParameter(CLIENT_IP)).append("'");
                 }
 
                 this.authenticatedConnection.set(connection);

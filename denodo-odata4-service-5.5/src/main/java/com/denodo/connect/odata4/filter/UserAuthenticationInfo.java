@@ -29,16 +29,32 @@ public class UserAuthenticationInfo {
     private String password;
     private String kerberosClientToken;
     private String databaseName;
-
-    public UserAuthenticationInfo(final String login, final String password, final String databaseName) {
+    private String userAgent;
+    private String serviceName;
+    private String intermediateIp;
+    private String clientIp;
+    
+    public UserAuthenticationInfo(String login, String password, String databaseName, String userAgent, String serviceName,
+            String intermediateIp, String clientIp) {
+        super();
         this.login = login;
         this.password = password;
         this.databaseName = databaseName;
+        this.userAgent = userAgent;
+        this.serviceName = serviceName;
+        this.intermediateIp = intermediateIp;
+        this.clientIp = clientIp;
     }
-
-    public UserAuthenticationInfo(final String kerberosClientToken, final String databaseName) {
+    
+    public UserAuthenticationInfo(String kerberosClientToken, String databaseName, String userAgent, String serviceName,
+            String intermediateIp, String clientIp) {
+        super();
         this.kerberosClientToken = kerberosClientToken;
         this.databaseName = databaseName;
+        this.userAgent = userAgent;
+        this.serviceName = serviceName;
+        this.intermediateIp = intermediateIp;
+        this.clientIp = clientIp;
     }
 
     public String getLogin() {
@@ -57,15 +73,39 @@ public class UserAuthenticationInfo {
         return this.databaseName;
     }
 
+    public String getUserAgent() {
+        return this.userAgent;
+    }
+
+    public String getServiceName() {
+        return this.serviceName;
+    }
+
+    public String getIntermediateIp() {
+        return this.intermediateIp;
+    }
+
+    public String getClientIp() {
+        return this.clientIp;
+    }
+
     @Override
     public String toString() {
         
         if (this.kerberosClientToken != null) {
-            return "UserAuthenticationInfo [using kerberos token," + "databaseName=" + this.databaseName + "]";
+            return "UserAuthenticationInfo [using kerberos token"
+                    + ", databaseName=" + this.databaseName 
+                    + ", userAgent=" + this.userAgent
+                    + ", serviceName=" + this.serviceName
+                    + ", intermediateIp=" + this.intermediateIp
+                    + ", clientIp=" + this.clientIp + "]";
         }
-        return "UserAuthenticationInfo [login=" + this.login + ", password=" + this.password + ", databaseName=" + this.databaseName + "]";
+        return "UserAuthenticationInfo [login=" + this.login 
+                + ", password=" + this.password 
+                + ", databaseName=" + this.databaseName 
+                + ", userAgent=" + this.userAgent 
+                + ", serviceName=" + this.serviceName
+                + ", intermediateIp=" + this.intermediateIp
+                + ", clientIp=" + this.clientIp + "]";
     }
-
-
-
 }

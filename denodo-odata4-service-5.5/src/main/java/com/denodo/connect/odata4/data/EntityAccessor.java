@@ -164,115 +164,111 @@ public class EntityAccessor {
         
         final Map<String, ExpandNavigationData> expandData = DenodoCommonProcessor.getExpandData(expandOption, edmEntitySetActual);
         
-        entitySetData.addAll(this.denodoTemplate.query(sqlStatement, 
-                new RowMapper<Entity>(){
+        entitySetData.addAll(this.denodoTemplate.query(sqlStatement, new RowMapper<Entity>() {
 
-        @Override
-        public Entity mapRow(final ResultSet resultSet, final int rowNum) throws SQLException {
-            final ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
-            final Entity entity = new Entity();
-            
-            final Map<String, Object> newEntityKeys = new  HashMap<String, Object>();
-            final List<String> entityKeyNames = edmEntityTypeActual.getKeyPredicateNames();
-            
-                for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
-                    final String columnName = resultSetMetaData.getColumnName(i);
-                    Object value = resultSet.getObject(i);
-
-                    final String expandColumnKey = new StringBuilder().append(edmEntitySetActual.getName()).append("-").append(columnName).toString();
-
-                    if (expandData.containsKey(expandColumnKey)) {
-                        try {
-                            DenodoCommonProcessor.setExpandData(expandColumnKey, newEntityKeys, entity, expandData, value, baseURI, uriInfo);
-                        } catch (final ODataApplicationException e) {
-                            logger.error("Error setting expand data: " + expandColumnKey, e);
-                            throw new SQLException("Error setting expand data: " + expandColumnKey, e);
-                        }
-                    } else {
-
-                        ValueType valueType = ValueType.PRIMITIVE;
-
-                        boolean relationLinkValue = false;
-
-                        if (value instanceof Array) {
-
-                            final Object[] arrayElements = (Object[]) ((Array) value).getArray();
-
+            @Override
+            public Entity mapRow(final ResultSet resultSet, final int rowNum) throws SQLException {
+                
+                final ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+                final Entity entity = new Entity();
+                
+                final Map<String, Object> newEntityKeys = new  HashMap<String, Object>();
+                final List<String> entityKeyNames = edmEntityTypeActual.getKeyPredicateNames();
+                
+                    for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
+                        final String columnName = resultSetMetaData.getColumnName(i);
+                        Object value = resultSet.getObject(i);
+    
+                        final String expandColumnKey = new StringBuilder().append(edmEntitySetActual.getName()).append("-").append(columnName).toString();
+    
+                        if (expandData.containsKey(expandColumnKey)) {
                             try {
-                                final EdmPropertyImpl edmProperty = (EdmPropertyImpl) edmEntityTypeActual.getProperty(columnName);
-
-                                final List<Object> arrayValues = new ArrayList<Object>();
-
-                                for (final Object arrayElement : arrayElements) {
-                                    // Elements of arrays are Structs in VDP
-                                    if (arrayElement instanceof Struct) {
-                                        final Object[] structValues = ((Struct) arrayElement).getAttributes();
-
-                                        arrayValues.add(DenodoCommonProcessor.getStructAsComplexValue(edmProperty, columnName, structValues));
-                                    }
-                                }
-
-                                value = arrayValues;
-
-                                valueType = ValueType.COLLECTION_COMPLEX;
-                            } catch (final EdmException e1) {
-                                logger.error("Error getting property data: " + columnName + e1);
-                                throw new SQLException("Error getting property data: " + columnName + e1);
+                                DenodoCommonProcessor.setExpandData(expandColumnKey, newEntityKeys, entity, expandData, value, baseURI, uriInfo);
+                            } catch (final ODataApplicationException e) {
+                                logger.error("Error setting expand data: " + expandColumnKey, e);
+                                throw new SQLException("Error setting expand data: " + expandColumnKey, e);
                             }
-
-                        } else if (value instanceof Struct) {
-                            // This is because select_navigational queries return some additional fields
-                            // in addition to the ones specified in the SELECT clause
-                            if (((Struct) value).getSQLTypeName().compareTo("relation_link") != 0) {
-                                final Object[] structValues = ((Struct) value).getAttributes();
-
+                        } else {
+    
+                            ValueType valueType = ValueType.PRIMITIVE;
+    
+                            boolean relationLinkValue = false;
+    
+                            if (value instanceof Array) {
+    
+                                final Object[] arrayElements = (Object[]) ((Array) value).getArray();
+    
                                 try {
                                     final EdmPropertyImpl edmProperty = (EdmPropertyImpl) edmEntityTypeActual.getProperty(columnName);
-                                    value = DenodoCommonProcessor.getStructAsComplexValue(edmProperty, columnName, structValues);
-
-                                    valueType = ValueType.COMPLEX;
-                                } catch (final EdmException e2) {
-                                    logger.error("Error getting property data: " + columnName, e2);
-                                    throw new SQLException("Error getting property data: " + columnName, e2);
+    
+                                    final List<Object> arrayValues = new ArrayList<Object>();
+    
+                                    for (final Object arrayElement : arrayElements) {
+                                        // Elements of arrays are Structs in VDP
+                                        if (arrayElement instanceof Struct) {
+                                            final Object[] structValues = ((Struct) arrayElement).getAttributes();
+    
+                                            arrayValues.add(DenodoCommonProcessor.getStructAsComplexValue(edmProperty, columnName, structValues));
+                                        }
+                                    }
+    
+                                    value = arrayValues;
+    
+                                    valueType = ValueType.COLLECTION_COMPLEX;
+                                } catch (final EdmException e1) {
+                                    logger.error("Error getting property data: " + columnName + e1);
+                                    throw new SQLException("Error getting property data: " + columnName + e1);
                                 }
-                            } else {
-                                relationLinkValue = true;
+    
+                            } else if (value instanceof Struct) {
+                                // This is because select_navigational queries return some additional fields
+                                // in addition to the ones specified in the SELECT clause
+                                if (((Struct) value).getSQLTypeName().compareTo("relation_link") != 0) {
+                                    final Object[] structValues = ((Struct) value).getAttributes();
+    
+                                    try {
+                                        final EdmPropertyImpl edmProperty = (EdmPropertyImpl) edmEntityTypeActual.getProperty(columnName);
+                                        value = DenodoCommonProcessor.getStructAsComplexValue(edmProperty, columnName, structValues);
+    
+                                        valueType = ValueType.COMPLEX;
+                                    } catch (final EdmException e2) {
+                                        logger.error("Error getting property data: " + columnName, e2);
+                                        throw new SQLException("Error getting property data: " + columnName, e2);
+                                    }
+                                } else {
+                                    relationLinkValue = true;
+                                }
                             }
-                        }
-
-                        if (!relationLinkValue) {
-                            final EdmProperty edmProperty = findPrimitiveProperty(uriInfo, edmEntityTypeActual, columnName);
-                            final Property newProperty = PropertyUtils.buildProperty(columnName, valueType, value, edmProperty);
-                            if (entityKeyNames.contains(columnName)) {
-                                newEntityKeys.put(columnName, value);
+    
+                            if (!relationLinkValue) {
+                                final EdmProperty edmProperty = findPrimitiveProperty(uriInfo, edmEntityTypeActual, columnName);
+                                final Property newProperty = PropertyUtils.buildProperty(columnName, valueType, value, edmProperty);
+                                if (entityKeyNames.contains(columnName)) {
+                                    newEntityKeys.put(columnName, value);
+                                }
+                                entity.addProperty(newProperty);
                             }
-                            entity.addProperty(newProperty);
                         }
                     }
-                }
+                    
+                final URI entityURI = URIUtils.createIdURI(baseURI, edmEntityTypeActual, entity);
+                entity.setId(entityURI);
                 
-            final URI entityURI = URIUtils.createIdURI(baseURI, edmEntityTypeActual, entity);
-            entity.setId(entityURI);
-            
-            // @odata.navigationLink and @odata.associationLink
-            DenodoCommonProcessor.setLinks(entity, edmEntitySetActual);
-            
-            // @odata.readLink
-            final Link link = new Link();
-            link.setHref(entityURI.toString());
-            link.setRel(Constants.SELF_LINK_REL); 
-            entity.setSelfLink(link);
-            
-            // @odata.type
-            entity.setType(edmEntityTypeActual.getFullQualifiedName().getFullQualifiedNameAsString());
-            
-            return entity;
-        }
-
-        
+                // @odata.navigationLink and @odata.associationLink
+                DenodoCommonProcessor.setLinks(entity, edmEntitySetActual);
+                
+                // @odata.readLink
+                final Link link = new Link();
+                link.setHref(entityURI.toString());
+                link.setRel(Constants.SELF_LINK_REL); 
+                entity.setSelfLink(link);
+                
+                // @odata.type
+                entity.setType(edmEntityTypeActual.getFullQualifiedName().getFullQualifiedNameAsString());
+                
+                return entity;
+            }
         }));
-
-        
         
         return entityCollection;
     }

@@ -50,7 +50,10 @@ public class DenodoODataAuthDataSource implements DataSource {
     public final static String KERBEROS_CLIENT_TOKEN = "KRBClientToken";
     public final static String DATA_BASE_NAME = "databaseName";
     public final static String DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION = "developmentModeDangerousBypassAuthentication";
-    
+    public final static String USER_AGENT = "userAgent";
+    public final static String SERVICE_NAME = "serviceName";
+    public final static String INTERMEDIATE_IP = "intermediateIP";
+    public final static String CLIENT_IP = "clientIP";
 
     // ERRORS
     private static final String AUTHENTICATION_ERROR = "The username or password is incorrect";
@@ -61,7 +64,6 @@ public class DenodoODataAuthDataSource implements DataSource {
     private static final String KERBEROS_ERROR = ".*[K|k]erberos.*";
     private static final String KERBEROS_DISABLED = ".*not allow [K|k]erberos authentication.*";
     private static final String KERBEROS_INVALID_USER = ".*No valid [K|k]erberos authentication for user.*";
-
 
     private final ThreadLocal<Map<String,String>> parameters = new ThreadLocal<Map<String,String>>();
     
@@ -173,6 +175,22 @@ public class DenodoODataAuthDataSource implements DataSource {
                             .append(quoteIdentifier(DATA_BASE_NAME));
                 }
 
+                if (getParameter(USER_AGENT) != null) {
+                    command.append(" USER_AGENT ").append("'").append(getParameter(USER_AGENT)).append("'");
+                }
+                
+                if (getParameter(SERVICE_NAME) != null) {
+                    command.append(" SERVICE_NAME ").append("'").append(getParameter(SERVICE_NAME)).append("'");
+                }
+                
+                if (getParameter(INTERMEDIATE_IP) != null) {
+                    command.append(" INTERMEDIATE_IP ").append("'").append(getParameter(INTERMEDIATE_IP)).append("'");
+                }
+                
+                if (getParameter(CLIENT_IP) != null) {
+                    command.append(" CLIENT_IP ").append("'").append(getParameter(CLIENT_IP)).append("'");
+                }
+                
                 this.authenticatedConnection.set(connection);
                 
                 stmt = connection.createStatement();

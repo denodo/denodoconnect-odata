@@ -47,6 +47,7 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
 
 import com.denodo.connect.odata4.datasource.DenodoODataAuthDataSource;
 import com.denodo.connect.odata4.datasource.DenodoODataKerberosDisabledException;
+import com.denodo.connect.odata4.util.Versions;
 
 public class DenodoODataFilter implements Filter {
 
@@ -56,7 +57,8 @@ public class DenodoODataFilter implements Filter {
     private static final String CHARACTER_ENCODING = "UTF-8";
     private static final String AUTH_KEYWORD = "Authorization";
     private static final String BASIC_AUTH_KEYWORD = "Basic ";
-
+    private static final String USER_AGENT_KEYWORD = "User-Agent";
+    private static final String SERVICE_NAME_KEYWORD = "OData4";
 
     // OData AUTH convenience constants
     private static final String AUTHORIZATION_CHALLENGE_ATTRIBUTE = "WWW-AUTHENTICATE";
@@ -232,21 +234,36 @@ public class DenodoODataFilter implements Filter {
             final String dataBaseName = retrieveDataBaseNameFromUrl(request.getPathInfo(), this.serviceAddress);
             final boolean dataBaseNameEncoded = StringUtils.indexOf(request.getRequestURI(), dataBaseName) == -1;
 
-            if (StringUtils.isEmpty(dataBaseName)){  // we will get a collection name (or a $metadata) as a database name! (maybe check that?)
+            if (StringUtils.isEmpty(dataBaseName)) {  // we will get a collection name (or a $metadata) as a database name! (maybe check that?)
                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
                 return;
+            }
+            
+            boolean supportUserAgent = Versions.ARTIFACT_ID >= Versions.MINOR_ARTIFACT_ID_SUPPORT_USER_AGENT;
+            
+            String userAgent = null;
+            String serviceName = null;
+            String intermediateIp = null;
+            String clientIp = null;
+            
+            if (supportUserAgent) {
+                userAgent = request.getHeader(USER_AGENT_KEYWORD);
+                serviceName = SERVICE_NAME_KEYWORD;
+                intermediateIp = request.getLocalAddr();
+                clientIp = request.getLocalAddr();                
             }
 
             UserAuthenticationInfo userAuthInfo = null;
             if (login != null) {
-                userAuthInfo = new UserAuthenticationInfo(login, password, dataBaseName);
+                userAuthInfo = new UserAuthenticationInfo(login, password, dataBaseName, 
+                        userAgent, serviceName, intermediateIp, clientIp);
             } else {
-                userAuthInfo = new UserAuthenticationInfo(kerberosClientToken, dataBaseName);
+                userAuthInfo = new UserAuthenticationInfo(kerberosClientToken, dataBaseName, 
+                        userAgent, serviceName, intermediateIp, clientIp);
             }
 
-
             // Set connection parameters
-            this.authDataSource.setParameters(fillParametersMap(userAuthInfo, developmentModeDangerousBypassAuthentication));
+            this.authDataSource.setParameters(fillParametersMap(userAuthInfo, supportUserAgent, developmentModeDangerousBypassAuthentication));
 
             logger.trace("Acquired data source: " + this.authDataSource);
 
@@ -363,16 +380,26 @@ public class DenodoODataFilter implements Filter {
 
     /**
      * This method fills a map with data required to get an authorized connection to VDP
-     * @param userAuthenticationInfo required user/pass or kerberos token to access a data base.
-     * @return
+     * @param userAuthenticationInfo required data to access a data base.
+     * @param supportUserAgent indicates if the service version supports the user-agent field
+     * @param developmentModeDangerousBypassAuthentication indicates if the service is using 
+     *        the dangerous mode by passing the authentication
+     * @return map with data required to get an authorized connection to VDP
      */
     private static Map<String,String> fillParametersMap(final UserAuthenticationInfo userAuthenticationInfo,
-            final String developmentModeDangerousBypassAuthentication){
+            final boolean supportUserAgent, final String developmentModeDangerousBypassAuthentication) {
+        
         final Map<String, String> parameters = new HashMap<String, String>();
         parameters.put(DenodoODataAuthDataSource.DATA_BASE_NAME, userAuthenticationInfo.getDatabaseName());
         parameters.put(DenodoODataAuthDataSource.USER_NAME, userAuthenticationInfo.getLogin());
         parameters.put(DenodoODataAuthDataSource.KERBEROS_CLIENT_TOKEN, userAuthenticationInfo.getKerberosClientToken());
         parameters.put(DenodoODataAuthDataSource.PASSWORD_NAME, userAuthenticationInfo.getPassword());
+        if (supportUserAgent) {
+            parameters.put(DenodoODataAuthDataSource.USER_AGENT, userAuthenticationInfo.getUserAgent());
+            parameters.put(DenodoODataAuthDataSource.SERVICE_NAME, userAuthenticationInfo.getServiceName());
+            parameters.put(DenodoODataAuthDataSource.INTERMEDIATE_IP, userAuthenticationInfo.getIntermediateIp());
+            parameters.put(DenodoODataAuthDataSource.CLIENT_IP, userAuthenticationInfo.getClientIp());            
+        }
         
         /*
          * Property that ONLY should be true in development mode, 

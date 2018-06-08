@@ -60,6 +60,20 @@
     <resources>
       <resource>
         <directory>src/main/resources</directory>
+        <includes>
+          <include>**/*.properties</include>
+          <include>**/*.xml</include>
+        </includes>
+        <excludes>
+          <exclude>**/version.properties</exclude>
+        </excludes>
+      </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+        <includes>
+          <include>**/version.properties</include>
+        </includes>
+        <filtering>true</filtering>
       </resource>
       <resource>
         <directory>src/main/java</directory>

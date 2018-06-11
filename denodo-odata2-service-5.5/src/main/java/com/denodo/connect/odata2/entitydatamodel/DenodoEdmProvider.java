@@ -21,6 +21,7 @@
  */
 package com.denodo.connect.odata2.entitydatamodel;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -102,12 +103,7 @@ public class DenodoEdmProvider extends EdmProvider {
         return this.getEntityType(entityName, null);
     }
 
-
-
-
-    private EntityType getEntityType(
-            final FullQualifiedName entityName, final List<Association> allAssociations)
-            throws ODataException {
+    private EntityType getEntityType(final FullQualifiedName entityName, final List<Association> allAssociations) throws ODataException {
 
         try {
 
@@ -152,6 +148,9 @@ public class DenodoEdmProvider extends EdmProvider {
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
         } catch (final DenodoODataResourceNotFoundException e) {
             throw new ODataNotFoundException(ODataNotFoundException.ENTITY, e);
+        } catch (final SQLException e) {
+            logger.error("An exception was raised while obtaining entity type " + entityName, e);
+            return null;
         } catch (final Exception e) {
             logger.error("An exception was raised while obtaining entity type " + entityName, e);
             throw new ODataApplicationException(e.getLocalizedMessage(), Locale.getDefault(), e);
@@ -177,12 +176,10 @@ public class DenodoEdmProvider extends EdmProvider {
             final Schema schema = new Schema();
             schemas.add(schema);
 
-
             /*
              * Namespace is fixed: just the DENODO one
              */
             schema.setNamespace(NAMESPACE_DENODO);
-
 
             /*
              * All the associations are computed first in order to not requiring each entity, when its entity type
@@ -193,13 +190,11 @@ public class DenodoEdmProvider extends EdmProvider {
             final List<Association> allAssociations = this.metadataAccessor.getAllAssociations(NAMESPACE_DENODO);
             schema.setAssociations(allAssociations);
 
-
             /*
              * Obtaining the names of all the tables (views, in VDP) is needed in order to query for the metadata
              * of each of these tables. These will be our entities.
              */
             final List<String> allEntityNames = this.metadataAccessor.getAllEntityNames();
-
 
             /*
              * Now let's obtain all the entity types (metadata for each of the entities)...
@@ -209,10 +204,12 @@ public class DenodoEdmProvider extends EdmProvider {
              */
             final List<EntityType> allEntityTypes = new ArrayList<EntityType>(allEntityNames.size());
             for (final String entityName : allEntityNames) {
-                allEntityTypes.add(this.getEntityType(new FullQualifiedName(NAMESPACE_DENODO, entityName), allAssociations));
+                EntityType entityType = this.getEntityType(new FullQualifiedName(NAMESPACE_DENODO, entityName), allAssociations);
+                if (entityType != null) {
+                    allEntityTypes.add(entityType);
+                }
             }
             schema.setEntityTypes(allEntityTypes);
-
 
             /*
              * Obtaining complex types names (registers).

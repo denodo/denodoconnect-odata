@@ -111,8 +111,6 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
          */
         final CsdlEntityContainer denodoEntityContainer = new CsdlEntityContainer();
 
-        
-        
         /*
          * Obtaining the names of all the tables (views, in VDP) is needed in
          * order to query for the metadata of each of these tables. These will
@@ -139,7 +137,10 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
              */
             final List<CsdlEntityType> allEntityTypes = new ArrayList<CsdlEntityType>(allEntityNames.size());
             for (final String entityName : allEntityNames) {
-                allEntityTypes.add(this.getEntityType(new FullQualifiedName(NAMESPACE_DENODO, entityName), navPropFullMap));
+                CsdlEntityType entityType = this.getEntityType(new FullQualifiedName(NAMESPACE_DENODO, entityName), navPropFullMap);
+                if (entityType != null) {
+                    allEntityTypes.add(entityType);
+                }
             }
 
             denodoEntityContainer.setName(ENTITY_CONTAINER_DENODO);
@@ -195,9 +196,8 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
     }
 
     
-    private CsdlEntityType getEntityType(
-            final FullQualifiedName entityName, final Map<FullQualifiedName, List<NavigationProperty>> allAssociations, final Set<String> complexTypeNames)
-            throws ODataException {
+    private CsdlEntityType getEntityType(final FullQualifiedName entityName, final Map<FullQualifiedName, 
+            List<NavigationProperty>> allAssociations, final Set<String> complexTypeNames) throws ODataException {
 
         try {
 

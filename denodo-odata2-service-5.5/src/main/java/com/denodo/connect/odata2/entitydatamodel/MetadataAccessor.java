@@ -676,20 +676,20 @@ public class MetadataAccessor {
 
         try {
 
-        // We obtain the connection in the most integrated possible way with the Spring infrastructure
-        connection = DataSourceUtils.getConnection(this.denodoTemplate.getDataSource());
-
-        final DatabaseMetaData metadata = connection.getMetaData();
-
-        // Virtual DataPort defines two types of "tables": "TABLE" and "VIEW" for base and derived views,
-        // respectively. But we are interested in both here, so we are going to set the last parameter to null
-        tablesRs = metadata.getTables(connection.getCatalog(), null, null, null);
-
-        while (tablesRs.next()) {
-            entityNames.add(tablesRs.getString(3));
-        }
-
-        return entityNames;
+            // We obtain the connection in the most integrated possible way with the Spring infrastructure
+            connection = DataSourceUtils.getConnection(this.denodoTemplate.getDataSource());
+    
+            final DatabaseMetaData metadata = connection.getMetaData();
+    
+            // Virtual DataPort defines two types of "tables": "TABLE" and "VIEW" for base and derived views,
+            // respectively. But we are interested in both here, so we are going to set the last parameter to null
+            tablesRs = metadata.getTables(connection.getCatalog(), null, null, null);
+    
+            while (tablesRs.next()) {
+                entityNames.add(tablesRs.getString(3));
+            }
+    
+            return entityNames;
 
         } finally  {
             JdbcUtils.closeResultSet(tablesRs);

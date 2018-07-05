@@ -120,7 +120,21 @@ public class DenodoEdmProvider extends EdmProvider {
                 final Key primaryKey = this.metadataAccessor.getEntityPrimaryKey(entityName);
 
                 /*
-                 * THIRD STEP: Obtain the navigation properties for the entity
+                 * THIRD STEP: Avoid entities without key properties
+                 */
+                if (primaryKey == null || primaryKey.getKeys() == null || primaryKey.getKeys().isEmpty()) {
+
+                    if (logger.isInfoEnabled()) {
+
+                        logger.info(entityName.getName() + " entity avoided beacuse has no primary keys");
+
+                    }
+                    
+                    return null;
+                }
+
+                /*
+                 * FOURTH STEP: Obtain the navigation properties for the entity
                  */
                 final List<NavigationProperty> navigationProperties =
                         (allAssociations == null ?

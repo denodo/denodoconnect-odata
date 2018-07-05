@@ -219,9 +219,23 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
                  * SECOND STEP: Obtain the primary key
                  */
                 final List<CsdlPropertyRef> primaryKey = this.metadataAccessor.getEntityPrimaryKey(entityName);
+                
+                /*
+                 * THIRD STEP: Avoid entities without key properties
+                 */
+                if (primaryKey == null || primaryKey.isEmpty()) {
+                    
+                    if (logger.isInfoEnabled()) {
+
+                        logger.info(entityName.getName() + " entity avoided beacuse has no primary keys");
+
+                    }
+                    
+                    return null;
+                }
 
                 /*
-                 * THIRD STEP: Obtain the navigation properties for the entity
+                 * FOURTH STEP: Obtain the navigation properties for the entity
                  */
                 final List<CsdlNavigationProperty> navigationProperties =
                         (allAssociations == null ?

@@ -318,10 +318,19 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
              * more than once.
              */
             final List<CsdlEntityType> allEntityTypes = new ArrayList<CsdlEntityType>(allEntityNames.size());
+
             for (final String entityName : allEntityNames) {
-                allEntityTypes.add(this.getEntityType(complexTypeNamesInUse, new FullQualifiedName(NAMESPACE_DENODO, entityName)));
+
+                CsdlEntityType csdlEntityType = this.getEntityType(complexTypeNamesInUse, new FullQualifiedName(NAMESPACE_DENODO, entityName));
+
+                if (csdlEntityType != null) {
+
+                    allEntityTypes.add(csdlEntityType);
+   
+                }
             }
-            schema.setEntityTypes(allEntityTypes);            
+            
+            schema.setEntityTypes(allEntityTypes);
 
             /*
              * Now let's obtain all the complex entity types

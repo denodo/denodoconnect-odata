@@ -2,18 +2,34 @@ package com.denodo.connect.odata.wrapper.http;
 
 import java.net.URI;
 
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.NTCredentials;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.olingo.client.core.http.NTLMAuthHttpClientFactory;
 import org.apache.olingo.commons.api.http.HttpMethod;
+/**
+ * Implementation for working with NTLM Authentication via embedded HttpClient features.
+ * 
+ */
 
-public class NTLMAuthHttpTimeoutClientFactory extends NTLMAuthHttpClientFactory{
-    
-    private final int timeout;
+public class NTLMAuthHttpTimeoutClientFactory extends DefaultHttpClientConnectionWithSSLFactory{
+    //This class not extend from NTLMAuthHttpTimeoutClientFactory because does not supports SSL
+  
+    private final String username;
 
-    public NTLMAuthHttpTimeoutClientFactory(String username, String password, String workstation, String domain, int timeout) {
-        super(username, password, workstation, domain);
-        this.timeout= timeout;
+    private final String password;
+
+    private final String workstation;
+
+    private final String domain;
+
+    public NTLMAuthHttpTimeoutClientFactory(String username, String password, String workstation, String domain, Integer timeout) {
+        super(timeout);
+        this.username = username;
+        this.password = password;
+        this.workstation = workstation;
+        this.domain = domain;
     }
 
 
@@ -23,8 +39,12 @@ public class NTLMAuthHttpTimeoutClientFactory extends NTLMAuthHttpClientFactory{
     @Override
     public DefaultHttpClient create(HttpMethod method, URI uri) {
         final DefaultHttpClient httpclient = super.create(method, uri);
-        HttpConnectionParams.setConnectionTimeout(httpclient.getParams(), this.timeout);
-        HttpConnectionParams.setSoTimeout(httpclient.getParams(), this.timeout);
+
+        final CredentialsProvider credsProvider = new BasicCredentialsProvider();
+        credsProvider.setCredentials(AuthScope.ANY,
+                new NTCredentials(username, password, workstation, domain));
+
+        httpclient.setCredentialsProvider(credsProvider);
         return httpclient;
     }
 }

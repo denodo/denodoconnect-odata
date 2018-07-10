@@ -64,7 +64,7 @@ import org.apache.olingo.client.api.domain.ClientValue;
 import org.apache.olingo.client.api.http.HttpClientFactory;
 import org.apache.olingo.client.api.uri.URIBuilder;
 import org.apache.olingo.client.core.ODataClientFactory;
-import org.apache.olingo.client.core.http.NTLMAuthHttpClientFactory;
+import org.apache.olingo.client.core.http.DefaultHttpClientFactory;
 import org.apache.olingo.client.core.http.ProxyWrappingHttpClientFactory;
 import org.apache.olingo.commons.api.edm.Edm;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
@@ -77,7 +77,7 @@ import org.apache.olingo.commons.api.edm.EdmType;
 import org.apache.olingo.commons.api.format.ContentType;
 
 import com.denodo.connect.odata.wrapper.http.BasicAuthHttpPreemptiveTimeoutClientFactory;
-import com.denodo.connect.odata.wrapper.http.HttpTimeoutClientFactory;
+import com.denodo.connect.odata.wrapper.http.DefaultHttpClientConnectionWithSSLFactory;
 import com.denodo.connect.odata.wrapper.http.NTLMAuthHttpTimeoutClientFactory;
 import com.denodo.connect.odata.wrapper.http.OdataOAuth2HttpClientFactory;
 import com.denodo.connect.odata.wrapper.http.ProxyWrappingHttpTimeoutClientFactory;
@@ -263,6 +263,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
             }          
                    
             final ODataClient client =  getClient();
+            if(logger.isDebugEnabled()) {
+                logger.debug("Client Factory: "+client.getConfiguration().getHttpClientFactory().toString());
+            }
             String uri = (String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT).getValue();
             String headers = null;
             if (getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS) != null) {
@@ -277,8 +280,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
             EdmMetadataRequest request = client.getRetrieveRequestFactory().getMetadataRequest(uri);
             addCustomHeaders(request, headers);
             setServiceFormat(request, contentType);
+            
             logger.info("Request metadata: "+request.getURI().toString());
-
+     
             ODataRetrieveResponse<Edm> response = request.execute();
 
             Edm edm = response.getBody();     
@@ -1250,7 +1254,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 client.getConfiguration().setHttpClientFactory(new NTLMAuthHttpTimeoutClientFactory(user, password, null, domain,
                         (Integer) getInputParameterValue(INPUT_PARAMETER_TIMEOUT).getValue()));
             }else{
-                client.getConfiguration().setHttpClientFactory(new NTLMAuthHttpClientFactory(user, password, null, domain));
+                client.getConfiguration().setHttpClientFactory(new NTLMAuthHttpTimeoutClientFactory(user, password, null, domain, null));
             }
 
         }else if (((Boolean) getInputParameterValue(INPUT_PARAMETER_OAUTH2).getValue()).booleanValue()) {
@@ -1322,7 +1326,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
             }
             if(user==null||user.equals("")){
                 if (getInputParameterValue(INPUT_PARAMETER_TIMEOUT) != null) {
-                    client.getConfiguration().setHttpClientFactory((HttpClientFactory) new HttpTimeoutClientFactory(
+                    client.getConfiguration().setHttpClientFactory((HttpClientFactory) new DefaultHttpClientConnectionWithSSLFactory(
                             (Integer) getInputParameterValue(INPUT_PARAMETER_TIMEOUT).getValue()));
                 }
 
@@ -1365,7 +1369,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
         } 
         
 
-
+    
        
         return client;
     }

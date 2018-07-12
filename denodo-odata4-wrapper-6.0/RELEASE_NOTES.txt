@@ -1,3 +1,7 @@
+20180712
+========
+#38328 - Added support for HTTPS connections
+
 20180529
 ========
 #29882 - Add service format configuration in OData 4 Wrapper

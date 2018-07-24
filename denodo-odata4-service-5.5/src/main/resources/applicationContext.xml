@@ -56,6 +56,7 @@
     <prop key="allowadminuser">${enable.adminUser}</prop>
     <prop key="disabledkerberosauth">${disable.kerberosAuthentication}</prop>
     <prop key="disabledbasicauth">${disable.basicAuthentication}</prop>
+    <prop key="disabledoauth2">${disable.oauth2Authentication}</prop>
   </util:properties>
   
   <util:properties id="debugconfig">

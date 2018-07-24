@@ -28,6 +28,7 @@ public class UserAuthenticationInfo {
     private String login;
     private String password;
     private String kerberosClientToken;
+    private String oauth2ClientToken;
     private String databaseName;
     private String userAgent;
     private String serviceName;
@@ -46,10 +47,15 @@ public class UserAuthenticationInfo {
         this.clientIp = clientIp;
     }
     
-    public UserAuthenticationInfo(String kerberosClientToken, String databaseName, String userAgent, String serviceName,
+    public UserAuthenticationInfo(String clientToken, boolean isKerberos, String databaseName, String userAgent, String serviceName,
             String intermediateIp, String clientIp) {
         super();
-        this.kerberosClientToken = kerberosClientToken;
+        
+        if (isKerberos) {
+            this.kerberosClientToken = clientToken;
+        } else {
+            this.oauth2ClientToken = clientToken;
+        }
         this.databaseName = databaseName;
         this.userAgent = userAgent;
         this.serviceName = serviceName;
@@ -67,6 +73,10 @@ public class UserAuthenticationInfo {
 
     public String getKerberosClientToken() {
         return this.kerberosClientToken;
+    }
+    
+    public String getOauth2ClientToken() {
+        return this.oauth2ClientToken;
     }
 
     public String getDatabaseName() {
@@ -92,16 +102,19 @@ public class UserAuthenticationInfo {
     @Override
     public String toString() {
         
+        String token = this.kerberosClientToken != null ? "kerberos" : "oauth2";
+        
         if (this.kerberosClientToken != null) {
-            return "UserAuthenticationInfo [using kerberos token"
+            return "UserAuthenticationInfo [using " + token + " token"
                     + ", databaseName=" + this.databaseName 
                     + ", userAgent=" + this.userAgent
                     + ", serviceName=" + this.serviceName
                     + ", intermediateIp=" + this.intermediateIp
                     + ", clientIp=" + this.clientIp + "]";
         }
+
         return "UserAuthenticationInfo [login=" + this.login 
-                + ", password=" + this.password 
+                + ", password=" + this.password != null ? "**** (hidden)" : this.password
                 + ", databaseName=" + this.databaseName 
                 + ", userAgent=" + this.userAgent 
                 + ", serviceName=" + this.serviceName

@@ -1,5 +1,6 @@
 package com.denodo.connect.odata4.util;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
@@ -11,23 +12,18 @@ public final class Versions {
     
     static {
         
+        InputStream input = null;
         String artifactId = null;
         
         try {
             
             final String filename = "version.properties";
-            final InputStream input = ResourcesUtil.loadResourceAsStream(filename);            
+            input = ResourcesUtil.loadResourceAsStream(filename);            
 
             final Properties properties = new Properties();
             properties.load(input);
             
             artifactId = properties.getProperty("artifactId");
-            
-        } catch (final Exception ignored) {
-            
-        }
-        
-        try {
             
             int separatorIdx = artifactId.lastIndexOf('-');
             ARTIFACT_ID = Double.parseDouble(artifactId.substring(separatorIdx + 1));           
@@ -35,6 +31,16 @@ public final class Versions {
         } catch (final Exception e) {
             
             throw new ExceptionInInitializerError("Exception during initialization of service versioning utilities");
-        }        
+            
+        } finally {
+            
+            try {
+                
+                input.close();
+                
+            } catch (IOException ignored) {
+
+            }
+        }
     }
 }

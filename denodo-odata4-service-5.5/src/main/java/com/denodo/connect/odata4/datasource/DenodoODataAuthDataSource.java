@@ -48,6 +48,7 @@ public class DenodoODataAuthDataSource implements DataSource {
     public final static String USER_NAME = "user";
     public final static String PASSWORD_NAME = "password";
     public final static String KERBEROS_CLIENT_TOKEN = "KRBClientToken";
+    public final static String OAUTH2_CLIENT_TOKEN = "OAuth2ClientToken";
     public final static String DATA_BASE_NAME = "databaseName";
     public final static String DEVELOPMENT_MODE_DANGEROUS_BYPASS_AUTHENTICATION = "developmentModeDangerousBypassAuthentication";
     public final static String USER_AGENT = "userAgent";
@@ -64,6 +65,14 @@ public class DenodoODataAuthDataSource implements DataSource {
     private static final String KERBEROS_ERROR = ".*[K|k]erberos.*";
     private static final String KERBEROS_DISABLED = ".*not allow [K|k]erberos authentication.*";
     private static final String KERBEROS_INVALID_USER = ".*No valid [K|k]erberos authentication for user.*";
+    private static final String INVALID_JWT_SERIALIZATION = "Invalid JWT serialization: Missing dot delimiter(s)";
+    private static final String EXPIRED_JWT = "Expired JWT";
+    private static final String JWT_REPLAY_DETECTED = "Replay attack detected";
+    private static final String INVALID_TOKEN_ISSUER = "Invalid token issuer";
+    private static final String ANOTHER_ALGORITHM_EXPECTED = "Another algorithm expected";
+    private static final String INVALID_AUDIENCE = "Invalid audience";
+    private static final String MISSING_SCOPE = "Missing scope";
+    private static final String READ_TIMED_OUT = "Read timed out";
 
     private final ThreadLocal<Map<String,String>> parameters = new ThreadLocal<Map<String,String>>();
     
@@ -166,11 +175,15 @@ public class DenodoODataAuthDataSource implements DataSource {
                      */
                     command = new StringBuilder("CONNECT ").append(" DATABASE ").append(quoteIdentifier(DATA_BASE_NAME));
                 } else if (getParameter(USER_NAME) != null) {
-
-                    command = new StringBuilder("CONNECT USER ").append(quoteIdentifier(USER_NAME)).append(" PASSWORD ")
-                            .append("'").append(getParameter(PASSWORD_NAME)).append("'").append(" DATABASE ")
+                    // Basic auth
+                    command = new StringBuilder("CONNECT USER ").append(quoteIdentifier(USER_NAME)).append(" PASSWORD ").append("'")
+                            .append(getParameter(PASSWORD_NAME)).append("'").append(" DATABASE ").append(quoteIdentifier(DATA_BASE_NAME));
+                } else if (getParameter(OAUTH2_CLIENT_TOKEN) != null) {
+                    // OAuth 2.0
+                    command = new StringBuilder("CONNECT OAUTHTOKEN '").append(getParameter(OAUTH2_CLIENT_TOKEN)).append("' DATABASE ")
                             .append(quoteIdentifier(DATA_BASE_NAME));
                 } else {
+                    // SPNEGO
                     command = new StringBuilder("CONNECT TOKEN '").append(getParameter(KERBEROS_CLIENT_TOKEN)).append("' DATABASE ")
                             .append(quoteIdentifier(DATA_BASE_NAME));
                 }
@@ -232,10 +245,43 @@ public class DenodoODataAuthDataSource implements DataSource {
                 if (e.getMessage().matches(CONNECT_TOKEN_UNSUPPORTED)) { // Check connect token sentence unsupported
                     logger.error("Kerberos is unsupported by this VDP version", e);
                     throw new DenodoODataKerberosUnsupportedException(e);
-                }                
+                }      
+                if (e.getMessage().contains(INVALID_JWT_SERIALIZATION)) { // Check JWT validity
+                    logger.error("Error when trying to authenticate using the provided access token", e);
+                    throw new DenodoODataJWTSerializationException(e);
+                }
+                if (e.getMessage().contains(EXPIRED_JWT)) { // Check JWT is not expired
+                    logger.error("An exception happened when trying to authenticate using the provided access token. Expired JWT", e);
+                    throw new DenodoODataExpiredJWTException(e);
+                }
+                if (e.getMessage().contains(JWT_REPLAY_DETECTED)) { // Check JWT replay
+                    logger.error("An exception happened when trying to authenticate using the provided access token. Replay attack detected", e);
+                    throw new DenodoODataJWTReplayDetectedException(e);
+                }
+                if (e.getMessage().contains(INVALID_TOKEN_ISSUER)) { // Check invalid token issuer
+                    logger.error("Invalid token issuer", e);
+                    throw new DenodoODataInvalidIssuerException(e);
+                }
+                if (e.getMessage().contains(ANOTHER_ALGORITHM_EXPECTED)) { // Check algorithm is not the expected
+                    logger.error("Signed JWT rejected: Another algorithm expected", e);
+                    throw new DenodoODataAnotherAlgorithmExpectedException(e);
+                }
+                if (e.getMessage().contains(INVALID_AUDIENCE)) { // Check JWT audience
+                    logger.error("Invalid audience", e);
+                    throw new DenodoODataInvalidAudienceException(e);
+                }
+                if (e.getMessage().contains(MISSING_SCOPE)) { // Check JWT missing scope
+                    logger.error("Missing scope", e);
+                    throw new DenodoODataMissingScopeException(e);
+                }
+                if (e.getMessage().contains(READ_TIMED_OUT)) { // Check read timed out
+                    logger.error("Read timed out", e);
+                    throw new DenodoODataReadTimeoutException(e);
+                }
             }
             logger.error("Error obtaining the connection", e);
-            throw new DenodoODataConnectException(e, getParameter(DATA_BASE_NAME), getParameter(USER_NAME));
+            throw new DenodoODataConnectException(e);
+            
         } finally {
         	if (stmt != null) {
         		JdbcUtils.closeStatement(stmt);

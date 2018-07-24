@@ -63,10 +63,15 @@ public class DenodoODataFilter implements Filter {
     // OData AUTH convenience constants
     private static final String AUTHORIZATION_CHALLENGE_ATTRIBUTE = "WWW-AUTHENTICATE";
     private static final String NEGOTIATE = "Negotiate";
+    private static final String BEARER = "Bearer";
     private static final String BASIC = "Basic";
     private static final String AUTHORIZATION_CHALLENGE_REALM = "Denodo_OData_Service";
     private static final String AUTHORIZATION_CHALLENGE_BASIC = SecurityContext.BASIC_AUTH + " realm=\""
             + AUTHORIZATION_CHALLENGE_REALM + "\", accept-charset=\"" + CHARACTER_ENCODING + "\"";
+    
+    // ConnectionConstants
+    public static final String PARAM_OAUTH2_USE_OAUTH2 = "useOAuth2";
+    public static final String PARAM_OAUTH2_ACCESS_TOKEN = "accessToken";
     
     private ServletContext servletContext = null;
     private String serviceRoot = null;
@@ -75,8 +80,8 @@ public class DenodoODataFilter implements Filter {
     private boolean allowAdminUser;
     private boolean disabledKerberosAuth = false;
     private boolean disabledBasicAuth = false;
+    private boolean disabledOAuth2 = false;
     private boolean checkedAvailabiltyKerberos = false;
-    
     
     public DenodoODataFilter() {
         super();
@@ -131,10 +136,14 @@ public class DenodoODataFilter implements Filter {
                     if (disabledBasicAuthAsString != null && disabledBasicAuthAsString.trim().length() != 0) {
                         this.disabledBasicAuth = Boolean.parseBoolean(disabledBasicAuthAsString);
                     }
+                    final String disabledOAuth2AsString = authconfig.getProperty("disabledoauth2");
+                    if (disabledOAuth2AsString != null && disabledOAuth2AsString.trim().length() != 0) {
+                        this.disabledOAuth2 = Boolean.parseBoolean(disabledOAuth2AsString);
+                    }
                     
-                    if (this.disabledKerberosAuth && this.disabledBasicAuth) {
-                        throw new ServletException("Denodo OData service authentication not properly configured: check 'disable.kerberosAuthentication' "
-                                + "and 'disable.basicAuthentication' properties at the configuration file");
+                    if (this.disabledKerberosAuth && this.disabledBasicAuth && this.disabledOAuth2) {
+                        throw new ServletException("Denodo OData service authentication not properly configured: check 'disable.kerberosAuthentication', "
+                                + "'disable.basicAuthentication' and 'disable.oauth2Authentication' properties at the configuration file");
                     }
                 }
             }
@@ -159,16 +168,22 @@ public class DenodoODataFilter implements Filter {
             final HttpServletRequest request = (HttpServletRequest) req;
             final HttpServletResponse response = (HttpServletResponse) res;
 
-            if (this.disabledKerberosAuth && this.disabledBasicAuth) {
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authentication required: Basic authentication disabled and Kerberos authentication disabled or unavailable.");
-                logger.trace("Authentication required: Basic authentication disabled and Kerberos authentication disabled or unavailable.");
+            if (this.disabledKerberosAuth && this.disabledBasicAuth && this.disabledOAuth2) {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
+                        "Authentication required: Basic authentication disabled, Kerberos authentication disabled and OAhto2 authentication disabled or unavailable.");
+                logger.trace(
+                        "Authentication required: Basic authentication disabled, Kerberos authentication disabled and OAhto2 authentication disabled or unavailable.");
                 return;
             }
             
             String login = null;
             String password = null;
             String kerberosClientToken = null;
+            String oauth2ClientToken = null;
 
+            // From Denodo 7.0, the VDP connection statement supports new headers such as User-Agent, OAuth 2.0, etc.
+            boolean supportNewHeaders = Versions.ARTIFACT_ID >= Versions.MINOR_ARTIFACT_ID_SUPPORT_USER_AGENT;
+            
             /*
              * Property that ONLY should be true in development mode, 
              * NEVER IN PRODUCTION ENVIRONMENTS. It is useful in order 
@@ -227,8 +242,11 @@ public class DenodoODataFilter implements Filter {
                 // Retrieve SPNEGO credentials
                 } else if (!this.disabledKerberosAuth && StringUtils.startsWithIgnoreCase(authorizationHeader, NEGOTIATE)) {
                     kerberosClientToken = authorizationHeader.substring(NEGOTIATE.length()).trim();
-                } 
-
+                
+                 // Retrieve OAuth 2.0 credentials
+                } else if (supportNewHeaders && !this.disabledOAuth2 && StringUtils.startsWithIgnoreCase(authorizationHeader, BEARER)) {
+                    oauth2ClientToken = authorizationHeader.substring(BEARER.length()).trim();
+                }
             }
   
             final String dataBaseName = retrieveDataBaseNameFromUrl(request.getPathInfo(), this.serviceAddress);
@@ -239,42 +257,54 @@ public class DenodoODataFilter implements Filter {
                 return;
             }
             
-            boolean supportUserAgent = Versions.ARTIFACT_ID >= Versions.MINOR_ARTIFACT_ID_SUPPORT_USER_AGENT;
-            
             String userAgent = null;
             String serviceName = null;
             String intermediateIp = null;
             String clientIp = null;
             
-            if (supportUserAgent) {
+            if (supportNewHeaders) {
                 userAgent = request.getHeader(USER_AGENT_KEYWORD);
                 serviceName = SERVICE_NAME_KEYWORD;
                 intermediateIp = request.getLocalAddr();
-                clientIp = request.getLocalAddr();                
+                clientIp = request.getLocalAddr();
             }
 
             UserAuthenticationInfo userAuthInfo = null;
             if (login != null) {
+                // Basic auth
                 userAuthInfo = new UserAuthenticationInfo(login, password, dataBaseName, 
                         userAgent, serviceName, intermediateIp, clientIp);
-            } else {
-                userAuthInfo = new UserAuthenticationInfo(kerberosClientToken, dataBaseName, 
+            } else if (kerberosClientToken != null) {
+                // Kerberos auth
+                userAuthInfo = new UserAuthenticationInfo(kerberosClientToken, true, dataBaseName, 
                         userAgent, serviceName, intermediateIp, clientIp);
+            } else if (oauth2ClientToken != null) {
+                // OAuth 2.0 auth
+                userAuthInfo = new UserAuthenticationInfo(oauth2ClientToken, false, dataBaseName, 
+                        userAgent, serviceName, intermediateIp, clientIp);
+            } else {
+                response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+                return;
             }
 
             // Set connection parameters
-            this.authDataSource.setParameters(fillParametersMap(userAuthInfo, supportUserAgent, developmentModeDangerousBypassAuthentication));
+            this.authDataSource.setParameters(fillParametersMap(userAuthInfo, supportNewHeaders, developmentModeDangerousBypassAuthentication));
 
             logger.trace("Acquired data source: " + this.authDataSource);
 
-            if (!this.checkedAvailabiltyKerberos && userAuthInfo.getKerberosClientToken() != null && !this.disabledKerberosAuth) {
+            if ((!this.checkedAvailabiltyKerberos && userAuthInfo.getKerberosClientToken() != null && !this.disabledKerberosAuth)
+                    || (userAuthInfo.getOauth2ClientToken() != null && !this.disabledOAuth2)) {
                 try {
-                    logger.trace("Checking Kerberos in VDP server");
+                    
+                    logger.trace("Checking " + kerberosClientToken != null ? "Kerberos" : "OAuth2" + " in VDP server");
+                    
+                    // Get datasource connection
                     final WebApplicationContext appCtx = WebApplicationContextUtils.getWebApplicationContext(this.servletContext);
                     final DenodoODataAuthDataSource dataSource = appCtx.getBean(DenodoODataAuthDataSource.class);
-                    
                     dataSource.getConnection();
+                    
                 } catch (final DenodoODataKerberosDisabledException e) {
+                    
                     logger.trace("Kerberos authentication is not enabled in VDP");
                     this.disabledKerberosAuth = true;
                     clearRequestAuthentication();
@@ -285,13 +315,16 @@ public class DenodoODataFilter implements Filter {
                         return;
                     }
                 } catch (final Exception e) {
-                    logger.error("An exception was raised while obtaining connection in order to check Kerberos availability ", e);
+                    
+                    logger.error("An exception was raised while obtaining connection in order to check " 
+                            + kerberosClientToken != null ? "Kerberos" : "OAuth2" + " availability ", e);
                     clearRequestAuthentication();
+                    
                 } finally {
                     this.checkedAvailabiltyKerberos = true;
                 }
             }
-
+            
             final String dataBaseNameInURL = getDataBaseNameInURL(dataBaseName, dataBaseNameEncoded);
             final DenodoODataRequestWrapper wrappedRequest = new DenodoODataRequestWrapper(request, dataBaseNameInURL);
             final DenodoODataResponseWrapper wrappedResponse = new DenodoODataResponseWrapper(response, getServiceRoot(request), dataBaseNameInURL);
@@ -381,20 +414,21 @@ public class DenodoODataFilter implements Filter {
     /**
      * This method fills a map with data required to get an authorized connection to VDP
      * @param userAuthenticationInfo required data to access a data base.
-     * @param supportUserAgent indicates if the service version supports the user-agent field
+     * @param supportNewHeaders indicates if the service version supports user-agent field, oauth2, etc
      * @param developmentModeDangerousBypassAuthentication indicates if the service is using 
      *        the dangerous mode by passing the authentication
      * @return map with data required to get an authorized connection to VDP
      */
     private static Map<String,String> fillParametersMap(final UserAuthenticationInfo userAuthenticationInfo,
-            final boolean supportUserAgent, final String developmentModeDangerousBypassAuthentication) {
+            final boolean supportNewHeaders, final String developmentModeDangerousBypassAuthentication) {
         
         final Map<String, String> parameters = new HashMap<String, String>();
         parameters.put(DenodoODataAuthDataSource.DATA_BASE_NAME, userAuthenticationInfo.getDatabaseName());
         parameters.put(DenodoODataAuthDataSource.USER_NAME, userAuthenticationInfo.getLogin());
-        parameters.put(DenodoODataAuthDataSource.KERBEROS_CLIENT_TOKEN, userAuthenticationInfo.getKerberosClientToken());
         parameters.put(DenodoODataAuthDataSource.PASSWORD_NAME, userAuthenticationInfo.getPassword());
-        if (supportUserAgent) {
+        parameters.put(DenodoODataAuthDataSource.KERBEROS_CLIENT_TOKEN, userAuthenticationInfo.getKerberosClientToken());
+        if (supportNewHeaders) {
+            parameters.put(DenodoODataAuthDataSource.OAUTH2_CLIENT_TOKEN,  userAuthenticationInfo.getOauth2ClientToken());
             parameters.put(DenodoODataAuthDataSource.USER_AGENT, userAuthenticationInfo.getUserAgent());
             parameters.put(DenodoODataAuthDataSource.SERVICE_NAME, userAuthenticationInfo.getServiceName());
             parameters.put(DenodoODataAuthDataSource.INTERMEDIATE_IP, userAuthenticationInfo.getIntermediateIp());

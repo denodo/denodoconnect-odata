@@ -25,9 +25,10 @@ public class UserAuthenticationInfo {
 
     public static final String REQUEST_ATTRIBUTE_NAME = "userAuthentication";
 
-    private final String login;
-    private final String password;
-    private final String databaseName;
+    private String login;
+    private String password;
+    private String oauth2ClientToken;
+    private String databaseName;
     private String userAgent;
     private String serviceName;
     private String intermediateIp;
@@ -45,12 +46,27 @@ public class UserAuthenticationInfo {
         this.clientIp = clientIp;
     }
 
+    public UserAuthenticationInfo(String oauth2ClientToken, String databaseName, String userAgent, String serviceName,
+            String intermediateIp, String clientIp) {
+        super();
+        this.oauth2ClientToken = oauth2ClientToken;
+        this.databaseName = databaseName;
+        this.userAgent = userAgent;
+        this.serviceName = serviceName;
+        this.intermediateIp = intermediateIp;
+        this.clientIp = clientIp;
+    }
+
     public String getLogin() {
         return this.login;
     }
 
     public String getPassword() {
         return this.password;
+    }
+    
+    public String getOauth2ClientToken() {
+        return this.oauth2ClientToken;
     }
 
     public String getDatabaseName() {
@@ -75,8 +91,18 @@ public class UserAuthenticationInfo {
 
     @Override
     public String toString() {
+        
+        if (this.oauth2ClientToken != null) {
+            return "UserAuthenticationInfo [using oauth2 token"
+                    + ", databaseName=" + this.databaseName 
+                    + ", userAgent=" + this.userAgent
+                    + ", serviceName=" + this.serviceName
+                    + ", intermediateIp=" + this.intermediateIp
+                    + ", clientIp=" + this.clientIp + "]";
+        }
+        
         return "UserAuthenticationInfo [login=" + this.login 
-                + ", password=" + this.password 
+                + ", password=" + this.password != null ? "**** (hidden)" : this.password
                 + ", databaseName=" + this.databaseName 
                 + ", userAgent=" + this.userAgent
                 + ", serviceName=" + this.serviceName

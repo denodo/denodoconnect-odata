@@ -65,12 +65,17 @@ public class DenodoODataFilter implements Filter {
     private static final String AUTHORIZATION_CHALLENGE_REALM = "Denodo_OData_Service";
     private static final String AUTHORIZATION_CHALLENGE_BASIC = SecurityContext.BASIC_AUTH + " realm=\""
             + AUTHORIZATION_CHALLENGE_REALM + "\", accept-charset=\"" + CHARACTER_ENCODING + "\"";
-
+    private static final String BEARER = "Bearer";
+    private static final String NEGOTIATE = "Negotiate";
+    private static final String BASIC = "Basic";
+    
     private ServletContext servletContext = null;
     private String serviceRoot = null;
     private String serverAddress = null;
     private DenodoODataAuthDataSource authDataSource = null;
     private boolean allowAdminUser;
+    private boolean disabledBasicAuth = false;
+    private boolean disabledOAuth2 = false;
     
     public DenodoODataFilter() {
         super();
@@ -113,6 +118,15 @@ public class DenodoODataFilter implements Filter {
                         throw new ServletException("Denodo OData service user not properly configured: check the 'enable.adminUser' property at the configuration file");
                     }
                     this.allowAdminUser = Boolean.parseBoolean(allowAdminUserAsString);
+                    
+                    final String disabledBasicAuthAsString = authconfig.getProperty("disabledbasicauth");
+                    if (disabledBasicAuthAsString != null && disabledBasicAuthAsString.trim().length() != 0) {
+                        this.disabledBasicAuth = Boolean.parseBoolean(disabledBasicAuthAsString);
+                    }
+                    final String disabledOAuth2AsString = authconfig.getProperty("disabledoauth2");
+                    if (disabledOAuth2AsString != null && disabledOAuth2AsString.trim().length() != 0) {
+                        this.disabledOAuth2 = Boolean.parseBoolean(disabledOAuth2AsString);
+                    }
                 }
             }
         }
@@ -135,10 +149,22 @@ public class DenodoODataFilter implements Filter {
 
             final HttpServletRequest request = (HttpServletRequest) req;
             final HttpServletResponse response = (HttpServletResponse) res;
+            
+            if (this.disabledBasicAuth && this.disabledOAuth2) {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
+                        "Authentication required: Basic authentication disabled, Kerberos authentication disabled and OAhto2 authentication disabled or unavailable.");
+                logger.trace(
+                        "Authentication required: Basic authentication disabled, Kerberos authentication disabled and OAhto2 authentication disabled or unavailable.");
+                return;
+            }
 
             String login = null;
             String password = null;
+            String oauth2ClientToken = null;
 
+            // From Denodo 7.0, the VDP connection statement supports new headers such as User-Agent, OAuth 2.0, etc.
+            boolean supportNewHeaders = Versions.ARTIFACT_ID >= Versions.MINOR_ARTIFACT_ID_SUPPORT_USER_AGENT;
+            
             /*
              * Property that ONLY should be true in development mode, 
              * NEVER IN PRODUCTION ENVIRONMENTS. It is useful in order 
@@ -153,34 +179,49 @@ public class DenodoODataFilter implements Filter {
             if (!Boolean.valueOf(developmentModeDangerousBypassAuthentication).booleanValue()) {
                 // Check request header contains BASIC AUTH segment
                 final String authorizationHeader = request.getHeader(AUTH_KEYWORD);
-                if (authorizationHeader == null || !StringUtils.startsWithIgnoreCase(authorizationHeader, BASIC_AUTH_KEYWORD)) {
+                if (authorizationHeader == null /*|| !StringUtils.startsWithIgnoreCase(authorizationHeader, BASIC_AUTH_KEYWORD)*/) {
+                    /*
                     final String reason = "HTTP request does not contain AUTH segment";
                     logger.trace(reason);
                     showLogin(response, reason);
                     return;
-                }
-
-                // Retrieve credentials
-                final String[] credentials = retrieveCredentials(authorizationHeader);
-                if (credentials == null) {
-                    final String reason = "Invalid credentials";
-                    logger.trace(reason);
-                    showLogin(response, reason);
+                    */
+                    response.setHeader(AUTHORIZATION_CHALLENGE_ATTRIBUTE, NEGOTIATE);
+                    if (!this.disabledBasicAuth) {
+                        response.addHeader(AUTHORIZATION_CHALLENGE_ATTRIBUTE, BASIC);
+                    }
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    logger.trace("SPNEGO starts");
                     return;
                 }
 
-                // Disable access to the service using 'admin' user if this option is established in the configuration
-                if (!this.allowAdminUser && adminUser.equals(credentials[0])) {
-                    final String reason = "Invalid user. The access to the service is not allowed with the 'admin' user.";
-                    logger.trace(reason);
-                    showLogin(response, reason);
-                    return;
-                }
+                // Retrieve BASIC credentials
+                if (!this.disabledBasicAuth && StringUtils.startsWithIgnoreCase(authorizationHeader, BASIC_AUTH_KEYWORD)) {
 
-                login = credentials[0];
-                password = credentials[1];
+                    final String[] credentials = retrieveCredentials(authorizationHeader);
+                    if (credentials == null) {
+                        final String reason = "Invalid credentials";
+                        logger.trace(reason);
+                        showLogin(response, reason);
+                        return;
+                    }
+
+                    // Disable access to the service using 'admin' user if this option is established in the configuration
+                    if (!this.allowAdminUser && adminUser.equals(credentials[0])) {
+                        final String reason = "Invalid user. The access to the service is not allowed with the 'admin' user.";
+                        logger.trace(reason);
+                        showLogin(response, reason);
+                        return;
+                    }
+                    
+                    login = credentials[0];
+                    password = credentials[1];
+                
+                // Retrieve OAuth 2.0 credentials
+                } else if (supportNewHeaders && StringUtils.startsWithIgnoreCase(authorizationHeader, BEARER)) {
+                    oauth2ClientToken = authorizationHeader.substring(BEARER.length()).trim();
+                }
             }
-
 
             final String dataBaseName = retrieveDataBaseNameFromUrl(request.getPathInfo(), this.serverAddress);
             final boolean dataBaseNameEncoded =  StringUtils.indexOf(request.getRequestURI(), dataBaseName) == -1;
@@ -189,28 +230,53 @@ public class DenodoODataFilter implements Filter {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND);
                 return;
             }
-
-            boolean supportUserAgent = Versions.ARTIFACT_ID >= Versions.MINOR_ARTIFACT_ID_SUPPORT_USER_AGENT;
             
             String userAgent = null;
             String serviceName = null;
             String intermediateIp = null;
             String clientIp = null;
             
-            if (supportUserAgent) {
+            if (supportNewHeaders) {
                 userAgent = request.getHeader(USER_AGENT_KEYWORD);
                 serviceName = SERVICE_NAME_KEYWORD;
                 intermediateIp = request.getLocalAddr();
                 clientIp = request.getLocalAddr();                
             }
             
-            final UserAuthenticationInfo userAuthInfo = new UserAuthenticationInfo(login, password, 
-                    dataBaseName, userAgent, serviceName, intermediateIp, clientIp);
+            UserAuthenticationInfo userAuthInfo = null;
+            if (login != null) {
+                userAuthInfo = new UserAuthenticationInfo(login, password, 
+                        dataBaseName, userAgent, serviceName, intermediateIp, clientIp);
+            } else if (oauth2ClientToken != null) {
+                userAuthInfo = new UserAuthenticationInfo(oauth2ClientToken, 
+                        dataBaseName, userAgent, serviceName, intermediateIp, clientIp);
+            } else {
+                response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+                return;
+            }
 
             // Set connection parameters
-            this.authDataSource.setParameters(fillParametersMap(userAuthInfo, supportUserAgent, developmentModeDangerousBypassAuthentication));
+            this.authDataSource.setParameters(fillParametersMap(userAuthInfo, supportNewHeaders, developmentModeDangerousBypassAuthentication));
 
             logger.trace("Acquired data source: " + this.authDataSource);
+            
+            if (userAuthInfo.getOauth2ClientToken() != null && !this.disabledOAuth2) {
+                
+                try {
+                    
+                    logger.trace("Checking  OAuth2 in VDP server");
+
+                    // Get datasource connection
+                    final WebApplicationContext appCtx = WebApplicationContextUtils.getWebApplicationContext(this.servletContext);
+                    final DenodoODataAuthDataSource dataSource = appCtx.getBean(DenodoODataAuthDataSource.class);
+                    dataSource.getConnection();
+                    
+                } catch (final Exception e) {
+                    
+                    logger.error("An exception was raised while obtaining connection in order to check OAuth2 availability ", e);
+                    clearRequestAuthentication();
+                }
+            }
 
             final String dataBaseNameInURL = getDataBaseNameInURL(dataBaseName, dataBaseNameEncoded);
             final DenodoODataRequestWrapper wrappedRequest = new DenodoODataRequestWrapper(request, dataBaseNameInURL, this.serverAddress);
@@ -288,13 +354,14 @@ public class DenodoODataFilter implements Filter {
      * @return map with data required to get an authorized connection to VDP
      */
     private static Map<String,String> fillParametersMap(final UserAuthenticationInfo userAuthenticationInfo,
-            final boolean supportUserAgent, final String developmentModeDangerousBypassAuthentication) {
+            final boolean supportNewHeaders, final String developmentModeDangerousBypassAuthentication) {
         
         final Map<String,String> parameters = new HashMap<String,String>();
         parameters.put(DenodoODataAuthDataSource.DATA_BASE_NAME, userAuthenticationInfo.getDatabaseName());
         parameters.put(DenodoODataAuthDataSource.USER_NAME, userAuthenticationInfo.getLogin());
         parameters.put(DenodoODataAuthDataSource.PASSWORD_NAME, userAuthenticationInfo.getPassword());
-        if (supportUserAgent) {
+        if (supportNewHeaders) {
+            parameters.put(DenodoODataAuthDataSource.OAUTH2_CLIENT_TOKEN,  userAuthenticationInfo.getOauth2ClientToken());
             parameters.put(DenodoODataAuthDataSource.USER_AGENT, userAuthenticationInfo.getUserAgent());
             parameters.put(DenodoODataAuthDataSource.SERVICE_NAME, userAuthenticationInfo.getServiceName());
             parameters.put(DenodoODataAuthDataSource.INTERMEDIATE_IP, userAuthenticationInfo.getIntermediateIp());

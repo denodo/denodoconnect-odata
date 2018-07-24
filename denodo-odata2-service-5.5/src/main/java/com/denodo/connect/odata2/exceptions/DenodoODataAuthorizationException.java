@@ -19,13 +19,13 @@
  *
  * =============================================================================
  */
-package com.denodo.connect.odata2.datasource;
+package com.denodo.connect.odata2.exceptions;
 
-public class DenodoODataConnectException extends RuntimeException {
+public class DenodoODataAuthorizationException extends RuntimeException {
 
-    private static final long serialVersionUID = 2018613110017661717L;
+    private static final long serialVersionUID = 432672448886023060L;
 
-    public DenodoODataConnectException(final Throwable cause) {
+    public DenodoODataAuthorizationException(final Throwable cause) {
         super(cause);
     }
 

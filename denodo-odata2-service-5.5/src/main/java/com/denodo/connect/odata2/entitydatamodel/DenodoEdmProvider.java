@@ -53,10 +53,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import com.denodo.connect.odata2.datasource.DenodoODataAuthenticationException;
-import com.denodo.connect.odata2.datasource.DenodoODataAuthorizationException;
-import com.denodo.connect.odata2.datasource.DenodoODataConnectException;
-import com.denodo.connect.odata2.datasource.DenodoODataResourceNotFoundException;
+import com.denodo.connect.odata2.exceptions.DenodoODataAuthenticationException;
+import com.denodo.connect.odata2.exceptions.DenodoODataAuthorizationException;
+import com.denodo.connect.odata2.exceptions.DenodoODataConnectException;
+import com.denodo.connect.odata2.exceptions.DenodoODataResourceNotFoundException;
 import com.denodo.connect.odata2.exceptions.ODataUnauthorizedException;
 
 

@@ -61,7 +61,7 @@ import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.jdbc.support.JdbcUtils;
 import org.springframework.stereotype.Repository;
 
-import com.denodo.connect.odata2.datasource.DenodoODataResourceNotFoundException;
+import com.denodo.connect.odata2.exceptions.DenodoODataResourceNotFoundException;
 import com.denodo.connect.odata2.util.SQLMetadataUtils;
 import com.denodo.connect.odata2.util.VDPJDBCTypes;
 

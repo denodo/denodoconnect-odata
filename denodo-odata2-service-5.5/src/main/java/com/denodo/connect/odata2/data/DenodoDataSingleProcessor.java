@@ -88,9 +88,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.UncategorizedSQLException;
 import org.springframework.stereotype.Component;
 
-import com.denodo.connect.odata2.datasource.DenodoODataAuthenticationException;
-import com.denodo.connect.odata2.datasource.DenodoODataAuthorizationException;
-import com.denodo.connect.odata2.datasource.DenodoODataConnectException;
+import com.denodo.connect.odata2.exceptions.DenodoODataAuthenticationException;
+import com.denodo.connect.odata2.exceptions.DenodoODataAuthorizationException;
+import com.denodo.connect.odata2.exceptions.DenodoODataConnectException;
 import com.denodo.connect.odata2.exceptions.ODataUnauthorizedException;
 import com.denodo.connect.odata2.util.VQLExpressionVisitor;
 

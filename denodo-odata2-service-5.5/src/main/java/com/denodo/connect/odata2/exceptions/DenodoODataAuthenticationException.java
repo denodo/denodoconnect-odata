@@ -19,17 +19,18 @@
  *
  * =============================================================================
  */
-package com.denodo.connect.odata2.datasource;
+package com.denodo.connect.odata2.exceptions;
 
-public class DenodoODataResourceNotFoundException extends RuntimeException {
+public class DenodoODataAuthenticationException extends RuntimeException {
 
-    private static final long serialVersionUID = 1264654081166637015L;
+    private static final long serialVersionUID = -7962108894437178198L;
 
-    public DenodoODataResourceNotFoundException(final Throwable cause) {
+    public DenodoODataAuthenticationException(final Throwable cause) {
         super(cause);
     }
 
-    public DenodoODataResourceNotFoundException(final String message) {
-        super(message);
+    @Override
+    public String getMessage() {
+        return "The username or password is incorrect";
     }
 }

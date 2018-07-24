@@ -64,7 +64,6 @@ import org.apache.olingo.client.api.domain.ClientValue;
 import org.apache.olingo.client.api.http.HttpClientFactory;
 import org.apache.olingo.client.api.uri.URIBuilder;
 import org.apache.olingo.client.core.ODataClientFactory;
-import org.apache.olingo.client.core.http.DefaultHttpClientFactory;
 import org.apache.olingo.client.core.http.ProxyWrappingHttpClientFactory;
 import org.apache.olingo.commons.api.edm.Edm;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
@@ -127,6 +126,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
     private final static String INPUT_PARAMETER_TOKEN_ENDPOINT_URL = "Token Endpoint URL";
     private final static String INPUT_PARAMETER_CUSTOM_QUERY_OPTIONS = "Custom Query Options";
     private final static String INPUT_PARAMETER_HTTP_HEADERS = "HTTP Headers";
+    private final static String INPUT_PARAMETER_AUTH_METHOD_SERVERS = "Refr. Token Auth. Method";
+    private final static String INPUT_PARAMETER_AUTH_METHOD_SERVERS_BODY = "Include the client credentials in the body of the request";
+    private final static String INPUT_PARAMETER_AUTH_METHOD_SERVERS_BASIC = "Send client credentials using the HTTP Basic authentication scheme";
     
     public final static String PAGINATION_FETCH = "fetch_size";
     public final static String PAGINATION_OFFSET = "offset_size";
@@ -164,32 +166,29 @@ public class ODataWrapper extends AbstractCustomWrapper {
     }
 
     private static final CustomWrapperInputParameter[] INPUT_PARAMETERS = new CustomWrapperInputParameter[] {
-            new CustomWrapperInputParameter(INPUT_PARAMETER_ENDPOINT, "URL Endpoint for the OData Service",
-                    true, CustomWrapperInputParameterTypeFactory.stringType()),
-            new CustomWrapperInputParameter(INPUT_PARAMETER_ENTITY_COLLECTION, "Entity to be used in the base view",
-                    true, CustomWrapperInputParameterTypeFactory.stringType()),
-            new CustomWrapperInputParameter(INPUT_PARAMETER_FORMAT, "Format of the service: XML-Atom or JSON",
-                    true, CustomWrapperInputParameterTypeFactory.enumStringType(new String[] {
-                            INPUT_PARAMETER_FORMAT_JSON, INPUT_PARAMETER_FORMAT_ATOM })),
-            new CustomWrapperInputParameter(
-                    INPUT_PARAMETER_CUSTOM_QUERY_OPTIONS,
-                    "Data service-specific information to be placed in the data service URI",                                    
-                    false, CustomWrapperInputParameterTypeFactory.stringType()),
+
+            new CustomWrapperInputParameter(INPUT_PARAMETER_ENDPOINT, "URL Endpoint for the OData Service", true,
+                    CustomWrapperInputParameterTypeFactory.stringType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_ENTITY_COLLECTION, "Entity to be used in the base view", true,
+                    CustomWrapperInputParameterTypeFactory.stringType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_FORMAT, "Format of the service: XML-Atom or JSON", true,
+                    CustomWrapperInputParameterTypeFactory
+                            .enumStringType(new String[] { INPUT_PARAMETER_FORMAT_JSON, INPUT_PARAMETER_FORMAT_ATOM })),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_CUSTOM_QUERY_OPTIONS,
+                    "Data service-specific information to be placed in the data service URI", false,
+                    CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_EXPAND,
-                    "If checked, related entities will be mapped as part of the output schema",
-                    false, CustomWrapperInputParameterTypeFactory.booleanType(false)), 
-            new CustomWrapperInputParameter(
-                    INPUT_PARAMETER_LIMIT,
+                    "If checked, related entities will be mapped as part of the output schema", false,
+                    CustomWrapperInputParameterTypeFactory.booleanType(false)),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_LIMIT,
                     "If checked, creates two optional input parameteres to specify fetch and offset sizes to enable pagination in the source",
                     false, CustomWrapperInputParameterTypeFactory.booleanType(false)),
-            new CustomWrapperInputParameter(
-                    INPUT_PARAMETER_LOAD_MEDIA_LINK_RESOURCES,
-                    "If checked, Edm.Stream properties and Stream entities will be loaded as BLOB objects",
-                    false, CustomWrapperInputParameterTypeFactory.booleanType(false)),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_LOAD_MEDIA_LINK_RESOURCES,
+                    "If checked, Edm.Stream properties and Stream entities will be loaded as BLOB objects", false,
+                    CustomWrapperInputParameterTypeFactory.booleanType(false)),
             new CustomWrapperInputParameter(INPUT_PARAMETER_USER, "OData Service User for Basic Authentication", false,
                     CustomWrapperInputParameterTypeFactory.stringType()),
-            new CustomWrapperInputParameter(INPUT_PARAMETER_PASSWORD,
-                    "OData Service Password for Basic Authentication", false,
+            new CustomWrapperInputParameter(INPUT_PARAMETER_PASSWORD, "OData Service Password for Basic Authentication", false,
                     CustomWrapperInputParameterTypeFactory.passwordType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_TIMEOUT, "Timeout for the service(milliseconds)", false,
                     CustomWrapperInputParameterTypeFactory.integerType()),
@@ -201,25 +200,29 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_PROXY_PASSWORD, "Proxy Password", false,
                     CustomWrapperInputParameterTypeFactory.passwordType()),
-            new CustomWrapperInputParameter(INPUT_PARAMETER_NTLM, "If checked, NTLM authentication will be used",
-                    false, CustomWrapperInputParameterTypeFactory.booleanType(false)),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_NTLM, "If checked, NTLM authentication will be used", false,
+                    CustomWrapperInputParameterTypeFactory.booleanType(false)),
             new CustomWrapperInputParameter(INPUT_PARAMETER_NTLM_DOMAIN, "Domain used for NTLM authentication", false,
                     CustomWrapperInputParameterTypeFactory.stringType()),
-            new CustomWrapperInputParameter(INPUT_PARAMETER_OAUTH2, "If checked, OAUTH2 authentication will be used",
-                     false, CustomWrapperInputParameterTypeFactory.booleanType(false)),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_OAUTH2, "If checked, OAUTH2 authentication will be used", false,
+                    CustomWrapperInputParameterTypeFactory.booleanType(false)),
             new CustomWrapperInputParameter(INPUT_PARAMETER_ACCESS_TOKEN, "Access token for OAuth2 authentication", false,
                     CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_REFRESH_TOKEN, "Refresh token for OAuth2 authentication", false,
                     CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_CLIENT_ID, "Client Id for OAuth2 authentication", false,
-                            CustomWrapperInputParameterTypeFactory.stringType()),
+                    CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_CLIENT_SECRET, "Client Secret for OAuth2 authentication", false,
-                                    CustomWrapperInputParameterTypeFactory.stringType()),
+                    CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_TOKEN_ENDPOINT_URL, "Token endpoint URL for OAuth2 authentication", false,
                     CustomWrapperInputParameterTypeFactory.stringType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_AUTH_METHOD_SERVERS,
+                    "Authentication method used by the authorization servers while refreshing the access token", false,
+                    CustomWrapperInputParameterTypeFactory.enumStringType(
+                            new String[] { INPUT_PARAMETER_AUTH_METHOD_SERVERS_BODY, INPUT_PARAMETER_AUTH_METHOD_SERVERS_BASIC })),
             new CustomWrapperInputParameter(INPUT_PARAMETER_HTTP_HEADERS, "Custom headers to be used in the underlying HTTP client", false,
                     CustomWrapperInputParameterTypeFactory.stringType())
-    };
+        };
 
     @Override
     public CustomWrapperInputParameter[] getInputParameters() {
@@ -1258,23 +1261,27 @@ public class ODataWrapper extends AbstractCustomWrapper {
             }
 
         }else if (((Boolean) getInputParameterValue(INPUT_PARAMETER_OAUTH2).getValue()).booleanValue()) {
+            
             //OAUTH2
             if ((getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN) == null)
-                   || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN).getValue())||
-                    (getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN) == null)
+                    || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN).getValue())
+                    || (getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN) == null)
                     || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN).getValue())
-                    ||
-                    (getInputParameterValue(INPUT_PARAMETER_TOKEN_ENDPOINT_URL) == null)
-                    ||  StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_TOKEN_ENDPOINT_URL).getValue())
-                    ||
-                    (getInputParameterValue(INPUT_PARAMETER_CLIENT_ID) == null)
+                    || (getInputParameterValue(INPUT_PARAMETER_TOKEN_ENDPOINT_URL) == null)
+                    || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_TOKEN_ENDPOINT_URL).getValue())
+                    || (getInputParameterValue(INPUT_PARAMETER_CLIENT_ID) == null)
                     || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_CLIENT_ID).getValue())
-                    ||
-                    (getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET) == null)
-                    || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET).getValue())) {
-                logger.error("It is necessary the access token, the refresh token, client id, client secret and the Token endpoint URL for Oauth2 authentication.");
-                throw  new CustomWrapperException("It is necessary the access token, the refresh token, client id, client secret and the Token endpoint URL for Oauth2 authentication.");
+                    || (getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET) == null)
+                    || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET).getValue())
+                    || (getInputParameterValue(INPUT_PARAMETER_AUTH_METHOD_SERVERS) == null)
+                    || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_AUTH_METHOD_SERVERS).getValue())) {
+                
+                logger.error("It is necessary the access token, the refresh token, client id, client secret, the token endpoint "
+                        + "URL and the authentication method used by the authorization servers for Oauth2 authentication.");
+                throw  new CustomWrapperException("It is necessary the access token, the refresh token, client id, client secret, the token endpoint "
+                        + "URL and the authentication method used by the authorization servers for Oauth2 authentication.");
             }
+            
             String accessToken = (String) getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN).getValue();
             if(accessToken!= null && !accessToken.isEmpty()){
                 String oldAccessToken= oDataAuthenticationCache.getOldAccessToken();
@@ -1303,12 +1310,18 @@ public class ODataWrapper extends AbstractCustomWrapper {
             if(logger.isDebugEnabled()){
                 logger.debug("Value of Access Token in the client of odata: "+ accessToken);
             }
+            
+            boolean credentialsInBody = INPUT_PARAMETER_AUTH_METHOD_SERVERS_BODY
+                    .equals((String) getInputParameterValue(INPUT_PARAMETER_AUTH_METHOD_SERVERS).getValue());
+            
             client.getConfiguration().setHttpClientFactory(
                     new OdataOAuth2HttpClientFactory((String) getInputParameterValue(INPUT_PARAMETER_TOKEN_ENDPOINT_URL).getValue(),
                             accessToken, (String) getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN).getValue(),
                             (String) getInputParameterValue(INPUT_PARAMETER_CLIENT_ID).getValue(),
-                            (String) getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET).getValue()));
+                            (String) getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET).getValue(), credentialsInBody));
+            
             logger.info("Using Oauth2 authentication.");
+            
         } else{
 
             String user=null;

@@ -1,4 +1,5 @@
 package com.denodo.connect.odata.wrapper.http;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -6,6 +7,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpException;
 import org.apache.http.HttpHeaders;
@@ -38,7 +40,8 @@ import org.apache.olingo.commons.api.http.HttpMethod;
 import com.denodo.connect.odata.wrapper.http.cache.ODataAuthenticationCache;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-public class OdataOAuth2HttpClientFactory     extends AbstractHttpClientFactory implements WrappingHttpClientFactory {
+
+public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory implements WrappingHttpClientFactory {
 
     final String REASON_PHRASE = "The SAML2 token is not valid because its validity period has ended.";
     final HttpClientConnectionManagerFactory wrapped;    
@@ -49,12 +52,12 @@ public class OdataOAuth2HttpClientFactory     extends AbstractHttpClientFactory 
     private ObjectNode token;
     private String clientId; 
     private String clientSecret;
+    private boolean credentialsInBody;
 
     private static final Logger logger = Logger.getLogger(OdataOAuth2HttpClientFactory.class);
 
-    
-    public OdataOAuth2HttpClientFactory(final String tokenEndpointURL,
-            final String accessToken, final String refreshToken, String clientId, String clientSecret, HttpClientConnectionManagerFactory httpClientFactory) throws URISyntaxException {
+    public OdataOAuth2HttpClientFactory(final String tokenEndpointURL, final String accessToken, final String refreshToken, String clientId,
+            String clientSecret, HttpClientConnectionManagerFactory httpClientFactory, final boolean credentialsInBody) throws URISyntaxException {
        
         this.oauth2TokenServiceURI = URI.create(tokenEndpointURL);
         this.refreshToken = refreshToken;
@@ -62,18 +65,21 @@ public class OdataOAuth2HttpClientFactory     extends AbstractHttpClientFactory 
         this.wrapped = httpClientFactory;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
+        this.credentialsInBody = credentialsInBody;
 
     }
 
-    public OdataOAuth2HttpClientFactory(final String tokenEndpointURL,
-            final String accessToken, final String refreshToken, String clientId, String clientSecret) throws URISyntaxException {
+    public OdataOAuth2HttpClientFactory(final String tokenEndpointURL, final String accessToken, final String refreshToken, String clientId,
+            String clientSecret, final boolean credentialsInBody) throws URISyntaxException {
+        
         this.oauth2TokenServiceURI = URI.create(tokenEndpointURL);
         this.refreshToken = refreshToken;
         this.accessToken = accessToken;
         this.wrapped = new HttpClientConnectionManagerFactory();
         this.clientId = clientId;
         this.clientSecret = clientSecret;
-
+        this.credentialsInBody = credentialsInBody;
+        
     }
 
 
@@ -90,32 +96,45 @@ public class OdataOAuth2HttpClientFactory     extends AbstractHttpClientFactory 
 
 
     private void fetchAccessToken(final DefaultHttpClient httpClient, final List<BasicNameValuePair> data) {
+        
         this.token = null;
         InputStream tokenResponse = null;
         final HttpPost post = new HttpPost(this.oauth2TokenServiceURI);
         try {
+            
+            if (!this.credentialsInBody) {
+                
+                // When the client credentials are send using the HTTP Basic authentication scheme, in addition to the grant type and the refresh token, 
+                // an authorization header with the client id and the client secret, as user and password, must be included
+                String userPassword = this.clientId + ":" + this.clientSecret;
+                Base64 base = new Base64();
+                String encoded = base.encodeAsString(new String(userPassword).getBytes());
+                encoded = encoded.replaceAll("\r\n?", "");
+                post.setHeader(HttpHeaders.AUTHORIZATION, "Basic " + encoded);
+                
+            }
 
-          post.setEntity(new UrlEncodedFormEntity(data, "UTF-8"));
-          final HttpResponse response = httpClient.execute(post);
-          tokenResponse = response.getEntity().getContent();
-          this.token = (ObjectNode) new ObjectMapper().readTree(tokenResponse);
-          ODataAuthenticationCache.getInstance().saveOldAccessToken(this.accessToken);
-          setAccessToken(this.token.get("access_token").asText());
-          if(logger.isDebugEnabled()){
-              logger.debug("Access token was obtained with refresh token");
-          }
-          ODataAuthenticationCache.getInstance().saveAccessToken(this.accessToken);
-          if(logger.isDebugEnabled()){
-              logger.debug("Access token saved in the cache");
-          }
-          setRefreshToken(this.token.get("refresh_token").asText());
-         
+            post.setEntity(new UrlEncodedFormEntity(data, "UTF-8"));
+            final HttpResponse response = httpClient.execute(post);
+            tokenResponse = response.getEntity().getContent();
+            this.token = (ObjectNode) new ObjectMapper().readTree(tokenResponse);
+            ODataAuthenticationCache.getInstance().saveOldAccessToken(this.accessToken);
+            setAccessToken(this.token.get("access_token").asText());
+            if (logger.isDebugEnabled()) {
+                logger.debug("Access token was obtained with refresh token");
+            }
+            ODataAuthenticationCache.getInstance().saveAccessToken(this.accessToken);
+            if (logger.isDebugEnabled()) {
+                logger.debug("Access token saved in the cache");
+            }
+            setRefreshToken(this.token.get("refresh_token").asText());
+
         } catch (Exception e) {
-          throw new OAuth2Exception(e);
+            throw new OAuth2Exception(e);
         } finally {
-          post.releaseConnection();
-          IOUtils.closeQuietly(tokenResponse);
-          
+            post.releaseConnection();
+            IOUtils.closeQuietly(tokenResponse);
+
         }
       }
     
@@ -138,15 +157,23 @@ public class OdataOAuth2HttpClientFactory     extends AbstractHttpClientFactory 
     }
 
     protected void refreshToken(final DefaultHttpClient client) throws OAuth2Exception {
-      final List<BasicNameValuePair> data = new ArrayList<BasicNameValuePair>();
-      data.add(new BasicNameValuePair("grant_type", "refresh_token"));
-      data.add(new BasicNameValuePair("refresh_token", this.refreshToken));
-      data.add(new BasicNameValuePair("client_id", this.clientId));
-      data.add(new BasicNameValuePair("client_secret", this.clientSecret));
-      fetchAccessToken(this.wrapped.create(null, null), data);
-      if (this.token == null) {
-        throw new OAuth2Exception("No OAuth2 refresh token");
-      }
+
+        final List<BasicNameValuePair> data = new ArrayList<BasicNameValuePair>();
+        data.add(new BasicNameValuePair("grant_type", "refresh_token"));
+        data.add(new BasicNameValuePair("refresh_token", this.refreshToken));
+
+        if (this.credentialsInBody) {
+            // When the client credentials are included in the body of the request, 
+            // in addition to the grant type and the refresh token, the client id 
+            // must be included on the request
+            data.add(new BasicNameValuePair("client_id", this.clientId));
+        }
+
+        fetchAccessToken(this.wrapped.create(null, null), data);
+        
+        if (this.token == null) {
+            throw new OAuth2Exception("No OAuth2 refresh token");
+        }
     }
 
 
@@ -189,7 +216,7 @@ public class OdataOAuth2HttpClientFactory     extends AbstractHttpClientFactory 
         public void process(final HttpResponse response, final HttpContext context) throws HttpException, IOException {
           if (response.getStatusLine().getStatusCode() == HttpStatus.SC_UNAUTHORIZED 
                   || (response.getStatusLine().getStatusCode() == HttpStatus.SC_INTERNAL_SERVER_ERROR 
-                  && response.getStatusLine().getReasonPhrase().contains(OdataOAuth2HttpClientFactory.this.REASON_PHRASE))) {
+                  /*&& response.getStatusLine().getReasonPhrase().contains(OdataOAuth2HttpClientFactory.this.REASON_PHRASE)*/)) {
             refreshToken(httpClient);
             accessToken(httpClient);
 

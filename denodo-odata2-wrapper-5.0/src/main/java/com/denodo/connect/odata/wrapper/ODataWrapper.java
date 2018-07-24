@@ -21,6 +21,10 @@
  */
 package com.denodo.connect.odata.wrapper;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,6 +37,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpHeaders;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
 import org.apache.log4j.Logger;
 import org.core4j.Enumerable;
 import org.odata4j.consumer.ODataClientRequest;
@@ -58,7 +69,9 @@ import org.odata4j.edm.EdmNavigationProperty;
 import org.odata4j.edm.EdmProperty;
 import org.odata4j.edm.EdmSchema;
 import org.odata4j.format.FormatType;
+import org.odata4j.repack.org.apache.commons.codec.binary.Base64;
 
+import com.denodo.connect.odata.wrapper.http.cache.ODataAuthenticationCache;
 import com.denodo.connect.odata.wrapper.util.DataTableColumnType;
 import com.denodo.connect.odata.wrapper.util.ODataEntityUtil;
 import com.denodo.connect.odata.wrapper.util.ODataQueryUtils;
@@ -73,6 +86,8 @@ import com.denodo.vdb.engine.customwrapper.condition.CustomWrapperCondition;
 import com.denodo.vdb.engine.customwrapper.condition.CustomWrapperConditionHolder;
 import com.denodo.vdb.engine.customwrapper.expression.CustomWrapperFieldExpression;
 import com.denodo.vdb.engine.customwrapper.input.type.CustomWrapperInputParameterTypeFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class ODataWrapper extends AbstractCustomWrapper {
 
@@ -95,7 +110,16 @@ public class ODataWrapper extends AbstractCustomWrapper {
     private final static String INPUT_PARAMETER_PROXY_PASSWORD = "Proxy Password";
     private final static String INPUT_PARAMETER_NTLM_DOMAIN = "NTLM Domain";
     private final static String INPUT_PARAMETER_TIMEOUT = "Timeout";
+    private final static String INPUT_PARAMETER_OAUTH2 = "Use OAuth2";
+    private final static String INPUT_PARAMETER_ACCESS_TOKEN = "Access Token";
+    private final static String INPUT_PARAMETER_REFRESH_TOKEN = "Refresh Token";
+    private final static String INPUT_PARAMETER_CLIENT_ID = "Client Id";
+    private final static String INPUT_PARAMETER_CLIENT_SECRET = "Client Secret";
+    private final static String INPUT_PARAMETER_TOKEN_ENDPOINT_URL = "Token Endpoint URL";
     private final static String INPUT_PARAMETER_HTTP_HEADERS = "HTTP Headers";
+    private final static String INPUT_PARAMETER_AUTH_METHOD_SERVERS = "Refr. Token Auth. Method";
+    private final static String INPUT_PARAMETER_AUTH_METHOD_SERVERS_BODY = "Include the client credentials in the body of the request";
+    private final static String INPUT_PARAMETER_AUTH_METHOD_SERVERS_BASIC = "Send client credentials using the HTTP Basic authentication scheme";
     
     public final static String PAGINATION_FETCH = "fetch_size";
     public final static String PAGINATION_OFFSET = "offset_size";
@@ -108,6 +132,11 @@ public class ODataWrapper extends AbstractCustomWrapper {
     public final static String NTLM_PASS = "ntlm.pass";
     public final static String NTLM_DOMAIN = "ntlm.domain";
     public final static String TIMEOUT= "http.timeout";
+    
+    private static final String GRANT_TYPE = "grant_type";
+    private static final String REFRESH_TOKEN = "refresh_token";
+    private static final String CLIENT_ID = "client_id";
+    private static final String ACCESS_TOKEN = "access_token";
     
     /*
      * A static variable keeps its value between executions but it is shared between all views
@@ -135,36 +164,36 @@ public class ODataWrapper extends AbstractCustomWrapper {
     private static Map<String, String> entityNameMetadataMap = new ConcurrentHashMap<String, String>();
 
     private static final Logger logger = Logger.getLogger(ODataWrapper.class);
+    
+    ODataAuthenticationCache oDataAuthenticationCache= ODataAuthenticationCache.getInstance();
 
     public ODataWrapper() {
         super();
     }
 
     private static final CustomWrapperInputParameter[] INPUT_PARAMETERS = new CustomWrapperInputParameter[] {
-            new CustomWrapperInputParameter(INPUT_PARAMETER_ENDPOINT, "URL Endpoint for the OData Service",
-                    true, CustomWrapperInputParameterTypeFactory.stringType()),
-            new CustomWrapperInputParameter(INPUT_PARAMETER_ENTITY_COLLECTION, "Entity to be used in the base view",
-                    true, CustomWrapperInputParameterTypeFactory.stringType()),
-            new CustomWrapperInputParameter(INPUT_PARAMETER_FORMAT, "Format of the service: XML-Atom or JSON",
-                    true, CustomWrapperInputParameterTypeFactory.enumStringType(new String[] {
-                            INPUT_PARAMETER_FORMAT_JSON, INPUT_PARAMETER_FORMAT_ATOM })),
-            new CustomWrapperInputParameter(INPUT_PARAMETER_VERSION, "Activate Compatibility (may not work)",
-                    false, CustomWrapperInputParameterTypeFactory.enumStringType(new String[] {
-                            INPUT_PARAMETER_VERSION_1, INPUT_PARAMETER_VERSION_2 })),
+            
+            new CustomWrapperInputParameter(INPUT_PARAMETER_ENDPOINT, "URL Endpoint for the OData Service", true,
+                    CustomWrapperInputParameterTypeFactory.stringType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_ENTITY_COLLECTION, "Entity to be used in the base view", true,
+                    CustomWrapperInputParameterTypeFactory.stringType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_FORMAT, "Format of the service: XML-Atom or JSON", true,
+                    CustomWrapperInputParameterTypeFactory
+                            .enumStringType(new String[] { INPUT_PARAMETER_FORMAT_JSON, INPUT_PARAMETER_FORMAT_ATOM })),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_VERSION, "Activate Compatibility (may not work)", false,
+                    CustomWrapperInputParameterTypeFactory
+                            .enumStringType(new String[] { INPUT_PARAMETER_VERSION_1, INPUT_PARAMETER_VERSION_2 })),
             new CustomWrapperInputParameter(INPUT_PARAMETER_EXPAND,
-                    "If checked, related entities will be mapped as part of the output schema",
-                    false, CustomWrapperInputParameterTypeFactory.booleanType(false)),
-            new CustomWrapperInputParameter(INPUT_PARAMETER_NTLM,
-                    "If checked, NTLM authentication will be used",
-                    false, CustomWrapperInputParameterTypeFactory.booleanType(false)),
-            new CustomWrapperInputParameter(
-                    INPUT_PARAMETER_LIMIT,
+                    "If checked, related entities will be mapped as part of the output schema", false,
+                    CustomWrapperInputParameterTypeFactory.booleanType(false)),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_NTLM, "If checked, NTLM authentication will be used", false,
+                    CustomWrapperInputParameterTypeFactory.booleanType(false)),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_LIMIT,
                     "If checked, creates two optional input parameteres to specify fetch and offset sizes to eanble pagination in the source",
                     false, CustomWrapperInputParameterTypeFactory.booleanType(false)),
             new CustomWrapperInputParameter(INPUT_PARAMETER_USER, "OData Service User for Basic Authentication", false,
                     CustomWrapperInputParameterTypeFactory.stringType()),
-            new CustomWrapperInputParameter(INPUT_PARAMETER_PASSWORD,
-                    "OData Service Password for Basic Authentication", false,
+            new CustomWrapperInputParameter(INPUT_PARAMETER_PASSWORD, "OData Service Password for Basic Authentication", false,
                     CustomWrapperInputParameterTypeFactory.passwordType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_PROXY_HOST, "HTTP Proxy Host", false,
                     CustomWrapperInputParameterTypeFactory.stringType()),
@@ -178,6 +207,22 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_TIMEOUT, "Timeout for the service(milliseconds)", false,
                     CustomWrapperInputParameterTypeFactory.integerType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_OAUTH2, "If checked, OAUTH2 authentication will be used", false,
+                    CustomWrapperInputParameterTypeFactory.booleanType(false)),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_ACCESS_TOKEN, "Access token for OAuth2 authentication", false,
+                    CustomWrapperInputParameterTypeFactory.stringType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_REFRESH_TOKEN, "Refresh token for OAuth2 authentication", false,
+                    CustomWrapperInputParameterTypeFactory.stringType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_CLIENT_ID, "Client Id for OAuth2 authentication", false,
+                    CustomWrapperInputParameterTypeFactory.stringType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_CLIENT_SECRET, "Client Secret for OAuth2 authentication", false,
+                    CustomWrapperInputParameterTypeFactory.stringType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_TOKEN_ENDPOINT_URL, "Token endpoint URL for OAuth2 authentication", false,
+                    CustomWrapperInputParameterTypeFactory.stringType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_AUTH_METHOD_SERVERS,
+                    "Authentication method used by the authorization servers while refreshing the access token", false,
+                    CustomWrapperInputParameterTypeFactory.enumStringType(
+                            new String[] { INPUT_PARAMETER_AUTH_METHOD_SERVERS_BODY, INPUT_PARAMETER_AUTH_METHOD_SERVERS_BASIC })),
             new CustomWrapperInputParameter(INPUT_PARAMETER_HTTP_HEADERS, "Custom headers to be used in the underlying HTTP client", false,
                     CustomWrapperInputParameterTypeFactory.stringType())
     };
@@ -197,8 +242,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
         configuration.setAllowedOperators(new String[] {
                 CustomWrapperCondition.OPERATOR_EQ, CustomWrapperCondition.OPERATOR_NE,
                 CustomWrapperCondition.OPERATOR_GT, CustomWrapperCondition.OPERATOR_GE,
-                CustomWrapperCondition.OPERATOR_LT, CustomWrapperCondition.OPERATOR_LE
-                , CustomWrapperCondition.OPERATOR_ISCONTAINED
+                CustomWrapperCondition.OPERATOR_LT, CustomWrapperCondition.OPERATOR_LE, 
+                CustomWrapperCondition.OPERATOR_ISCONTAINED
         });
 
         return configuration;
@@ -272,12 +317,12 @@ public class ODataWrapper extends AbstractCustomWrapper {
     }
 
     @Override
-    public void run(final CustomWrapperConditionHolder condition,
-            final List<CustomWrapperFieldExpression> projectedFields, final CustomWrapperResult result,
-            final Map<String, String> inputValues) throws CustomWrapperException {
+    public void run(final CustomWrapperConditionHolder condition, final List<CustomWrapperFieldExpression> projectedFields,
+            final CustomWrapperResult result, final Map<String, String> inputValues) throws CustomWrapperException {
+        
         try {
-            final String entityCollection = (String) getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION)
-                    .getValue();
+            
+            final String entityCollection = (String) getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION).getValue();
              
             final ODataConsumer consumer = getConsumer();
             
@@ -322,11 +367,11 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 }
             }
 
-            final List<OEntity> response = getEntities(entityCollection, rels, consumer, condition, projectedFields,
-                    inputValues);
             if(logger.isDebugEnabled()){
                 logger.debug("ProjectedFields:  "+ projectedFields.toString());
             }
+            
+            final List<OEntity> response = getEntities(entityCollection, rels, consumer, condition, projectedFields, inputValues);
             for (final OEntity item : response) {
                 // Build the output object
 
@@ -386,11 +431,10 @@ public class ODataWrapper extends AbstractCustomWrapper {
     }
 
     @Override
-    public int insert(final Map<CustomWrapperFieldExpression, Object> insertValues,
-            final Map<String, String> inputValues)
+    public int insert(final Map<CustomWrapperFieldExpression, Object> insertValues, final Map<String, String> inputValues)
             throws CustomWrapperException {
+        
         final String entityCollection = (String) getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION).getValue();
-
         logger.info("Inserting entity (href): " + entityCollection);
 
         final ODataConsumer consumer = getConsumer();
@@ -403,7 +447,6 @@ public class ODataWrapper extends AbstractCustomWrapper {
             entityNameMetadata = addEntityNameMetadata(consumer);
         }
         final String collectionMetadataName = entityNameMetadata != null ? entityNameMetadata : entityCollection; 
-        
         logger.info("Inserting entity (metadata document): " + collectionMetadataName);
         
         final OCreateRequest<OEntity> request = consumer.createEntity(collectionMetadataName);
@@ -456,16 +499,12 @@ public class ODataWrapper extends AbstractCustomWrapper {
             throws CustomWrapperException {
         try {
             int updated = 0;
-            final String entityCollection = (String) getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION)
-                    .getValue();
-
+            final String entityCollection = (String) getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION).getValue();
             logger.info("Updating entity: " + entityCollection);
 
             if (logger.isDebugEnabled()) {
                 ODataConsumer.dump.all(true);
             }
-
-            final Map<CustomWrapperFieldExpression, Object> conditionsMap = conditions.getConditionMap(true);
 
             final List<OEntity> response = getEntities(entityCollection, new ArrayList<String>(), null, conditions,
                     new ArrayList<CustomWrapperFieldExpression>(), inputValues);
@@ -524,8 +563,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
         try {
             int deleted = 0;
-            final String entityCollection = (String) getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION)
-                    .getValue();
+            final String entityCollection = (String) getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION).getValue();
 
             logger.info("Deleting entity: " + entityCollection);
 
@@ -558,17 +596,19 @@ public class ODataWrapper extends AbstractCustomWrapper {
         }
     }
 
-    private List<OEntity> getEntities(final String entityCollection, final List<String> rels,
-            final ODataConsumer consumer,
+    private List<OEntity> getEntities(final String entityCollection, final List<String> rels, final ODataConsumer consumer,
             final CustomWrapperConditionHolder condition, final List<CustomWrapperFieldExpression> projectedFields,
             final Map<String, String> inputValues) throws CustomWrapperException {
+        
         ODataConsumer consumerLocal;
         if (consumer == null) {
             consumerLocal = getConsumer();
         } else {
             consumerLocal = consumer;
         }
+        
         final OQueryRequest<OEntity> request = consumerLocal.getEntities(entityCollection);
+        
         String odataQuery = consumerLocal.getServiceRootUri() + entityCollection + "?$select=";
 
         // Delegate projection
@@ -661,10 +701,10 @@ public class ODataWrapper extends AbstractCustomWrapper {
     }
 
     private ODataConsumer getConsumer() throws CustomWrapperException {
-
-        String uri = (String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT)
-                        .getValue();
+        
+        String uri = (String) getInputParameterValue(INPUT_PARAMETER_ENDPOINT).getValue();
         logger.info("URI: " + uri);
+        
         final Builder builder = ODataCxfConsumer.newBuilder(uri);
         // Properties of the system are modified to pass the proxy properties and NTLM authentication 
         // it is made in this way, because of how is implemented the class OdataCxfClient, that belongs to the library
@@ -709,6 +749,66 @@ public class ODataWrapper extends AbstractCustomWrapper {
             if (checkIfAddToSystemProperties(props, NTLM_DOMAIN, domain)) {
                 props.setProperty(NTLM_DOMAIN, domain);
             }
+        } else if (((Boolean) getInputParameterValue(INPUT_PARAMETER_OAUTH2).getValue()).booleanValue()) {
+            
+            // OAUTH2
+            if ((getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN) == null)
+                    || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN).getValue())
+                    || (getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN) == null)
+                    || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN).getValue())
+                    || (getInputParameterValue(INPUT_PARAMETER_TOKEN_ENDPOINT_URL) == null)
+                    || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_TOKEN_ENDPOINT_URL).getValue())
+                    || (getInputParameterValue(INPUT_PARAMETER_CLIENT_ID) == null)
+                    || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_CLIENT_ID).getValue())
+                    || (getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET) == null)
+                    || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET).getValue())) {
+                logger.error("It is necessary the access token, the refresh token, client id, client secret and the Token endpoint URL for Oauth2 authentication.");
+                throw new CustomWrapperException(
+                        "It is necessary the access token, the refresh token, client id, client secret and the Token endpoint URL for Oauth2 authentication.");
+            }
+            
+            String accessToken = (String) getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN).getValue();
+            if (accessToken != null && !accessToken.isEmpty()) {
+                String oldAccessToken = oDataAuthenticationCache.getOldAccessToken();
+                if (oldAccessToken != null && !oldAccessToken.isEmpty()) {
+                    if (oldAccessToken != accessToken) {
+                        // Check if the paramater Acces_token were updated
+                        oDataAuthenticationCache.saveAccessToken("");
+                        oDataAuthenticationCache.saveOldAccessToken("");
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("The authentication cache is deleted because the Access Token have been updated");
+                        }
+                    }
+                }
+            }
+            
+            if (this.oDataAuthenticationCache.getAccessToken() == null || this.oDataAuthenticationCache.getAccessToken().isEmpty()) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Access token used from parameters");
+                }
+            } else {
+                accessToken = this.oDataAuthenticationCache.getAccessToken();
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Access token used, it was obtained with refresh token");
+                }
+            }
+            
+            if (logger.isDebugEnabled()) {
+                logger.debug("Value of Access Token in the client of odata: " + accessToken);
+            }
+            
+            builder.setClientBehaviors(new OClientBehavior() {
+                public ODataClientRequest transform(final ODataClientRequest request) {
+                    try {
+                        return request.header(HttpHeaders.AUTHORIZATION, "Bearer " + getAccessToken());
+                    } catch (CustomWrapperException e) {
+                        logger.error(e);
+                        return null;
+                    }
+                }
+            });
+            
+            logger.info("Using OAuth2 authentication");
         }
         
         if ((getInputParameterValue(INPUT_PARAMETER_PROXY_HOST) != null)
@@ -740,15 +840,15 @@ public class ODataWrapper extends AbstractCustomWrapper {
             if (checkIfAddToSystemProperties(props, HTTP_PROXY_PORT, proxyPort)) {
                 props.setProperty(HTTP_PROXY_PORT, proxyPort);
             }
-
+        
         } else {
             props.remove(HTTP_PROXY_HOST);
             props.remove(HTTP_PROXY_PORT);
         }
         if (getInputParameterValue(INPUT_PARAMETER_TIMEOUT) != null) {
-        	if (checkIfAddToSystemProperties(props, TIMEOUT, getInputParameterValue(INPUT_PARAMETER_TIMEOUT).getValue().toString())) {
-        	    props.setProperty(TIMEOUT, getInputParameterValue(INPUT_PARAMETER_TIMEOUT).getValue().toString());
-        	}
+            if (checkIfAddToSystemProperties(props, TIMEOUT, getInputParameterValue(INPUT_PARAMETER_TIMEOUT).getValue().toString())) {
+                props.setProperty(TIMEOUT, getInputParameterValue(INPUT_PARAMETER_TIMEOUT).getValue().toString());
+            }
         }
         
         System.setProperties(props);
@@ -759,7 +859,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                         return request.header("MaxDataServiceVersion", ODataVersion.V2.asString);
                     }
                 });
-
+        
             } else if (getInputParameterValue(INPUT_PARAMETER_VERSION).getValue().equals(INPUT_PARAMETER_VERSION_1)) {
                 builder.setClientBehaviors(new OClientBehavior() {
                     public ODataClientRequest transform(final ODataClientRequest request) {
@@ -781,7 +881,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
             // this allows HTTP Basic Authentication
             builder.setClientBehaviors(OClientBehaviors.basicAuth(user, password));
         }
-
+        
         final String format = (String) getInputParameterValue(INPUT_PARAMETER_FORMAT).getValue();
         if ((format != null) && !format.isEmpty() && INPUT_PARAMETER_FORMAT_JSON.equals(format)) {
             builder.setFormatType(FormatType.JSON);
@@ -790,14 +890,14 @@ public class ODataWrapper extends AbstractCustomWrapper {
             builder.setFormatType(FormatType.ATOM);
             logger.info("FORMAT: " + FormatType.ATOM);
         }
-
+        
         if ((getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS) != null)
                 && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS).getValue())) {
             
             final Map<String, String> headers = getHttpHeaders((String) getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS).getValue());
             
             if (headers != null) {
-
+        
                 builder.setClientBehaviors(new OClientBehavior() {
                     
                     @Override
@@ -816,12 +916,10 @@ public class ODataWrapper extends AbstractCustomWrapper {
         
         return builder.build();
     }
-
     
-    private String addEntityNameMetadata(final ODataConsumer consumer) {
-        
+    private String addEntityNameMetadata(ODataConsumer consumer) throws CustomWrapperException {
+
         final String collectionName = (String) getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION).getValue();
-        
         Iterator<EntitySetInfo> it = consumer.getEntitySets().iterator();
         while (it.hasNext()) {
             EntitySetInfo element = it.next();
@@ -839,7 +937,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
     // variable entityNameMetadataMap in order to avoid an extra http request in every 
     // execution of a view. The href value used to retrieve a collection can be different
     // from this name.
-    private static  Map<String, EdmEntitySet> getEntitySetByName(final ODataConsumer consumer) {
+    private static Map<String, EdmEntitySet> getEntitySetByName(final ODataConsumer consumer) throws CustomWrapperException {
+        
         final Map<String, EdmEntitySet> entitySets = new HashMap<String, EdmEntitySet>();
         
         for (final EdmSchema schema : consumer.getMetadata().getSchemas()) {
@@ -955,4 +1054,94 @@ public class ODataWrapper extends AbstractCustomWrapper {
         return properties.getProperty(key) == null
                 || (properties.getProperty(key) != null && !properties.getProperty(key).equals(value));
     }
+    
+    private String getAccessToken() throws CustomWrapperException {
+
+        logger.info("Refresh access token");
+        
+        // In order to refresh the access token, an authentication method must be provided to be used by the authorization servers
+        if (getInputParameterValue(INPUT_PARAMETER_AUTH_METHOD_SERVERS) == null) {
+            
+            throw new CustomWrapperException(
+                    "It is necessary to provide a authentication method in order to be used by the authorization servers while refreshing the access token");
+        }
+        
+        final HttpPost post = new HttpPost(URI.create((String) getInputParameterValue(INPUT_PARAMETER_TOKEN_ENDPOINT_URL).getValue()));
+        InputStream tokenResponse = null;
+        
+        try {
+
+            // Parameters
+            final List<BasicNameValuePair> parameters = new ArrayList<BasicNameValuePair>();
+            parameters.add(new BasicNameValuePair(GRANT_TYPE, REFRESH_TOKEN));
+            parameters.add(new BasicNameValuePair(REFRESH_TOKEN, (String) getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN).getValue()));
+
+            final String authMethod = (String) getInputParameterValue(INPUT_PARAMETER_AUTH_METHOD_SERVERS).getValue();
+
+            if (logger.isInfoEnabled()) {
+                logger.info("Authentication method: " + authMethod);
+            }
+            
+            if ((authMethod != null) && !authMethod.isEmpty() && INPUT_PARAMETER_AUTH_METHOD_SERVERS_BODY.equals(authMethod)) {
+            
+                // When the client credentials are included in the body of the request, in addition to the grant type and the refresh token, 
+                // the client id must be included on the request 
+                parameters.add(new BasicNameValuePair(CLIENT_ID, (String) getInputParameterValue(INPUT_PARAMETER_CLIENT_ID).getValue()));
+                
+            } else if ((authMethod != null) && !authMethod.isEmpty() && INPUT_PARAMETER_AUTH_METHOD_SERVERS_BASIC.equals(authMethod)) {
+                
+                // When the client credentials are send using the HTTP Basic authentication scheme, in addition to the grant type and the refresh token, 
+                // an authorization header with the client id and the client secret, as user and password, must be included 
+                String userPassword = (String) getInputParameterValue(INPUT_PARAMETER_CLIENT_ID).getValue() + ":"
+                        + (String) getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET).getValue();
+                String encoded = Base64.encodeBase64String(userPassword.getBytes());
+                encoded = encoded.replaceAll("\r\n?", "");
+                post.setHeader(HttpHeaders.AUTHORIZATION, "Basic " + encoded);
+                
+            }
+
+            post.setEntity(new UrlEncodedFormEntity(parameters, StandardCharsets.UTF_8.name()));
+            
+            // HTTP client
+            CloseableHttpClient httpClient = HttpClients.createDefault();
+            
+            // Response
+            final HttpResponse response = httpClient.execute(post);
+            tokenResponse = response.getEntity().getContent();
+            
+            // Retrieve token
+            ObjectNode token = (ObjectNode) new ObjectMapper().readTree(tokenResponse);
+            String accessToken = null;
+            if (token.get(ACCESS_TOKEN) != null) {
+                accessToken = token.get(ACCESS_TOKEN).asText();
+                logger.info("New access token obtained");
+            }
+            
+            if (accessToken == null) {
+                throw new CustomWrapperException("No OAuth2 refresh token");
+            }
+            
+            // Update token cache
+            ODataAuthenticationCache.getInstance().saveAccessToken(accessToken);
+            ODataAuthenticationCache.getInstance().saveOldAccessToken(oDataAuthenticationCache.getAccessToken());
+            
+            return accessToken;
+            
+        } catch (Exception e) {
+            
+            logger.error("Error while getting token refresh", e);
+            throw new CustomWrapperException("Error while getting token refresh. Error message: " + e.getMessage());
+            
+        } finally {
+            
+            post.releaseConnection();
+            try {
+                if (tokenResponse != null) {
+                    tokenResponse.close();
+                }
+            } catch (IOException ioe) {
+                // ignore
+            }
+        }
+    }    
 }

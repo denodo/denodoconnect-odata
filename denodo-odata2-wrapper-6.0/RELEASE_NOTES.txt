@@ -1,3 +1,7 @@
+20180801
+========
+#38705 - NTLM authentication not working properly - Changed version of odata4j-denodo
+
 20180529
 ========
 #35770 - Custom header support for OData 2 Wrapper

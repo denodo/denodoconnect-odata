@@ -1046,10 +1046,10 @@ public class ODataWrapper extends AbstractCustomWrapper {
         return map;
     }
     
-    private boolean checkIfAddToSystemProperties(Properties properties, String key, String value) {
+    private static boolean checkIfAddToSystemProperties(Properties properties, String key, String value) {
     	
         // To avoid a potential stack overflow, a property only can be added to the system properties
-        // iff the key is not on the system properties or if the key is on the system properties but its
+        // if the key is not on the system properties or if the key is on the system properties but its
         // value is different
         return properties.getProperty(key) == null
                 || (properties.getProperty(key) != null && !properties.getProperty(key).equals(value));

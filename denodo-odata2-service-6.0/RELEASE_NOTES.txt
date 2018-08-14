@@ -1,13 +1,18 @@
+20180814
+--------
+- Added #37782 - Update all instances of the Spring Framework in order to include fixes for the latest CVEs
+- Fixed #37932 - The service fails while obtaining the PKs for a view if the user only has metadata privileges over it
+- Fixed #38380 - Avoid entities without key properties
+
 20180426
 --------
-
-Fix #36962 - Explain the required privileges for users in the user manual
-Fix #36983 - Clean META-INF resources in distributions
-Fix #37021 - Replace Log4j by SLF4J
-Fix #36960 - User names should be quoted in CONNECT statements
-Fix #37044 - Error accessing the root of the OData 2 Service
-Fix #37067 - Filter queries using decimal and doubles literals are not being properly delegated to VDP
-Add #36877 - Steps to adapt OData 2 Service to Denodo 7
+- Fixed #36962 - Explain the required privileges for users in the user manual
+- Fixed #36983 - Clean META-INF resources in distributions
+- Fixed #37021 - Replace Log4j by SLF4J
+- Fixed #36960 - User names should be quoted in CONNECT statements
+- Fixed #37044 - Error accessing the root of the OData 2 Service
+- Fixed #37067 - Filter queries using decimal and doubles literals are not being properly delegated to VDP
+- Fixed #36877 - Steps to adapt OData 2 Service to Denodo 7
 
 20180312
 ---------------
@@ -21,8 +26,8 @@ Add #36877 - Steps to adapt OData 2 Service to Denodo 7
 
 20170518
 --------
--   Added #32416 - Create scripts to manage the Odata2 service as Windows service.
--   Fixed#32392 - Password issue in OData
+- Added #32416 - Create scripts to manage the Odata2 service as Windows service.
+- Fixed#32392 - Password issue in OData
 20170404
 --------
 - Fixed #28998 - Use Date/Timestamp literals instead of String

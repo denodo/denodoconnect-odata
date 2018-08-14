@@ -1,3 +1,11 @@
+20180814
+--------
+- Added #37783 - Update all instances of the Spring Framework in order to include fixes for the latest CVEs
+- Fixed #37932 - The service fails while obtaining the PKs for a view if the user only has metadata privileges over it
+- Fixed #38381 - Avoid entities without key properties
+- Added #34744 - Add User Agent support to OData 4 Service
+- Added #32299 - OAuth support in OData service
+
 20180410
 --------
 - First version of the Denodo OData 4 Service for Denodo 7.0.

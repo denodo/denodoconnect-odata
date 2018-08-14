@@ -1,8 +1,14 @@
+20180814
+--------
+- Added #37783 - Update all instances of the Spring Framework in order to include fixes for the latest CVEs
+- Fixed #37932 - The service fails while obtaining the PKs for a view if the user only has metadata privileges over it
+- Fixed #38381 - Avoid entities without key properties
+
 20180412
 --------
-Fixed #36961 - User names should be quoted in CONNECT statements
-Fixed #36935 - Explain the required privileges for users in the user manual
-Fix #36977 - Fix logging of exceptions
+- Fixed #36961 - User names should be quoted in CONNECT statements
+- Fixed #36935 - Explain the required privileges for users in the user manual
+- Fixed #36977 - Fix logging of exceptions
 
 20180410
 --------

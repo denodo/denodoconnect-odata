@@ -1,0 +1,6 @@
+The following repository includes a template of a project that allows to create an OData service with read and write capabilities:
+- https://git.denodo.com/afortes/ODataServiceSample
+
+Requeriments:
+- In order to create the service, the following tools and technologies are needed:
+- SQL Server

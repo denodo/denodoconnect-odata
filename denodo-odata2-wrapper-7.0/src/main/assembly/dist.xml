@@ -40,7 +40,18 @@
         <include>RELEASE_NOTES.txt</include>
         <include>MIGRATION_20160909.txt</include>
       </includes>
-    </fileSet>
-    
+    </fileSet>  
   </fileSets>
+  
+  <dependencySets>
+    <dependencySet>
+      <outputDirectory>/lib</outputDirectory>
+      <unpack>false</unpack>
+      <scope>runtime</scope>
+      <excludes>
+        <exclude>com.denodo.connect:*</exclude>
+      </excludes>
+    </dependencySet>
+  </dependencySets>  
+  
 </assembly>

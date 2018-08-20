@@ -41,4 +41,15 @@
     </fileSet>
   </fileSets>
 
+  <dependencySets>
+    <dependencySet>
+      <outputDirectory>/lib</outputDirectory>
+      <unpack>false</unpack>
+      <scope>runtime</scope>
+      <excludes>
+        <exclude>com.denodo.connect:*</exclude>
+      </excludes>
+    </dependencySet>
+  </dependencySets>
+
 </assembly>

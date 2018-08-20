@@ -1,3 +1,8 @@
+20180820
+========
+#29775 - OData 2 wrapper authentication pass-through
+#28433 - OAuth support in OData wrapper
+
 20180801
 ========
 #38705 - NTLM authentication not working properly - Changed version of odata4j-denodo

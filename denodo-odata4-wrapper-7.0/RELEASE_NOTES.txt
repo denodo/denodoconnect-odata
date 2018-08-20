@@ -1,3 +1,8 @@
+20180820
+========
+#38628 - Send client credentials through basic authentication or in the body of the response
+#29886 - OData 4 wrapper authentication pass-through
+
 20180712
 ========
 #38328 - Added support for HTTPS connections

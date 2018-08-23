@@ -770,7 +770,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
             if (accessToken != null && !accessToken.isEmpty()) {
                 final String oldAccessToken = this.oDataAuthenticationCache.getOldAccessToken();
                 if (oldAccessToken != null && !oldAccessToken.isEmpty()) {
-                    if (oldAccessToken != accessToken) {
+                    if (!oldAccessToken.equals(accessToken)) {
                         // Check if the paramater Acces_token were updated
                         this.oDataAuthenticationCache.saveAccessToken("");
                         this.oDataAuthenticationCache.saveOldAccessToken("");

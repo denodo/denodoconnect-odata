@@ -61,7 +61,6 @@ import org.apache.olingo.client.api.domain.ClientLink;
 import org.apache.olingo.client.api.domain.ClientProperty;
 import org.apache.olingo.client.api.domain.ClientServiceDocument;
 import org.apache.olingo.client.api.domain.ClientValue;
-import org.apache.olingo.client.api.http.HttpClientFactory;
 import org.apache.olingo.client.api.uri.URIBuilder;
 import org.apache.olingo.client.core.ODataClientFactory;
 import org.apache.olingo.client.core.http.ProxyWrappingHttpClientFactory;
@@ -1287,7 +1286,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
             if(accessToken!= null && !accessToken.isEmpty()){
                 final String oldAccessToken= this.oDataAuthenticationCache.getOldAccessToken();
                 if(oldAccessToken != null && !oldAccessToken.isEmpty()){
-                    if(oldAccessToken!=accessToken){
+                    if (!oldAccessToken.equals(accessToken)) {
                         //Check if the paramater Acces_token were updated
                         this.oDataAuthenticationCache.saveAccessToken("");
                         this.oDataAuthenticationCache.saveOldAccessToken("");
@@ -1340,7 +1339,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
             }
             if(user==null||user.equals("")){
                 if (getInputParameterValue(INPUT_PARAMETER_TIMEOUT) != null) {
-                    client.getConfiguration().setHttpClientFactory((HttpClientFactory) new DefaultHttpClientConnectionWithSSLFactory(
+                    client.getConfiguration().setHttpClientFactory(new DefaultHttpClientConnectionWithSSLFactory(
                             (Integer) getInputParameterValue(INPUT_PARAMETER_TIMEOUT).getValue()));
                 }
 

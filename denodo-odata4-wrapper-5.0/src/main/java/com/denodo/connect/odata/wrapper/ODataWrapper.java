@@ -216,7 +216,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
             new CustomWrapperInputParameter(INPUT_PARAMETER_TOKEN_ENDPOINT_URL, "Token endpoint URL for OAuth2 authentication", false,
                     CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_AUTH_METHOD_SERVERS,
-                    "Authentication method used by the authorization servers while refreshing the access token", false,
+                    "Authentication method used by the authorization servers while refreshing the access token (credentials in the body by default)", false,
                     CustomWrapperInputParameterTypeFactory.enumStringType(
                             new String[] { INPUT_PARAMETER_AUTH_METHOD_SERVERS_BODY, INPUT_PARAMETER_AUTH_METHOD_SERVERS_BASIC })),
             new CustomWrapperInputParameter(INPUT_PARAMETER_HTTP_HEADERS, "Custom headers to be used in the underlying HTTP client", false,
@@ -1272,14 +1272,12 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     || (getInputParameterValue(INPUT_PARAMETER_CLIENT_ID) == null)
                     || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_CLIENT_ID).getValue())
                     || (getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET) == null)
-                    || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET).getValue())
-                    || (getInputParameterValue(INPUT_PARAMETER_AUTH_METHOD_SERVERS) == null)
-                    || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_AUTH_METHOD_SERVERS).getValue())) {
+                    || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET).getValue())) {
                 
-                logger.error("It is necessary the access token, the refresh token, client id, client secret, the token endpoint "
-                        + "URL and the authentication method used by the authorization servers for Oauth2 authentication.");
-                throw  new CustomWrapperException("It is necessary the access token, the refresh token, client id, client secret, the token endpoint "
-                        + "URL and the authentication method used by the authorization servers for Oauth2 authentication.");
+                logger.error("For Oauth2 authentication: the access token, the refresh token, client id, client secret and the token endpoint "
+                        + "URL are required.");
+                throw  new CustomWrapperException("For Oauth2 authentication: the access token, the refresh token, client id, client secret and the token endpoint "
+                        + "URL are required.");
             }
             
             String accessToken = (String) getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN).getValue();
@@ -1311,8 +1309,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 logger.debug("Value of Access Token in the client of odata: "+ accessToken);
             }
             
-            final boolean credentialsInBody = INPUT_PARAMETER_AUTH_METHOD_SERVERS_BODY
-                    .equals(getInputParameterValue(INPUT_PARAMETER_AUTH_METHOD_SERVERS).getValue());
+            final boolean credentialsInBody = (getInputParameterValue(INPUT_PARAMETER_AUTH_METHOD_SERVERS) == null)
+                    || INPUT_PARAMETER_AUTH_METHOD_SERVERS_BODY.equals(getInputParameterValue(INPUT_PARAMETER_AUTH_METHOD_SERVERS).getValue());
             
             client.getConfiguration().setHttpClientFactory(
                     new OdataOAuth2HttpClientFactory((String) getInputParameterValue(INPUT_PARAMETER_TOKEN_ENDPOINT_URL).getValue(),

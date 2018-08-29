@@ -3,6 +3,7 @@ CURRENT
 #39047 - Client secret for OAuth2 should be a hidden parameter
 #39069 - Authentication cache for OAuth not working as expected
 #36303 - Error retrieving Decimal values from an OData4 source
+#39213 - "Refr. Token Auth. Method" should have a default value option
 
 20180820
 ========

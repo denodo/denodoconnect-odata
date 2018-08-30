@@ -1,5 +1,5 @@
-CURRENT
-=======
+20180903
+========
 #39048 - Client secret for OAuth2 should be a hidden parameter
 #39070 - Authentication cache for OAuth not working as expected
 

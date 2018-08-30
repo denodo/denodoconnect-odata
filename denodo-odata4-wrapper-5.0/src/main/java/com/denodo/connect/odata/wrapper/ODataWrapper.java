@@ -291,7 +291,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
             final Edm edm = response.getBody();     
             entitySets = getEntitySetMap(edm);        
             
-            final Map<EdmEntityType, List<EdmEntityType>> baseTypeMap = getBaseTypeMap(edm);
+            final Map<EdmEntityType, EdmEntityType> baseTypeMap = getBaseTypeMap(edm);
 
             final String entityCollection = getInputParameterValue(INPUT_PARAMETER_ENTITY_COLLECTION).toString();
             final String uriKeyCache = getUriKeyCache(uri, entityCollection);
@@ -322,21 +322,24 @@ public class ODataWrapper extends AbstractCustomWrapper {
                         propertiesMap.put(property, edmProperty);
                     }
                     
-                    // Add the properties belonging to a type whose base type is the type of the requested entity set
-                    if (baseTypeMap.containsKey(edmType)) {
+                    // Add the properties belonging to the base type of the requested entity set, if exist
+                    EdmEntityType currentType = edmType;
+                    while (baseTypeMap.containsKey(currentType)) {
                         
-                        for (final EdmEntityType entityType : baseTypeMap.get(edmType)) {
-                            for (final String property : entityType.getPropertyNames()) {
-                                if (!properties.contains(property)) {   
-                                    final EdmProperty edmProperty = entityType.getStructuralProperty(property);
-                                    logger.trace("Adding property: " +property+ " .Type: " + edmProperty.getType().getName()+ " kind: "+edmProperty.getType().getKind().name());
-                                    schemaParams.add(ODataEntityUtil.createSchemaOlingoParameter(edmProperty,  loadBlobObjects));
-                                    propertiesMap.put(property, edmProperty);
-                                }
+                        final EdmEntityType baseType = baseTypeMap.get(currentType);
+                        for (final String property : baseType.getPropertyNames()) {
+                            if (!propertiesMap.containsKey(property)) {
+                                final EdmProperty edmProperty = baseType.getStructuralProperty(property);
+                                logger.trace("Adding property for Base Type: " + property + " .Type: " + edmProperty.getType().getName()
+                                                + " kind: " + edmProperty.getType().getKind().name());
+                                schemaParams.add(ODataEntityUtil.createSchemaOlingoParameter(edmProperty, loadBlobObjects));
+                                propertiesMap.put(property, edmProperty);
                             }
                         }
+                        currentType = baseType;
                     }
-                    if(edmType.hasStream()){
+                    
+                    if (edmType.hasStream()) {
                        
                         if(loadBlobObjects){
                             logger.trace("Adding property: Stream .Type: Blob ");
@@ -1399,26 +1402,24 @@ public class ODataWrapper extends AbstractCustomWrapper {
         return entitySets;
     }
 
-    private static Map<EdmEntityType, List<EdmEntityType>> getBaseTypeMap(final Edm edm) {
-        final Map<EdmEntityType, List<EdmEntityType>> baseTypeMap = new HashMap<EdmEntityType, List<EdmEntityType>>();    
-        
+    private static Map<EdmEntityType, EdmEntityType> getBaseTypeMap(final Edm edm) {
+
+        final Map<EdmEntityType, EdmEntityType> baseTypeMap = new HashMap<EdmEntityType, EdmEntityType>();
+
         final List<EdmSchema> schemas = edm.getSchemas();
-        for (final EdmSchema schema : schemas) {  
-            if(schema.getEntityContainer()!=null){
+        for (final EdmSchema schema : schemas) {
+            if (schema.getEntityContainer() != null) {
                 final List<EdmEntityType> schemaEntityTypes = schema.getEntityTypes();
                 if (schemaEntityTypes != null) {
                     for (final EdmEntityType edmEntityType : schemaEntityTypes) {
-                        if (edmEntityType != null && edmEntityType.getBaseType() != null) {                            
-                            if (!baseTypeMap.containsKey(edmEntityType.getBaseType())) {
-                                baseTypeMap.put(edmEntityType.getBaseType(), new ArrayList<EdmEntityType>());
-                            }
-                            baseTypeMap.get(edmEntityType.getBaseType()).add(edmEntityType);
+                        if (edmEntityType != null && edmEntityType.getBaseType() != null) {
+                            baseTypeMap.put(edmEntityType, edmEntityType.getBaseType());
                         }
                     }
                 }
             }
         }
-        
+
         return baseTypeMap;
     }
     
@@ -1578,7 +1579,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
             
             final Edm edm = response.getBody();     
             entitySets = getEntitySetMap(edm);   
-            final Map<EdmEntityType, List<EdmEntityType>> baseTypeMap = getBaseTypeMap(edm);
+            final Map<EdmEntityType, EdmEntityType> baseTypeMap = getBaseTypeMap(edm);
 
             final String uriKeyCache = getUriKeyCache(uri, entityCollection);
             final EdmEntitySet entitySet = entitySets.get(collectionNameMetadata);
@@ -1608,18 +1609,23 @@ public class ODataWrapper extends AbstractCustomWrapper {
                         navigationPropertiesMap.put(property,new CustomNavigationProperty(typeNavigation, (edmNavigationProperty.isCollection()?CustomNavigationProperty.ComplexType.COLLECTION:CustomNavigationProperty.ComplexType.COMPLEX)));
                         logger.trace("Adding navigation property metadata: " +property+ " .Type: " + typeNavigation.getName()+".It is Collection :"+edmNavigationProperty.isCollection());
                     }
-                    // Add the properties belonging to a type whose base type is the type of the requested entity set
-                    if (baseTypeMap.containsKey(edmType)) {
-                        for (final EdmEntityType entityType : baseTypeMap.get(edmType)) {
-                            for (final String property : entityType.getPropertyNames()) {
-                                if (!properties.contains(property)) {   
-                                    final EdmProperty edmProperty = entityType.getStructuralProperty(property);
-                                    logger.trace("Adding property metadata: " +property+ " .Type: " + edmProperty.getType().getName()+ " kind: "+edmProperty.getType().getKind().name());
-                                    propertiesMap.put(property, edmProperty);
-                                }
+                    
+                    // Add the properties belonging to the base type of the requested entity set, if exist
+                    EdmEntityType currentType = edmType;
+                    while (baseTypeMap.containsKey(currentType)) {
+                        
+                        final EdmEntityType baseType = baseTypeMap.get(currentType);
+                        for (final String property : baseType.getPropertyNames()) {
+                            if (!propertiesMap.containsKey(property)) {
+                                final EdmProperty edmProperty = baseType.getStructuralProperty(property);
+                                logger.trace("Adding property metadata for Base Type: " + property + " .Type: " + edmProperty.getType().getName()
+                                                + " kind: " + edmProperty.getType().getKind().name());
+                                propertiesMap.put(property, edmProperty);
                             }
                         }
+                        currentType = baseType;
                     }
+                    
                     if(edmType.hasStream()){
                         if(loadBlobObjects){
                             propertiesMap.put(ODataEntityUtil.STREAM_FILE_PROPERTY, null);

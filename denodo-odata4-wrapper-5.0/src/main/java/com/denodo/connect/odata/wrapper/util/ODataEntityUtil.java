@@ -81,18 +81,18 @@ public class ODataEntityUtil {
     private static final Logger logger = Logger.getLogger(ODataEntityUtil.class);
 
 
-    public static CustomWrapperSchemaParameter createSchemaOlingoParameter(EdmElement property,  Boolean loadBlobObjects)
+    public static CustomWrapperSchemaParameter createSchemaOlingoParameter(final EdmElement property,  final Boolean loadBlobObjects)
             throws CustomWrapperException {  
                 
-        boolean isNullable = (property instanceof EdmProperty) ? ((EdmProperty) property).isNullable() : true;  
+        final boolean isNullable = (property instanceof EdmProperty) ? ((EdmProperty) property).isNullable() : true;  
                 
         if (property.isCollection()) {
             //array with primitive types
             if (property.getType().getKind().equals(EdmTypeKind.PRIMITIVE) || 
                     property.getType().getKind().equals(EdmTypeKind.ENUM)) { 
                 //ENUM type always is a string
-                CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[]{new CustomWrapperSchemaParameter(property.getName(), 
-                        mapODataSimpleType((EdmType) property.getType(), loadBlobObjects), null,  true /* isSearchable */, 
+                final CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[]{new CustomWrapperSchemaParameter(property.getName(), 
+                        mapODataSimpleType(property.getType(), loadBlobObjects), null,  true /* isSearchable */, 
                         CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                         isNullable /*isNullable*/, false /*isMandatory*/)};
                 return new CustomWrapperSchemaParameter(property.getName(), Types.ARRAY, complexParams, true /* isSearchable */, 
@@ -101,11 +101,11 @@ public class ODataEntityUtil {
             }  
             //array of complex types
             if(property.getType() instanceof EdmStructuredType){
-                EdmStructuredType edmStructuralType = ((EdmStructuredType) property.getType());
-                List<String> propertyNames = edmStructuralType.getPropertyNames();
-                CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[propertyNames.size()];
+                final EdmStructuredType edmStructuralType = ((EdmStructuredType) property.getType());
+                final List<String> propertyNames = edmStructuralType.getPropertyNames();
+                final CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[propertyNames.size()];
                 int i = 0;
-                for (String prop : propertyNames) {
+                for (final String prop : propertyNames) {
                     complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop),  loadBlobObjects);
                     i++;
                 }
@@ -118,7 +118,7 @@ public class ODataEntityUtil {
             }
         }
         if (property.getType().getKind().equals(EdmTypeKind.PRIMITIVE)) {
-            return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType((EdmType) property.getType(), loadBlobObjects), null,  true /* isSearchable */, 
+            return new CustomWrapperSchemaParameter(property.getName(), mapODataSimpleType(property.getType(), loadBlobObjects), null,  true /* isSearchable */, 
                     CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                     isNullable /*isNullable*/, false /*isMandatory*/);
         }
@@ -131,11 +131,11 @@ public class ODataEntityUtil {
         }
         if (property.getType() instanceof EdmStructuredType) {
             //complex type
-                EdmStructuredType edmStructuralType = ((EdmStructuredType) property.getType());
-                List<String> propertyNames = edmStructuralType.getPropertyNames();
-                CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[propertyNames.size()];
+                final EdmStructuredType edmStructuralType = ((EdmStructuredType) property.getType());
+                final List<String> propertyNames = edmStructuralType.getPropertyNames();
+                final CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[propertyNames.size()];
                 int i = 0;
-                for (String prop : propertyNames) {
+                for (final String prop : propertyNames) {
                     logger.info("property name: "+ prop);
                     complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop),  loadBlobObjects);
                     i++;
@@ -151,9 +151,9 @@ public class ODataEntityUtil {
     }
 
 
-    private static int mapODataSimpleType(EdmType edmType, Boolean loadBlobObjects) {
+    private static int mapODataSimpleType(final EdmType edmType, final Boolean loadBlobObjects) {
         
-    	boolean onlyTimestamp = Versions.ARTIFACT_ID < Versions.MINOR_ARTIFACT_ID_SUPPORT_DIFFERENT_FORMAT_DATES;
+    	final boolean onlyTimestamp = Versions.ARTIFACT_ID < Versions.MINOR_ARTIFACT_ID_SUPPORT_DIFFERENT_FORMAT_DATES;
     	
     	if (edmType instanceof EdmBoolean) {
             return Types.BOOLEAN;
@@ -162,7 +162,7 @@ public class ODataEntityUtil {
         } else if (edmType instanceof EdmDate) {
             return onlyTimestamp ? Types.TIMESTAMP : Types.DATE;
         } else if (edmType instanceof EdmDateTimeOffset) {
-        	return onlyTimestamp ? Types.TIMESTAMP : Types.TIMESTAMP_WITH_TIMEZONE;
+        	return onlyTimestamp ? Types.TIMESTAMP : 2014; // since java 8 -> Types.TIMESTAMP_WITH_TIMEZONE;
         } else if (edmType instanceof EdmDecimal) {
             return Types.DOUBLE;
         } else if (edmType instanceof EdmDouble) {
@@ -194,7 +194,7 @@ public class ODataEntityUtil {
     }
 
 
-    public static Object getOutputValue(ClientProperty property) throws CustomWrapperException {
+    public static Object getOutputValue(final ClientProperty property) throws CustomWrapperException {
         logger.trace("returning value :" + property.toString());
         
 		if (property.hasPrimitiveValue()
@@ -207,13 +207,13 @@ public class ODataEntityUtil {
         }
         // Build complex objets (register)
         if (property.hasComplexValue()) {
-            ClientComplexValue complexValues = property.getComplexValue();
+            final ClientComplexValue complexValues = property.getComplexValue();
 
             Object[] complexOutput = null;
             if (complexValues != null) {
                 complexOutput = new Object[complexValues.size()];
                 int i = 0;
-                Iterator<ClientProperty> iterator = complexValues.iterator();
+                final Iterator<ClientProperty> iterator = complexValues.iterator();
                 while (iterator.hasNext()) {
                     complexOutput[i] = getOutputValue(iterator.next());
                     i++;
@@ -223,13 +223,13 @@ public class ODataEntityUtil {
             return complexOutput;
         }
         if (property.hasCollectionValue()) {
-            ClientCollectionValue<ClientValue> collectionValues = property.getCollectionValue();
+            final ClientCollectionValue<ClientValue> collectionValues = property.getCollectionValue();
 
             Object[] complexOutput = null;
             if (collectionValues != null) {
                 complexOutput = new Object[collectionValues.size()];
                 int i = 0;
-                for (ClientValue complexProp : collectionValues) {
+                for (final ClientValue complexProp : collectionValues) {
                     complexOutput[i] = getOutputValue(complexProp);
                     i++;
                 }
@@ -248,20 +248,20 @@ public class ODataEntityUtil {
     }
 
 
-    public static Object getOutputValue(ClientValue property) throws CustomWrapperException {
+    public static Object getOutputValue(final ClientValue property) throws CustomWrapperException {
         if (property.isPrimitive()) {
             logger.trace("added value: " + property.asPrimitive().toValue());
             return property.asPrimitive().toValue();
         }
         // Build complex objets (register)
         if (property.isComplex()) {
-            ClientComplexValue complexValues = property.asComplex();
+            final ClientComplexValue complexValues = property.asComplex();
 
             Object[] complexOutput = null;
             if (complexValues != null) {
                 complexOutput = new Object[complexValues.size()];
                 int i = 0;
-                Iterator<ClientProperty> iterator = complexValues.iterator();
+                final Iterator<ClientProperty> iterator = complexValues.iterator();
                 while (iterator.hasNext()) {
                     complexOutput[i] = getOutputValue(iterator.next());
                     i++;
@@ -271,13 +271,13 @@ public class ODataEntityUtil {
             return complexOutput;
         }
         if (property.isCollection()) {
-            ClientCollectionValue<ClientValue> collectionValues = property.asCollection();
+            final ClientCollectionValue<ClientValue> collectionValues = property.asCollection();
             Object[] complexOutput = null;
             if (collectionValues != null) {
                 complexOutput = new Object[collectionValues.size()];
                 int i = 0;
 
-                for (ClientValue complexProp : collectionValues) {
+                for (final ClientValue complexProp : collectionValues) {
                     complexOutput[i] = getOutputValue(complexProp);
                     i++;
                 }
@@ -291,25 +291,25 @@ public class ODataEntityUtil {
         throw new CustomWrapperException("Error obtaining the property "+property.toString()+". Check the data type of this property." );
     }
 
-    public static CustomWrapperSchemaParameter createPaginationParameter(String name) {
+    public static CustomWrapperSchemaParameter createPaginationParameter(final String name) {
         return new CustomWrapperSchemaParameter(name, Types.INTEGER, null, true, CustomWrapperSchemaParameter.NOT_SORTABLE,
                 false /* isUpdateable */, true /* is Nullable */, false /* isMandatory */);
     }
 
-    public static CustomWrapperSchemaParameter createSchemaOlingoFromNavigation(EdmNavigationProperty nav, Edm edm, boolean isMandatory, Boolean loadBlobObjects,  Map<String,  CustomNavigationProperty> navigationPropertiesMap )
+    public static CustomWrapperSchemaParameter createSchemaOlingoFromNavigation(final EdmNavigationProperty nav, final Edm edm, final boolean isMandatory, final Boolean loadBlobObjects,  final Map<String,  CustomNavigationProperty> navigationPropertiesMap )
             throws CustomWrapperException {
-        String relName = nav.getName(); // Field name
+        final String relName = nav.getName(); // Field name
         
         final EdmEntityType type = edm.getEntityType(nav.getType().getFullQualifiedName());
         logger.trace("Adding navigation property metadata.Property: "+relName+".It is collection :"+ nav.isCollection());
         navigationPropertiesMap.put(relName,new CustomNavigationProperty(type,( nav.isCollection()?CustomNavigationProperty.ComplexType.COLLECTION:CustomNavigationProperty.ComplexType.COMPLEX)));//add to cache
         if (type != null) {
-            List<String> props = type.getPropertyNames();
-            int schemaSize = props.size() + (type.hasStream() ? 1 : 0); 
-            CustomWrapperSchemaParameter[] schema = new CustomWrapperSchemaParameter[schemaSize];
+            final List<String> props = type.getPropertyNames();
+            final int schemaSize = props.size() + (type.hasStream() ? 1 : 0); 
+            final CustomWrapperSchemaParameter[] schema = new CustomWrapperSchemaParameter[schemaSize];
             
             int i = 0;
-            for (String property : props) {
+            for (final String property : props) {
                 schema[i] = ODataEntityUtil.createSchemaOlingoParameter(type.getProperty(property),  loadBlobObjects);
                 i++;
             }
@@ -338,9 +338,9 @@ public class ODataEntityUtil {
         throw new CustomWrapperException("Error accesing to navigation properties");
     }
 
-    public static EdmEntityType getEdmEntityType(String name, Map<String, EdmEntitySet> entitySets) {
-        for (EdmEntitySet entitySet : entitySets.values()) {
-            EdmEntityType type = entitySet.getEntityType();
+    public static EdmEntityType getEdmEntityType(final String name, final Map<String, EdmEntitySet> entitySets) {
+        for (final EdmEntitySet entitySet : entitySets.values()) {
+            final EdmEntityType type = entitySet.getEntityType();
             if (type.getName().equals(name)) {
                 return type;
             }
@@ -351,29 +351,29 @@ public class ODataEntityUtil {
     public static Object[] getOutputValueForRelatedEntity(final ClientEntity relatedEntity, final ODataClient client,
             final String uri, final Boolean loadBlobObjects) throws CustomWrapperException, IOException {
         
-        boolean isMediaEntity = relatedEntity.isMediaEntity();
-        List<ClientProperty> properties = relatedEntity.getProperties();
-        List<ClientLink> mediaEditLinks = relatedEntity.getMediaEditLinks();
-        Object[] output = new Object[properties.size() + mediaEditLinks.size() + (isMediaEntity ? 1 : 0)];
+        final boolean isMediaEntity = relatedEntity.isMediaEntity();
+        final List<ClientProperty> properties = relatedEntity.getProperties();
+        final List<ClientLink> mediaEditLinks = relatedEntity.getMediaEditLinks();
+        final Object[] output = new Object[properties.size() + mediaEditLinks.size() + (isMediaEntity ? 1 : 0)];
         
         int i = 0;
-        for (ClientProperty prop : properties) {
+        for (final ClientProperty prop : properties) {
             try {
                 output[i++] = getOutputValue(prop);
-            } catch (PropertyNotFoundException e) {
+            } catch (final PropertyNotFoundException e) {
                 throw e;
             }
         }
         
-        for (ClientLink clientLink : mediaEditLinks) {  
+        for (final ClientLink clientLink : mediaEditLinks) {  
             logger.trace("Getting media data for " + clientLink.getLink());
             Object value = null;
             if (loadBlobObjects != null && loadBlobObjects.booleanValue()) {
-                URIBuilder uribuilder = client.newURIBuilder(uri);
+                final URIBuilder uribuilder = client.newURIBuilder(uri);
                 uribuilder.appendSingletonSegment(clientLink.getLink().getRawPath());
-                ODataMediaRequest request2 = client.getRetrieveRequestFactory().getMediaRequest(uribuilder.build());
+                final ODataMediaRequest request2 = client.getRetrieveRequestFactory().getMediaRequest(uribuilder.build());
 
-                ODataRetrieveResponse<InputStream> response2 = request2.execute();
+                final ODataRetrieveResponse<InputStream> response2 = request2.execute();
 
                 value = IOUtils.toByteArray(response2.getBody());
             } else {
@@ -408,9 +408,9 @@ public class ODataEntityUtil {
 
     public static Object[] getOutputValueForRelatedEntityList(final List<ClientEntity> relatedEntities, final ODataClient client, 
             final String uri, final Boolean loadBlobObjects) throws CustomWrapperException, IOException {
-        Object[] output = new Object[relatedEntities.size()];
+        final Object[] output = new Object[relatedEntities.size()];
         int i = 0;
-        for (ClientEntity entity : relatedEntities) {
+        for (final ClientEntity entity : relatedEntities) {
             output[i] = getOutputValueForRelatedEntity(entity, client, uri, loadBlobObjects);
             i++;
         }

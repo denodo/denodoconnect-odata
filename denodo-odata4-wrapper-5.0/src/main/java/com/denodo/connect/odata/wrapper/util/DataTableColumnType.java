@@ -42,7 +42,7 @@ public enum DataTableColumnType {
     private final int sqlType;
     private final EdmPrimitiveTypeKind edmType;
 
-    private DataTableColumnType(int sqlType, EdmPrimitiveTypeKind edmType) {
+    private DataTableColumnType(final int sqlType, final EdmPrimitiveTypeKind edmType) {
         this.sqlType = sqlType;
         this.edmType = edmType;
     }
@@ -54,7 +54,7 @@ public enum DataTableColumnType {
         return this.sqlType;
     }
 
-    public static DataTableColumnType fromString(String typeToCheck) {
+    public static DataTableColumnType fromString(final String typeToCheck) {
         if (typeToCheck.toLowerCase().contains("char"))
             return VARCHAR;
         if (typeToCheck.toLowerCase().contains("text"))
@@ -75,7 +75,7 @@ public enum DataTableColumnType {
         return TEXT;
     }
 
-    public static DataTableColumnType fromJDBCType(int type) {
+    public static DataTableColumnType fromJDBCType(final int type) {
         switch (type) {
             case Types.VARCHAR:
                 return VARCHAR;
@@ -95,7 +95,7 @@ public enum DataTableColumnType {
                 return DATE;
             case Types.TIME:
             case Types.TIMESTAMP:
-            case Types.TIMESTAMP_WITH_TIMEZONE:
+            case 2014: // since java 8 -> Types.TIMESTAMP_WITH_TIMEZONE:
                 return DATETIME;
         }
         return TEXT;
@@ -103,7 +103,7 @@ public enum DataTableColumnType {
     }
 
     public static int[] getAllSQLTypes() {
-        int types[] = { Types.ARRAY, Types.BIGINT, Types.BINARY, Types.BIT, Types.BLOB, Types.BOOLEAN, Types.CHAR, Types.CLOB, Types.DATALINK, Types.DATE,
+        final int types[] = { Types.ARRAY, Types.BIGINT, Types.BINARY, Types.BIT, Types.BLOB, Types.BOOLEAN, Types.CHAR, Types.CLOB, Types.DATALINK, Types.DATE,
                 Types.DECIMAL, Types.DISTINCT, Types.DOUBLE, Types.FLOAT, Types.INTEGER, Types.JAVA_OBJECT, Types.LONGNVARCHAR, Types.LONGVARBINARY,
                 Types.LONGVARCHAR, Types.NCHAR, Types.NCLOB, Types.NULL, Types.NVARCHAR, Types.OTHER, Types.REAL, Types.REF, Types.ROWID, Types.SMALLINT,
                 Types.SQLXML, Types.STRUCT, Types.TIME, Types.TIMESTAMP, Types.TINYINT, Types.VARBINARY, Types.VARCHAR };

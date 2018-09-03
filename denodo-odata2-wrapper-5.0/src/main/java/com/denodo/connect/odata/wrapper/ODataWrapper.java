@@ -35,6 +35,7 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpHeaders;
@@ -61,6 +62,7 @@ import org.odata4j.core.OProperties;
 import org.odata4j.core.OProperty;
 import org.odata4j.core.OQueryRequest;
 import org.odata4j.cxf.consumer.ODataCxfConsumer;
+import org.odata4j.cxf.consumer.ODataCxfConsumer.Builder;
 import org.odata4j.edm.EdmEntityContainer;
 import org.odata4j.edm.EdmEntitySet;
 import org.odata4j.edm.EdmEntityType;
@@ -210,11 +212,11 @@ public class ODataWrapper extends AbstractCustomWrapper {
             new CustomWrapperInputParameter(INPUT_PARAMETER_ACCESS_TOKEN, "Access token for OAuth2 authentication", false,
                     CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_REFRESH_TOKEN, "Refresh token for OAuth2 authentication", false,
-                    CustomWrapperInputParameterTypeFactory.hiddenStringType()),
+                    CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_CLIENT_ID, "Client Id for OAuth2 authentication", false,
                     CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_CLIENT_SECRET, "Client Secret for OAuth2 authentication", false,
-                    CustomWrapperInputParameterTypeFactory.stringType()),
+                    CustomWrapperInputParameterTypeFactory.hiddenStringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_TOKEN_ENDPOINT_URL, "Token endpoint URL for OAuth2 authentication", false,
                     CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_AUTH_METHOD_SERVERS,
@@ -797,6 +799,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
             }
             
             builder.setClientBehaviors(new OClientBehavior() {
+                @Override
                 public ODataClientRequest transform(final ODataClientRequest request) {
                     try {
                         return request.header(HttpHeaders.AUTHORIZATION, "Bearer " + getAccessToken());
@@ -854,6 +857,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
         if (getInputParameterValue(INPUT_PARAMETER_VERSION) != null) {
             if (getInputParameterValue(INPUT_PARAMETER_VERSION).getValue().equals(INPUT_PARAMETER_VERSION_2)) {
                 builder.setClientBehaviors(new OClientBehavior() {
+                    @Override
                     public ODataClientRequest transform(final ODataClientRequest request) {
                         return request.header("MaxDataServiceVersion", ODataVersion.V2.asString);
                     }
@@ -861,6 +865,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
         
             } else if (getInputParameterValue(INPUT_PARAMETER_VERSION).getValue().equals(INPUT_PARAMETER_VERSION_1)) {
                 builder.setClientBehaviors(new OClientBehavior() {
+                    @Override
                     public ODataClientRequest transform(final ODataClientRequest request) {
                         return request.header("MaxDataServiceVersion", ODataVersion.V1.asString);
                     }

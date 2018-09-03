@@ -26,8 +26,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import com.denodo.connect.odata.wrapper.exceptions.PropertyNotFoundException;
-import com.denodo.vdb.engine.customwrapper.CustomWrapperSchemaParameter;
 import org.core4j.Enumerable;
 import org.joda.time.LocalDateTime;
 import org.odata4j.core.Guid;
@@ -41,10 +39,13 @@ import org.odata4j.edm.EdmNavigationProperty;
 import org.odata4j.edm.EdmProperty;
 import org.odata4j.edm.EdmSimpleType;
 
+import com.denodo.connect.odata.wrapper.exceptions.PropertyNotFoundException;
+import com.denodo.vdb.engine.customwrapper.CustomWrapperSchemaParameter;
+
 public class ODataEntityUtil {
 
     @SuppressWarnings("rawtypes")
-    public static CustomWrapperSchemaParameter createSchemaParameter(EdmProperty property, boolean isMandatory) {
+    public static CustomWrapperSchemaParameter createSchemaParameter(final EdmProperty property, final boolean isMandatory) {
         if (property.getType().isSimple()) {
 
             return new CustomWrapperSchemaParameter(
@@ -58,10 +59,10 @@ public class ODataEntityUtil {
                     isMandatory);
         }
         // Complex data types
-        Enumerable<EdmProperty> complexProperties = ((EdmComplexType)property.getType()).getDeclaredProperties();
-        CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[complexProperties.count()];
+        final Enumerable<EdmProperty> complexProperties = ((EdmComplexType)property.getType()).getDeclaredProperties();
+        final CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[complexProperties.count()];
         int i = 0;
-        for (EdmProperty complexProp:complexProperties) {
+        for (final EdmProperty complexProp:complexProperties) {
             complexParams[i] = createSchemaParameter(complexProp, isMandatory);
             i++;
         }
@@ -76,9 +77,9 @@ public class ODataEntityUtil {
                 isMandatory);
     }
 
-    private static int mapODataSimpleType(@SuppressWarnings("rawtypes") EdmSimpleType edmType) {
+    private static int mapODataSimpleType(@SuppressWarnings("rawtypes") final EdmSimpleType edmType) {
         
-    	boolean onlyTimestamp = Versions.ARTIFACT_ID < Versions.MINOR_ARTIFACT_ID_SUPPORT_DIFFERENT_FORMAT_DATES;
+    	final boolean onlyTimestamp = Versions.ARTIFACT_ID < Versions.MINOR_ARTIFACT_ID_SUPPORT_DIFFERENT_FORMAT_DATES;
     	
     	if (edmType.equals(EdmSimpleType.BOOLEAN)) {
             return Types.BOOLEAN;
@@ -101,13 +102,13 @@ public class ODataEntityUtil {
         } else if (edmType.equals(EdmSimpleType.TIME)) {
         	return onlyTimestamp ? Types.TIMESTAMP : Types.TIME;
         } else if (edmType.equals(EdmSimpleType.DATETIMEOFFSET)) {
-        	return onlyTimestamp ? Types.TIMESTAMP : Types.TIMESTAMP_WITH_TIMEZONE;
+        	return onlyTimestamp ? Types.TIMESTAMP : 2014;  // in java 8 ->Types.TIMESTAMP_WITH_TIMEZONE;
         }
         return Types.VARCHAR;
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static Object getOutputValue(OProperty<?> p) {
+    public static Object getOutputValue(final OProperty<?> p) {
         if (p.getType().isSimple()) {
             // Odata4j uses Joda time instead of Java.util.data. It needs to be casted
             if (p.getValue() instanceof LocalDateTime) {
@@ -122,12 +123,12 @@ public class ODataEntityUtil {
             return p.getValue();
         } 
         //  Build complex objets (register)
-        List<OProperty<?>> complexValues = (List<OProperty<?>>) p.getValue();
+        final List<OProperty<?>> complexValues = (List<OProperty<?>>) p.getValue();
         Object[] complexOutput = null;
         if(complexValues != null){
             complexOutput = new Object[complexValues.size()]; 
             int i = 0;
-            for (OProperty complexProp : complexValues) {
+            for (final OProperty complexProp : complexValues) {
                 complexOutput[i] = getOutputValue(complexProp);
                 i++;
             }
@@ -135,7 +136,7 @@ public class ODataEntityUtil {
         return complexOutput;
     }
 
-    public static CustomWrapperSchemaParameter createPaginationParameter(String name) {
+    public static CustomWrapperSchemaParameter createPaginationParameter(final String name) {
         return  new CustomWrapperSchemaParameter(
                 name, 
                 Types.INTEGER, 
@@ -147,18 +148,18 @@ public class ODataEntityUtil {
                 false /* isMandatory */);
     }
 
-    public static CustomWrapperSchemaParameter createSchemaFromNavigation(EdmNavigationProperty nav,
-            Map<String, EdmEntitySet> entitySets, boolean isMandatory) {
-        String relName = nav.getName(); // Field name
-        EdmMultiplicity multiplicity = nav.getToRole().getMultiplicity(); // MANY to array, otherwise record
-        String enityName = nav.getToRole().getType().getName(); // Entity related
+    public static CustomWrapperSchemaParameter createSchemaFromNavigation(final EdmNavigationProperty nav,
+            final Map<String, EdmEntitySet> entitySets, final boolean isMandatory) {
+        final String relName = nav.getName(); // Field name
+        final EdmMultiplicity multiplicity = nav.getToRole().getMultiplicity(); // MANY to array, otherwise record
+        final String enityName = nav.getToRole().getType().getName(); // Entity related
 
         // Creates structure for the entity
-        EdmEntityType type = getEdmEntityType(enityName, entitySets);
-        Enumerable<EdmProperty> props = type.getDeclaredProperties();
-        CustomWrapperSchemaParameter[] schema = new CustomWrapperSchemaParameter[props.count()];
+        final EdmEntityType type = getEdmEntityType(enityName, entitySets);
+        final Enumerable<EdmProperty> props = type.getDeclaredProperties();
+        final CustomWrapperSchemaParameter[] schema = new CustomWrapperSchemaParameter[props.count()];
         int i = 0;
-        for (EdmProperty property:props){
+        for (final EdmProperty property:props){
             schema[i] = ODataEntityUtil.createSchemaParameter(property, isMandatory);
             i++;
         }
@@ -197,9 +198,9 @@ public class ODataEntityUtil {
                 false /* isMandatory */);
     }
 
-    public static EdmEntityType getEdmEntityType(String name, Map<String, EdmEntitySet> entitySets) {
-        for (EdmEntitySet entitySet: entitySets.values()) {
-            EdmEntityType type = entitySet.getType();
+    public static EdmEntityType getEdmEntityType(final String name, final Map<String, EdmEntitySet> entitySets) {
+        for (final EdmEntitySet entitySet: entitySets.values()) {
+            final EdmEntityType type = entitySet.getType();
             if (type.getName().equals(name)) {
                 return type;
             }
@@ -208,33 +209,33 @@ public class ODataEntityUtil {
     }
 
     @SuppressWarnings("rawtypes")
-    public static Object[] getOutputValueForRelatedEntity(OEntity relatedEntity,  EdmEntityType type) {
-        Object[] output = new Object[type.getDeclaredProperties().count()];
-        for (OProperty prop:relatedEntity.getProperties()) {
-            String name = prop.getName();
+    public static Object[] getOutputValueForRelatedEntity(final OEntity relatedEntity,  final EdmEntityType type) {
+        final Object[] output = new Object[type.getDeclaredProperties().count()];
+        for (final OProperty prop:relatedEntity.getProperties()) {
+            final String name = prop.getName();
             try {
                 output[getPropertyIndex(type, name)] = getOutputValue(prop);
-            } catch (PropertyNotFoundException e) {
+            } catch (final PropertyNotFoundException e) {
                 // TODO: handle exception
             }
         }
         return output;
     }
 
-    public static Object[] getOutputValueForRelatedEntityList(List<OEntity> relatedEntities,  EdmEntityType type) {
-        Object[]  output= new Object[relatedEntities.size()];
+    public static Object[] getOutputValueForRelatedEntityList(final List<OEntity> relatedEntities,  final EdmEntityType type) {
+        final Object[]  output= new Object[relatedEntities.size()];
         int i = 0;
-        for (OEntity entity:relatedEntities) {
+        for (final OEntity entity:relatedEntities) {
             output[i] = getOutputValueForRelatedEntity(entity, type);
             i++;
         }
         return output;
     }
 
-    private static int getPropertyIndex(EdmEntityType type, String name)  
+    private static int getPropertyIndex(final EdmEntityType type, final String name)  
     throws PropertyNotFoundException {
         int i = 0;
-        for (EdmProperty prop :type.getDeclaredProperties()) {
+        for (final EdmProperty prop :type.getDeclaredProperties()) {
             if (prop.getName().equals(name)) {
                 return i;
             }

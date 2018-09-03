@@ -27,7 +27,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.denodo.connect.odata</groupId>
   <artifactId>denodo-odata4-wrapper-6.0</artifactId>
-  <version>20180830</version>
+  <version>20180903</version>
   <packaging>jar</packaging>
   <name>denodo-odata4-wrapper-6.0</name>
 
@@ -265,6 +265,20 @@
        <version>4.5.0</version>
        <scope>compile</scope>
     </dependency>
+
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+      <version>4.5.3</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpcore</artifactId>
+      <version>4.4.6</version>
+      <scope>compile</scope>
+    </dependency> 
+        
     <dependency>
        <groupId>org.slf4j</groupId>
        <artifactId>slf4j-log4j12</artifactId>

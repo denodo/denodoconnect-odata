@@ -5,6 +5,7 @@
 #36303 - Error retrieving Decimal values from an OData4 source
 #39213 - "Refr. Token Auth. Method" should have a default value option
 #39237 - Fix inheritance between entities (attribute BaseType)
+#39329 - Support TLS > 1.0 for java 7
 
 20180820
 ========

@@ -121,15 +121,24 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
             tokenResponse = response.getEntity().getContent();
             this.token = (ObjectNode) new ObjectMapper().readTree(tokenResponse);
             ODataAuthenticationCache.getInstance().saveOldAccessToken(this.accessToken);
-            setAccessToken(this.token.get("access_token").asText());
-            if (logger.isDebugEnabled()) {
-                logger.debug("Access token was obtained with refresh token");
+            
+            if (this.token.get("access_token") != null) {
+                setAccessToken(this.token.get("access_token").asText());
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Access token was obtained with refresh token");
+                }                
+            } else {
+                throw new OAuth2Exception(this.token != null ? this.token.toString() : "No OAuth2 access token");
             }
+            
             ODataAuthenticationCache.getInstance().saveAccessToken(this.accessToken);
             if (logger.isDebugEnabled()) {
                 logger.debug("Access token saved in the cache");
             }
-            setRefreshToken(this.token.get("refresh_token").asText());
+            
+            if (this.token.get("refresh_token") != null) {
+                setRefreshToken(this.token.get("refresh_token").asText());                
+            }
 
         } catch (final Exception e) {
             throw new OAuth2Exception(e);

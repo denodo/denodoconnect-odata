@@ -28,7 +28,7 @@
   <groupId>com.denodo.connect.odata</groupId>
   <artifactId>denodo-odata4-wrapper-7.0</artifactId>
   <packaging>jar</packaging>
-  <version>20180903</version>
+  <version>20180927</version>
   <name>denodo-odata4-wrapper-7.0</name>
   
   <!-- *************************** -->

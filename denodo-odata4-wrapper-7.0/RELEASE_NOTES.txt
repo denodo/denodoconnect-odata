@@ -1,6 +1,7 @@
-CURRENT
+20180927
 ========
 #39540 - NullPointerException when access token is not found when refreshing OAuth 2.0 credentials
+#39579 - Separate "entity collection" and "entity name" in parameters so that different collections of an entity can be accessed
 
 20180903
 ========

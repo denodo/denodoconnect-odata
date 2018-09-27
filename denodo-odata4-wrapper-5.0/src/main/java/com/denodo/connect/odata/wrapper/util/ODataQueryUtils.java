@@ -277,14 +277,19 @@ public class ODataQueryUtils {
         return properties;
     }
     
-    public static boolean areAllSelected(final BaseViewMetadata baseViewMetadata, final List<String> selectedProperties) {
-        
-        for (String keyProperty : baseViewMetadata.getProperties().keySet()) {
-            if (!selectedProperties.contains(keyProperty)) {
-                return false;
+    public static boolean areAllSelected(final BaseViewMetadata baseViewMetadata, final List<String> selectedProperties) throws CustomWrapperException {
+
+        if (baseViewMetadata != null) {
+
+            for (String keyProperty : baseViewMetadata.getProperties().keySet()) {
+                if (!selectedProperties.contains(keyProperty)) {
+                    return false;
+                }
             }
+
+            return true;
         }
-        
-        return true;
+
+        throw new CustomWrapperException("BaseViewMetadata cannot be null");
     }
 }

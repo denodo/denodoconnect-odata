@@ -52,6 +52,9 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
     private String clientSecret;
     private boolean credentialsInBody;
 
+    private static final int REFRESH_MAX_ATTEMPTS = 1;
+    private int refreshAttempts = 0;
+
     private static final Logger logger = Logger.getLogger(OdataOAuth2HttpClientFactory.class);
 
     public OdataOAuth2HttpClientFactory(final String tokenEndpointURL, final String accessToken,
@@ -190,7 +193,10 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
     @Override
     public HttpClient create(final HttpMethod method, final URI uri) {
 
+        refreshAttempts = 0;
+
         try {
+
             final SchemeRegistry registry = HttpUtils.getSchemeRegistry();
 
             // we need a PoolingClientConnectionManager to execute the request with
@@ -222,15 +228,21 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
                     }
                 }
             });
+
             httpClient.addResponseInterceptor(new HttpResponseInterceptor() {
 
                 @Override
                 public void process(final HttpResponse response, final HttpContext context)
                         throws HttpException, IOException {
-                    if (response.getStatusLine().getStatusCode() == HttpStatus.SC_UNAUTHORIZED
-                            || (response.getStatusLine().getStatusCode() == HttpStatus.SC_INTERNAL_SERVER_ERROR)) {
+
+                    if ((response.getStatusLine().getStatusCode() == HttpStatus.SC_UNAUTHORIZED
+                            || (response.getStatusLine().getStatusCode() == HttpStatus.SC_INTERNAL_SERVER_ERROR))
+                            && refreshAttempts < REFRESH_MAX_ATTEMPTS) {
+
+                        // Refresh OAuth credentials
                         refreshToken(httpClient);
                         accessToken(httpClient);
+                        refreshAttempts++;
 
                         if (OdataOAuth2HttpClientFactory.this.currentRequest != null) {
                             // we need a PoolingClientConnectionManager to execute
@@ -241,7 +253,6 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
                             response.setEntity(response2.getEntity());
                             response.setStatusLine(response2.getStatusLine());
                         }
-
                     }
                 }
             });

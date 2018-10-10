@@ -80,7 +80,7 @@
   <context-param>
     <param-name>webAppRootKey</param-name>
     <param-value>DenodoOData4</param-value>
-</context-param>
+  </context-param>
 
   <!-- ******************* -->
   <!-- Listeners           -->

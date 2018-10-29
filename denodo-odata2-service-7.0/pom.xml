@@ -43,7 +43,7 @@
     <version.commonscodec>1.10</version.commonscodec>
     <version.commonsdbcp>1.4</version.commonsdbcp>
     <version.commonslang>3.7</version.commonslang>
-    <version.denodovdpjdbcdriver>7.0.0</version.denodovdpjdbcdriver>
+    <version.denodovdpjdbcdriver>7.0.3</version.denodovdpjdbcdriver>
     <version.cxf>3.1.0</version.cxf>
     <version.log4j2>2.11.0</version.log4j2>
     <version.olingo>2.0.10</version.olingo>

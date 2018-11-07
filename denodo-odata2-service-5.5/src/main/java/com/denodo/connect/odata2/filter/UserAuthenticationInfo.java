@@ -33,23 +33,38 @@ public class UserAuthenticationInfo {
     private String serviceName;
     private String intermediateIp;
     private String clientIp;
-    
+
+    public UserAuthenticationInfo(String databaseName, String userAgent, String serviceName, String intermediateIp, String clientIp) {
+        super();
+        setOtherFields(databaseName, userAgent, serviceName, intermediateIp, clientIp);
+    }
+
     public UserAuthenticationInfo(String login, String password, String databaseName, String userAgent, String serviceName,
             String intermediateIp, String clientIp) {
         super();
         this.login = login;
         this.password = password;
-        this.databaseName = databaseName;
-        this.userAgent = userAgent;
-        this.serviceName = serviceName;
-        this.intermediateIp = intermediateIp;
-        this.clientIp = clientIp;
+        setOtherFields(databaseName, userAgent, serviceName, intermediateIp, clientIp);
     }
 
     public UserAuthenticationInfo(String oauth2ClientToken, String databaseName, String userAgent, String serviceName,
             String intermediateIp, String clientIp) {
         super();
         this.oauth2ClientToken = oauth2ClientToken;
+        setOtherFields(databaseName, userAgent, serviceName, intermediateIp, clientIp);
+    }
+
+    /**
+     * Set common user authentication information
+     *
+     * @param databaseName
+     * @param userAgent
+     * @param serviceName
+     * @param intermediateIp
+     * @param clientIp
+     */
+    private void setOtherFields(String databaseName, String userAgent, String serviceName, String intermediateIp, String clientIp) {
+
         this.databaseName = databaseName;
         this.userAgent = userAgent;
         this.serviceName = serviceName;

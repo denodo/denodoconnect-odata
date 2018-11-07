@@ -183,15 +183,27 @@ public class DenodoODataAuthDataSource implements DataSource {
                      * (JNDI resource).
                      */
                     command = new StringBuilder("CONNECT ").append(" DATABASE ").append(quoteIdentifier(DATA_BASE_NAME));
+
                 } else if (getParameter(OAUTH2_CLIENT_TOKEN) != null) {
+
                     // OAuth 2.0
                     command = new StringBuilder("CONNECT OAUTHTOKEN '").append(getParameter(OAUTH2_CLIENT_TOKEN)).append("' DATABASE ")
                             .append(quoteIdentifier(DATA_BASE_NAME));
-                } else {
+
+                } else if (getParameter(USER_NAME) != null) {
+
                     // Basic auth
                     command = new StringBuilder("CONNECT USER ").append(quoteIdentifier(USER_NAME)).append(" PASSWORD ")
                             .append("'").append(getParameter(PASSWORD_NAME)).append("'").append(" DATABASE ")
                             .append(quoteIdentifier(DATA_BASE_NAME));
+
+                } else {
+
+                    // No authentication method provided
+                    logger.error("One of these authentication methods must be specified: " +
+                            "Basic Auth or OAuth 2.0. Please, check the configuration");
+                    throw new IllegalArgumentException("One of these authentication methods must be specified: " +
+                            "Basic Auth or OAuth 2.0. Please, check the configuration");
                 }
                 
                 if (getParameter(USER_AGENT) != null) {

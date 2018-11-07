@@ -1,6 +1,7 @@
 CURRENT
 --------
 - Fixed #40357 - When service is accessed through Chrome or Internet explorer, HTTP 405 Method Not Allowed is returned
+- Fixed #40445 - Authentication disabled mode is not working when all authentication types are disabled
 
 20180814
 --------

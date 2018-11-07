@@ -149,12 +149,31 @@ public class DenodoODataFilter implements Filter {
 
             final HttpServletRequest request = (HttpServletRequest) req;
             final HttpServletResponse response = (HttpServletResponse) res;
-            
-            if (this.disabledBasicAuth && this.disabledOAuth2) {
+
+            /*
+             * Property that ONLY should be true in development mode,
+             * NEVER IN PRODUCTION ENVIRONMENTS. It is useful in order
+             * to use the service with components that do not allow
+             * authentication and in this situation the web.xml file
+             * must be modified to add the property and then
+             * the service will use the credentials included in the
+             * data source configuration (JNDI resource).
+             */
+            final String developmentModeDangerousBypassAuthentication = this.servletContext.getInitParameter(
+                    "developmentModeDangerousBypassAuthentication");
+
+            // At least one authentication method is needed Basic or OAuth2.
+            // In case there is not auth method configured, an error is raised.
+            // The only exception is when the authentication is disabled in the web.xml file.
+            if (this.disabledBasicAuth && this.disabledOAuth2
+                    && !Boolean.parseBoolean(developmentModeDangerousBypassAuthentication)) {
+
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
-                        "Authentication required: Basic authentication disabled, Kerberos authentication disabled and OAhto2 authentication disabled or unavailable.");
+                        "Authentication required: Basic authentication disabled " +
+                                "and OAuth2 authentication disabled or unavailable.");
                 logger.trace(
-                        "Authentication required: Basic authentication disabled, Kerberos authentication disabled and OAhto2 authentication disabled or unavailable.");
+                        "Authentication required: Basic authentication disabled " +
+                                "and OAuth2 authentication disabled or unavailable.");
                 return;
             }
 
@@ -164,22 +183,13 @@ public class DenodoODataFilter implements Filter {
 
             // From Denodo 7.0, the VDP connection statement supports new headers such as User-Agent, OAuth 2.0, etc.
             boolean supportNewHeaders = Versions.ARTIFACT_ID >= Versions.MINOR_ARTIFACT_ID_SUPPORT_USER_AGENT;
-            
-            /*
-             * Property that ONLY should be true in development mode, 
-             * NEVER IN PRODUCTION ENVIRONMENTS. It is useful in order 
-             * to use the service with components that do not allow 
-             * authentication and in this situation the web.xml file
-             * must be modified to add the property and then
-             * the service will use the credentials included in the 
-             * data source configuration (JNDI resource).
-             */
-            final String developmentModeDangerousBypassAuthentication = this.servletContext.getInitParameter("developmentModeDangerousBypassAuthentication");
 
             if (!Boolean.valueOf(developmentModeDangerousBypassAuthentication).booleanValue()) {
                 // Check request header contains BASIC AUTH segment
                 final String authorizationHeader = request.getHeader(AUTH_KEYWORD);
-                if (authorizationHeader == null /*|| !StringUtils.startsWithIgnoreCase(authorizationHeader, BASIC_AUTH_KEYWORD)*/) {
+                if (authorizationHeader == null
+                        || (!StringUtils.startsWithIgnoreCase(authorizationHeader, BASIC_AUTH_KEYWORD)
+                            && this.disabledOAuth2 && !this.disabledBasicAuth)) {
                     /*
                     final String reason = "HTTP request does not contain AUTH segment";
                     logger.trace(reason);
@@ -244,14 +254,29 @@ public class DenodoODataFilter implements Filter {
             
             UserAuthenticationInfo userAuthInfo = null;
             if (login != null) {
-                userAuthInfo = new UserAuthenticationInfo(login, password, 
+
+                // Basic auth
+                userAuthInfo = new UserAuthenticationInfo(login, password,
                         dataBaseName, userAgent, serviceName, intermediateIp, clientIp);
+
             } else if (oauth2ClientToken != null) {
-                userAuthInfo = new UserAuthenticationInfo(oauth2ClientToken, 
+
+                // OAuth 2.0 auth
+                userAuthInfo = new UserAuthenticationInfo(oauth2ClientToken,
                         dataBaseName, userAgent, serviceName, intermediateIp, clientIp);
+
+            } else if (Boolean.parseBoolean(developmentModeDangerousBypassAuthentication)) {
+
+                // Authentication disabled
+                userAuthInfo = new UserAuthenticationInfo(dataBaseName, userAgent, serviceName, intermediateIp, clientIp);
+
             } else {
-                response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
-                return;
+
+                // No authentication method provided
+                logger.error("One of these authentication methods must be specified: " +
+                        "Basic Auth, OAuth 2.0");
+                throw new IllegalArgumentException("One of these authentication methods must be specified: " +
+                        "Basic Auth, OAuth 2.0");
             }
 
             // Set connection parameters

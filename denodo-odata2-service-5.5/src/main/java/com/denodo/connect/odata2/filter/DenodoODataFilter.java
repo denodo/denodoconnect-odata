@@ -186,7 +186,6 @@ public class DenodoODataFilter implements Filter {
                     showLogin(response, reason);
                     return;
                     */
-                    response.setHeader(AUTHORIZATION_CHALLENGE_ATTRIBUTE, NEGOTIATE);
                     if (!this.disabledBasicAuth) {
                         response.addHeader(AUTHORIZATION_CHALLENGE_ATTRIBUTE, BASIC);
                     }

@@ -1,3 +1,7 @@
+CURRENT
+========
+#40795 - OAuth credentials must have higher priority than basic authentication credentials
+
 20180903
 ========
 #39048 - Client secret for OAuth2 should be a hidden parameter

@@ -717,11 +717,14 @@ public class ODataWrapper extends AbstractCustomWrapper {
         String proxyPort;
         String proxyUser;
         String proxyPassword;
-        
+
+        // NLTM
         if (((Boolean) getInputParameterValue(INPUT_PARAMETER_NTLM).getValue()).booleanValue()) {
+
             String user = "";
             String password = "";
             String domain = "";
+
             if ((getInputParameterValue(INPUT_PARAMETER_USER) != null)
                     && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_USER).getValue())) {
                 user = (String) getInputParameterValue(INPUT_PARAMETER_USER).getValue();
@@ -730,6 +733,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                     password = (String) getInputParameterValue(INPUT_PARAMETER_PASSWORD).getValue();
                 }
             }
+
             if ((getInputParameterValue(INPUT_PARAMETER_NTLM_DOMAIN) != null)
                     && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_NTLM_DOMAIN).getValue())) {
                 domain = (String) getInputParameterValue(INPUT_PARAMETER_NTLM_DOMAIN).getValue();
@@ -750,6 +754,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
             if (checkIfAddToSystemProperties(props, NTLM_DOMAIN, domain)) {
                 props.setProperty(NTLM_DOMAIN, domain);
             }
+
+        // OAuth 2.0
         } else if (((Boolean) getInputParameterValue(INPUT_PARAMETER_OAUTH2).getValue()).booleanValue()) {
             
             // OAUTH2
@@ -811,6 +817,30 @@ public class ODataWrapper extends AbstractCustomWrapper {
             });
             
             logger.info("Using OAuth2 authentication");
+
+        // Basic auth
+        } else {
+
+            String user = null;
+            String password = "";
+
+            if ((getInputParameterValue(INPUT_PARAMETER_USER) != null)
+                    && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_USER).getValue())) {
+
+                user = (String) getInputParameterValue(INPUT_PARAMETER_USER).getValue();
+            }
+
+            if ((getInputParameterValue(INPUT_PARAMETER_PASSWORD) != null)
+                    && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_PASSWORD).getValue())) {
+
+                password = (String) getInputParameterValue(INPUT_PARAMETER_PASSWORD).getValue();
+            }
+
+            if (StringUtils.isNotBlank(user) && StringUtils.isNotBlank(password)) {
+
+                // Allow HTTP Basic Authentication
+                builder.setClientBehaviors(OClientBehaviors.basicAuth(user, password));
+            }
         }
         
         if ((getInputParameterValue(INPUT_PARAMETER_PROXY_HOST) != null)
@@ -872,20 +902,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 });
             }
         }
-        final String user;
-        if (!((Boolean) getInputParameterValue(INPUT_PARAMETER_NTLM).getValue()).booleanValue() &&
-                (getInputParameterValue(INPUT_PARAMETER_USER) != null)
-                && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_USER).getValue())) {
-            user = (String) getInputParameterValue(INPUT_PARAMETER_USER).getValue();
-            String password = "";
-            if ((getInputParameterValue(INPUT_PARAMETER_PASSWORD) != null)
-                    && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_PASSWORD).getValue())) {
-                password = (String) getInputParameterValue(INPUT_PARAMETER_PASSWORD).getValue();
-            }
-            // this allows HTTP Basic Authentication
-            builder.setClientBehaviors(OClientBehaviors.basicAuth(user, password));
-        }
-        
+
         final String format = (String) getInputParameterValue(INPUT_PARAMETER_FORMAT).getValue();
         if ((format != null) && !format.isEmpty() && INPUT_PARAMETER_FORMAT_JSON.equals(format)) {
             builder.setFormatType(FormatType.JSON);

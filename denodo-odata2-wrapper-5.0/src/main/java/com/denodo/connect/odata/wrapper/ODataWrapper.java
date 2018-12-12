@@ -116,11 +116,12 @@ public class ODataWrapper extends AbstractCustomWrapper {
     private final static String INPUT_PARAMETER_CLIENT_ID = "Client Id";
     private final static String INPUT_PARAMETER_CLIENT_SECRET = "Client Secret";
     private final static String INPUT_PARAMETER_TOKEN_ENDPOINT_URL = "Token Endpoint URL";
-    private final static String INPUT_PARAMETER_HTTP_HEADERS = "HTTP Headers";
+    private final static String INPUT_PARAMETER_EXTRA_PARAMETERS = "OAuth Extra Parameters";
     private final static String INPUT_PARAMETER_AUTH_METHOD_SERVERS = "Refr. Token Auth. Method";
     private final static String INPUT_PARAMETER_AUTH_METHOD_SERVERS_BODY = "Include the client credentials in the body of the request";
     private final static String INPUT_PARAMETER_AUTH_METHOD_SERVERS_BASIC = "Send client credentials using the HTTP Basic authentication scheme";
-    
+    private final static String INPUT_PARAMETER_HTTP_HEADERS = "HTTP Headers";
+
     public final static String PAGINATION_FETCH = "fetch_size";
     public final static String PAGINATION_OFFSET = "offset_size";
     public final static String USE_NTLM_AUTH = "http.ntlm.auth";
@@ -136,6 +137,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
     private static final String GRANT_TYPE = "grant_type";
     private static final String REFRESH_TOKEN = "refresh_token";
     private static final String CLIENT_ID = "client_id";
+    private static final String CLIENT_SECRET = "client_secret";
     private static final String ACCESS_TOKEN = "access_token";
     
     /*
@@ -218,6 +220,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
             new CustomWrapperInputParameter(INPUT_PARAMETER_CLIENT_SECRET, "Client Secret for OAuth2 authentication", false,
                     CustomWrapperInputParameterTypeFactory.hiddenStringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_TOKEN_ENDPOINT_URL, "Token endpoint URL for OAuth2 authentication", false,
+                    CustomWrapperInputParameterTypeFactory.stringType()),
+            new CustomWrapperInputParameter(INPUT_PARAMETER_EXTRA_PARAMETERS, "Extra parameters of the refresh token requests", false,
                     CustomWrapperInputParameterTypeFactory.stringType()),
             new CustomWrapperInputParameter(INPUT_PARAMETER_AUTH_METHOD_SERVERS,
                     "Authentication method used by the authorization servers while refreshing the access token", false,
@@ -927,7 +931,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
         if ((getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS) != null)
                 && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS).getValue())) {
             
-            final Map<String, String> headers = getHttpHeaders((String) getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS).getValue());
+            final Map<String, String> headers = getMultiParameters((String) getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS).getValue());
             
             if (headers != null) {
 
@@ -1055,32 +1059,32 @@ public class ODataWrapper extends AbstractCustomWrapper {
         return key.toString();
     }
     
-    private static Map<String, String> getHttpHeaders(String httpHeaders) throws CustomWrapperException {
+    private static Map<String, String> getMultiParameters(String input) throws CustomWrapperException {
         
         final Map<String, String> map = new HashMap<String, String>();
 
         // Unescape JavaScript backslash escape character
-        httpHeaders = StringEscapeUtils.unescapeJavaScript(httpHeaders);
+        input = StringEscapeUtils.unescapeJavaScript(input);
         
-        // Headers are introduced with the following format: field1="value1";field2="value2";...;fieldn="valuen";
+        // Parameters are introduced with the following format: field1="value1";field2="value2";...;fieldn="valuen";
         // They are splitted by the semicolon character (";") to get pairs field="value"
-        final String[] headers = httpHeaders.split(";(?=([^\"]*\"[^\"]*\")*[^\"]*$)");
-        for (final String header : headers) {
+        final String[] parameters = input.split(";(?=([^\"]*\"[^\"]*\")*[^\"]*$)");
+        for (final String parameter : parameters) {
             
-            // Once the split has been done, each header must have this format: field="value"
-            // In order to get the header and its value, split by the first equals character ("=")
-            final String[] parts = header.split("=", 2);
+            // Once the split has been done, each parameter must have this format: field="value"
+            // In order to get the parameter and its value, split by the first equals character ("=")
+            final String[] parts = parameter.split("=", 2);
             
             if (parts.length != 2 
                     || (parts.length == 2 && parts[1].length() < 1 )) {
-                throw new CustomWrapperException("HTTP headers must be defined with the format name=\"value\"");
+                throw new CustomWrapperException("Parameters must be defined with the format name=\"value\"");
             }
 
             final String key = parts[0].trim();
             String value = parts[1].trim();
             
             if (!value.startsWith("\"") || !value.endsWith("\"")) {
-                throw new CustomWrapperException("HTTP headers must be defined with the format name=\"value\"");
+                throw new CustomWrapperException("Parameters must be defined with the format name=\"value\"");
             }
 
             // Remove initial and final double quotes
@@ -1133,6 +1137,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 // When the client credentials are included in the body of the request, in addition to the grant type and the refresh token, 
                 // the client id must be included on the request 
                 parameters.add(new BasicNameValuePair(CLIENT_ID, (String) getInputParameterValue(INPUT_PARAMETER_CLIENT_ID).getValue()));
+                parameters.add(new BasicNameValuePair(CLIENT_SECRET, (String) getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET).getValue()));
                 
             } else if ((authMethod != null) && !authMethod.isEmpty() && INPUT_PARAMETER_AUTH_METHOD_SERVERS_BASIC.equals(authMethod)) {
                 
@@ -1144,6 +1149,20 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 encoded = encoded.replaceAll("\r\n?", "");
                 post.setHeader(HttpHeaders.AUTHORIZATION, "Basic " + encoded);
                 
+            }
+
+            if ((getInputParameterValue(INPUT_PARAMETER_EXTRA_PARAMETERS) != null)
+                    && !StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_EXTRA_PARAMETERS).getValue())) {
+
+                final Map<String, String> extraParameters = getMultiParameters((String) getInputParameterValue(INPUT_PARAMETER_EXTRA_PARAMETERS).getValue());
+
+                if (extraParameters != null) {
+
+                    for (final Entry<String, String> entry : extraParameters.entrySet()) {
+
+                        parameters.add(new BasicNameValuePair(entry.getKey(), entry.getValue()));
+                    }
+                }
             }
 
             post.setEntity(new UrlEncodedFormEntity(parameters, StandardCharsets.UTF_8.name()));
@@ -1189,5 +1208,5 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 // ignore
             }
         }
-    }    
+    }
 }

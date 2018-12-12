@@ -718,6 +718,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
         String proxyUser;
         String proxyPassword;
 
+        List<OClientBehavior> behaviors = new ArrayList<OClientBehavior>();
+
         // NLTM
         if (((Boolean) getInputParameterValue(INPUT_PARAMETER_NTLM).getValue()).booleanValue()) {
 
@@ -803,8 +805,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
             if (logger.isDebugEnabled()) {
                 logger.debug("Value of Access Token in the client of odata: " + accessToken);
             }
-            
-            builder.setClientBehaviors(new OClientBehavior() {
+
+            OClientBehavior behaviorOAuth = new OClientBehavior() {
                 @Override
                 public ODataClientRequest transform(final ODataClientRequest request) {
                     try {
@@ -814,8 +816,10 @@ public class ODataWrapper extends AbstractCustomWrapper {
                         return null;
                     }
                 }
-            });
-            
+            };
+
+            behaviors.add(behaviorOAuth);
+
             logger.info("Using OAuth2 authentication");
 
         // Basic auth
@@ -839,7 +843,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
             if (StringUtils.isNotBlank(user) && StringUtils.isNotBlank(password)) {
 
                 // Allow HTTP Basic Authentication
-                builder.setClientBehaviors(OClientBehaviors.basicAuth(user, password));
+                OClientBehavior behaviorBasicAuth = OClientBehaviors.basicAuth(user, password);
+                behaviors.add(behaviorBasicAuth);
             }
         }
         
@@ -885,21 +890,28 @@ public class ODataWrapper extends AbstractCustomWrapper {
         
         System.setProperties(props);
         if (getInputParameterValue(INPUT_PARAMETER_VERSION) != null) {
+
             if (getInputParameterValue(INPUT_PARAMETER_VERSION).getValue().equals(INPUT_PARAMETER_VERSION_2)) {
-                builder.setClientBehaviors(new OClientBehavior() {
+
+                OClientBehavior behaviorServiceVersion = new OClientBehavior() {
                     @Override
                     public ODataClientRequest transform(final ODataClientRequest request) {
                         return request.header("MaxDataServiceVersion", ODataVersion.V2.asString);
                     }
-                });
-        
+                };
+
+                behaviors.add(behaviorServiceVersion);
+
             } else if (getInputParameterValue(INPUT_PARAMETER_VERSION).getValue().equals(INPUT_PARAMETER_VERSION_1)) {
-                builder.setClientBehaviors(new OClientBehavior() {
+
+                OClientBehavior behaviorServiceVersion = new OClientBehavior() {
                     @Override
                     public ODataClientRequest transform(final ODataClientRequest request) {
                         return request.header("MaxDataServiceVersion", ODataVersion.V1.asString);
                     }
-                });
+                };
+
+                behaviors.add(behaviorServiceVersion);
             }
         }
 
@@ -918,23 +930,36 @@ public class ODataWrapper extends AbstractCustomWrapper {
             final Map<String, String> headers = getHttpHeaders((String) getInputParameterValue(INPUT_PARAMETER_HTTP_HEADERS).getValue());
             
             if (headers != null) {
-        
-                builder.setClientBehaviors(new OClientBehavior() {
-                    
+
+                OClientBehavior behaviorHttpHeaders = new OClientBehavior() {
                     @Override
                     public ODataClientRequest transform(final ODataClientRequest request) {
-                        
+
                         for (final Entry<String, String> entry : headers.entrySet()) {
+
                             request.header(entry.getKey(), entry.getValue());
-                            logger.info("HTTP Header - " + entry.getKey() + ": " + entry.getValue());
+
+                            if (logger.isInfoEnabled()) {
+                                logger.info("HTTP Header - " + entry.getKey() + ": " + entry.getValue());
+                            }
                         }
-                        
+
                         return request;
                     }
-                });                
+                };
+
+                behaviors.add(behaviorHttpHeaders);
             }
         }
-        
+
+        // Add client behabiors
+        if (!behaviors.isEmpty()) {
+
+            OClientBehavior[] clientBehaviors = new OClientBehavior[behaviors.size()];
+            clientBehaviors = behaviors.toArray(clientBehaviors);
+            builder.setClientBehaviors(clientBehaviors);
+        }
+
         return builder.build();
     }
     

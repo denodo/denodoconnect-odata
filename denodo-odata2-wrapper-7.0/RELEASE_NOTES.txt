@@ -1,4 +1,4 @@
-CURRENT
+20181213
 ========
 #40795 - OAuth credentials must have higher priority than basic authentication credentials
 #40892 - OAuth2 headers not being sent to the service in some scenarios

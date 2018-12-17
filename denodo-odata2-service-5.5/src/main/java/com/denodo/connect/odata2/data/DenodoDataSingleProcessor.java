@@ -298,15 +298,24 @@ public class DenodoDataSingleProcessor extends ODataSingleProcessor {
                     propertiesBuilder.inlineCount(count);
                     propertiesBuilder.inlineCountType(inlineCount);
                 }
-                
+
                 return EntityProvider.writeFeed(contentType, entitySetTarget, data, propertiesBuilder.build());
             }
         } catch (final DenodoODataConnectException e) {
+            logger.error("An error happened", e);
             throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
         } catch (final DenodoODataAuthenticationException e) {
+            logger.error("An error happened", e);
             throw new ODataUnauthorizedException(e);
         } catch (final DenodoODataAuthorizationException e) {
+            logger.error("An error happened", e);
             throw new ODataForbiddenException(ODataForbiddenException.COMMON, e);
+        } catch (final ODataException e) {
+            logger.error("An error happened", e);
+            throw e;
+        } catch (final Exception e) {
+            logger.error("An error happened", e);
+            throw new ODataInternalServerErrorException(ODataInternalServerErrorException.NOSERVICE, e);
         }
 
         throw new ODataNotImplementedException();

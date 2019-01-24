@@ -306,7 +306,21 @@
       <artifactId>odata4j-core</artifactId>
       <version>0.8.0-denodo-20190123</version>
       <scope>compile</scope>
+        <exclusions>
+            <exclusion>
+                <!--We change this library in denodo 6.0, because the version that has not  any CVE known
+                   9.4.14.v20181114 and it is used in denodo 7.0. It is not compatible con java 7 -->
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-servlet</artifactId>
+            </exclusion>
+        </exclusions>
     </dependency>
+    <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-servlet</artifactId>
+        <version>9.2.26.v20180806</version>
+    </dependency>
+
     <dependency>
       <groupId>org.odata4j</groupId>
       <artifactId>odata4j-cxf</artifactId>

@@ -1,6 +1,8 @@
-CURRENT
+20190125
 ========
 #39879 - OAuth 2.0 credentials can only be updated once
+#41521 - Added profile errorprone to execute error prone
+#41523 - Check and fix errors and CVE with error-prone and dependency check
 
 20180927
 ========

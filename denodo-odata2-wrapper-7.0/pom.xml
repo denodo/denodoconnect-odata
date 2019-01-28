@@ -1,20 +1,59 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-  
-  <!-- *************************** -->
-  <!-- BASIC PROJECT INFO -->
-  <!-- *************************** -->
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>com.denodo.connect.odata</groupId>
-  <artifactId>denodo-odata2-wrapper-7.0</artifactId>
-  <packaging>jar</packaging>
-  <version>20190125</version>
-  <name>denodo-odata2-wrapper-7.0</name>
-  
-  <!-- *************************** -->
-  <!-- BUILD INFO -->
-  <!-- *************************** -->
-  <build>
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <!-- *************************** -->
+    <!-- BASIC PROJECT INFO -->
+    <!-- *************************** -->
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.denodo.connect.odata</groupId>
+    <artifactId>denodo-odata2-wrapper-7.0</artifactId>
+    <packaging>jar</packaging>
+    <version>20190125</version>
+    <name>denodo-odata2-wrapper-7.0</name>
+    <properties>
+        <java.version>1.8</java.version>
+        <errorprone.javac.version>9+181-r4173-1</errorprone.javac.version>
+        <errorprone.core.version>2.3.2</errorprone.core.version>
+    </properties>
+    <!-- *************************** -->
+    <!-- PROFILES -->
+    <!-- *************************** -->
+    <profiles>
+        <profile>
+            <id>errorprone</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <version>3.8.0</version>
+                        <configuration>
+                            <source>${java.version}</source>
+                            <target>${java.version}</target>
+                            <fork>true</fork>
+                            <compilerArgs>
+                                <arg>-XDcompilePolicy=simple</arg>
+                                <arg>-Xplugin:ErrorProne</arg>
+                                <arg>-J-Xbootclasspath/p:${settings.localRepository}/com/google/errorprone/javac/${errorprone.javac.version}/javac-${errorprone.javac.version}.jar</arg>
+                            </compilerArgs>
+                            <annotationProcessorPaths>
+                                <path>
+                                    <groupId>com.google.errorprone</groupId>
+                                    <artifactId>error_prone_core</artifactId>
+                                    <version>${errorprone.core.version}</version>
+                                </path>
+                            </annotationProcessorPaths>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+    <!-- *************************** -->
+    <!-- BUILD INFO -->
+    <!-- *************************** -->
+    <build>
   
     <resources>
       <resource>

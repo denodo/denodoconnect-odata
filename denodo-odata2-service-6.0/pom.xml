@@ -28,29 +28,66 @@
   <groupId>com.denodo.connect.odata2</groupId>
   <artifactId>denodo-odata2-service-6.0</artifactId>
   <name>${project.artifactId}</name>
-  <version>20181107</version>
+  <version>20190129</version>
   
   <organization>
     <name>Denodo Technologies</name>
     <url>http://www.denodo.com</url>
   </organization>
-  
 
-  <packaging>war</packaging>
 
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <version.commonscodec>1.10</version.commonscodec>
-    <version.commonsdbcp>1.4</version.commonsdbcp>
-    <version.commonslang>3.7</version.commonslang>
-    <version.cxf>3.1.0</version.cxf>
-    <version.denodovdpjdbcdriver>6.0.10</version.denodovdpjdbcdriver>
-    <version.olingo>2.0.10</version.olingo>
-    <version.slf4j>1.7.1</version.slf4j>
-    <version.springframework>4.3.17.RELEASE</version.springframework>
-    <classifier.denodovdpjdbcdriver>full</classifier.denodovdpjdbcdriver>
-    <version.servlet.api>2.4</version.servlet.api>
-  </properties>
+    <packaging>war</packaging>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <version.commonscodec>1.10</version.commonscodec>
+        <version.commonsdbcp>1.4</version.commonsdbcp>
+        <version.commonslang>3.7</version.commonslang>
+        <version.cxf>3.1.17</version.cxf>
+        <version.denodovdpjdbcdriver>6.0.10</version.denodovdpjdbcdriver>
+        <version.olingo>2.0.10</version.olingo>
+        <version.slf4j>1.7.1</version.slf4j>
+        <version.springframework>4.3.22.RELEASE</version.springframework>
+        <classifier.denodovdpjdbcdriver>full</classifier.denodovdpjdbcdriver>
+        <version.servlet.api>2.4</version.servlet.api>
+        <java.version>1.8</java.version>
+        <errorprone.javac.version>9+181-r4173-1</errorprone.javac.version>
+        <errorprone.core.version>2.3.2</errorprone.core.version>
+    </properties>
+    <!-- *************************** -->
+    <!-- PROFILES -->
+    <!-- *************************** -->
+    <profiles>
+        <profile>
+            <id>errorprone</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <version>3.8.0</version>
+                        <configuration>
+                            <source>${java.version}</source>
+                            <target>${java.version}</target>
+                            <fork>true</fork>
+                            <compilerArgs>
+                                <arg>-XDcompilePolicy=simple</arg>
+                                <arg>-Xplugin:ErrorProne</arg>
+                                <arg>-J-Xbootclasspath/p:${settings.localRepository}/com/google/errorprone/javac/${errorprone.javac.version}/javac-${errorprone.javac.version}.jar</arg>
+                            </compilerArgs>
+                            <annotationProcessorPaths>
+                                <path>
+                                    <groupId>com.google.errorprone</groupId>
+                                    <artifactId>error_prone_core</artifactId>
+                                    <version>${errorprone.core.version}</version>
+                                </path>
+                            </annotationProcessorPaths>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
   <build>
 

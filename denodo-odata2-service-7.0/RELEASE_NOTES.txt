@@ -1,6 +1,8 @@
-CURRENT
+20190129
 --------
 - Fixed #40968 - RuntimeExceptions being swallowed when produced by Olingo encoding infrastructure
+- Added #41476 - Check and fix errors and CVE with error-prone and dependency check
+- Added #41566 - Added profile errorprone to execute error prone
 
 20181107
 --------

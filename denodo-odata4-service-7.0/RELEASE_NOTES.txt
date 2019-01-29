@@ -1,6 +1,8 @@
-CURRENT
+20190129
 --------
 - Added #36510 - The OData 4 Service logs an error because it is unnecessarily checking Kerberos availability in the VDP Server when no user has been configured in the data source connection
+- Added #41521 - Added profile errorprone to execute error prone
+- Added #41523 - Check and fix errors and CVE with error-prone and dependency check
 
 20180814
 --------

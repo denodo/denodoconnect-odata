@@ -1,3 +1,7 @@
+CURRENT
+========
+#41651 - Documentation error in user's manual, connection to microsoft sharepoint online appendix
+
 20190125
 ========
 #41479 - Added profile errorprone to execute error prone

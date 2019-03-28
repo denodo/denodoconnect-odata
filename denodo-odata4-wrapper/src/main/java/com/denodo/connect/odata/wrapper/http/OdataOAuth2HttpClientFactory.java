@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.Header;
 import org.apache.http.HttpException;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpRequest;
@@ -193,6 +194,8 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
     @Override
     public HttpClient create(final HttpMethod method, final URI uri) {
 
+        logger.trace("[OdataOAuth2HttpClientFactory.create(...) starts]");
+
         refreshAttempts = 0;
 
         try {
@@ -210,20 +213,33 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
 
                 @Override
                 public void process(final HttpRequest request, final HttpContext context)
-                        throws HttpException, IOException {
+                    throws HttpException, IOException {
+
                     if (request instanceof HttpUriRequest) {
 
-                        OdataOAuth2HttpClientFactory.this.currentRequest = (HttpUriRequest) request;
-                        if (OdataOAuth2HttpClientFactory.this.currentRequest instanceof RequestWrapper) {
-                            final HttpRequest original = ((RequestWrapper) OdataOAuth2HttpClientFactory.this.currentRequest)
-                                    .getOriginal();
-                            if (original instanceof HttpUriRequest) {
-                                // This is to eliminate the wrapper, because the
-                                // wrapper convert the absolute URI in relative  URI
-                                OdataOAuth2HttpClientFactory.this.currentRequest = (HttpUriRequest) original;
+                        HttpRequest targetRequest = request;
+
+                        if (targetRequest instanceof RequestWrapper) {
+                            targetRequest = ((RequestWrapper) targetRequest).getOriginal();
+                        }
+
+                        if (targetRequest instanceof HttpUriRequest) {
+
+                            // This is to eliminate the wrapper, because the
+                            // wrapper convert the absolute URI in relative  URI
+                            OdataOAuth2HttpClientFactory.this.currentRequest = (HttpUriRequest) targetRequest;
+
+                            if (logger.isDebugEnabled()) {
+
+                                logger.debug("Request. URI: " + ((HttpUriRequest) targetRequest).getURI());
+                                for (Header header : targetRequest.getAllHeaders()) {
+                                    logger.debug("Request. Header: " + header);
+                                }
                             }
                         }
+
                     } else {
+
                         OdataOAuth2HttpClientFactory.this.currentRequest = null;
                     }
                 }
@@ -233,11 +249,24 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
 
                 @Override
                 public void process(final HttpResponse response, final HttpContext context)
-                        throws HttpException, IOException {
+                    throws HttpException, IOException {
+
+                    if (logger.isDebugEnabled()) {
+
+                        if (response != null) {
+
+                            logger.debug("Response. Status code: " + response.getStatusLine().getStatusCode());
+                            logger.debug("Response. Reason phrase: " + response.getStatusLine().getReasonPhrase());
+
+                            for (Header header : response.getAllHeaders()) {
+                                logger.debug("Response. Header: " + header);
+                            }
+                        }
+                    }
 
                     if ((response.getStatusLine().getStatusCode() == HttpStatus.SC_UNAUTHORIZED
-                            || (response.getStatusLine().getStatusCode() == HttpStatus.SC_INTERNAL_SERVER_ERROR))
-                            && refreshAttempts < REFRESH_MAX_ATTEMPTS) {
+                        || (response.getStatusLine().getStatusCode() == HttpStatus.SC_INTERNAL_SERVER_ERROR))
+                        && refreshAttempts < REFRESH_MAX_ATTEMPTS) {
 
                         // Refresh OAuth credentials
                         refreshToken(httpClient);
@@ -249,7 +278,7 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
                             // the request with the new authorization obtained
                             // with the refresh token
                             final HttpResponse response2 = httpClient
-                                    .execute(OdataOAuth2HttpClientFactory.this.currentRequest);
+                                .execute(OdataOAuth2HttpClientFactory.this.currentRequest);
                             response.setEntity(response2.getEntity());
                             response.setStatusLine(response2.getStatusLine());
                         }
@@ -260,6 +289,7 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
             return httpClient;
         
         } catch (final Exception e) {
+
             throw new ODataRuntimeException(e);
         }
     }

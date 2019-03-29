@@ -268,19 +268,48 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
                         || (response.getStatusLine().getStatusCode() == HttpStatus.SC_INTERNAL_SERVER_ERROR))
                         && refreshAttempts < REFRESH_MAX_ATTEMPTS) {
 
+                        if (logger.isDebugEnabled()) {
+
+                            logger.debug(
+                                "Response status: " + response.getStatusLine().getStatusCode() + " - "
+                                    + response.getStatusLine().getReasonPhrase() + ". Refresh access token is needed");
+                        }
+
                         // Refresh OAuth credentials
                         refreshToken(httpClient);
                         accessToken(httpClient);
                         refreshAttempts++;
 
                         if (OdataOAuth2HttpClientFactory.this.currentRequest != null) {
+
                             // we need a PoolingClientConnectionManager to execute
                             // the request with the new authorization obtained
                             // with the refresh token
                             final HttpResponse response2 = httpClient
                                 .execute(OdataOAuth2HttpClientFactory.this.currentRequest);
+
                             response.setEntity(response2.getEntity());
                             response.setStatusLine(response2.getStatusLine());
+
+                            // Remove original response headers
+                            for (Header header : response.getAllHeaders()) {
+                                response.removeHeader(header);
+                            }
+
+                            // Set headers from new response
+                            response.setHeaders(response2.getAllHeaders());
+
+                            if (logger.isDebugEnabled()) {
+
+                                logger.debug("Response after new request with the new access token");
+
+                                logger.debug("Response. Status code: " + response.getStatusLine().getStatusCode());
+                                logger.debug("Response. Reason phrase: " + response.getStatusLine().getReasonPhrase());
+
+                                for (Header header : response.getAllHeaders()) {
+                                    logger.debug("Response. Header: " + header);
+                                }
+                            }
                         }
                     }
                 }
@@ -304,5 +333,4 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
 
         return this.wrapped;
     }
-
 }

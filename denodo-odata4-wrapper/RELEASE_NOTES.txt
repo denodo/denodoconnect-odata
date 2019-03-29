@@ -1,3 +1,7 @@
+20190329
+========
+#42514 - Exception when querying the base view after the access token has expired
+
 20190328
 ========
 #42541 - Increase of the log trace in the OAuth tokens management

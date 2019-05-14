@@ -1,3 +1,7 @@
+CURRENT
+--------
+- Fixed #42688 - Fix documentation lacking explanation of the OAuth 2.0 support
+
 20190129
 --------
 - Added #36510 - The OData 4 Service logs an error because it is unnecessarily checking Kerberos availability in the VDP Server when no user has been configured in the data source connection

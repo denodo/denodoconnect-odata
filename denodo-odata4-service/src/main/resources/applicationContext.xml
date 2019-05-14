@@ -50,6 +50,7 @@
   <util:properties id="odataconfig">
     <prop key="serveraddress">${odataserver.address:}</prop>
     <prop key="serviceroot">${odataserver.serviceRoot:}</prop>
+    <prop key="streaming">${enable.streaming}</prop>
   </util:properties>
   
   <util:properties id="authconfig">

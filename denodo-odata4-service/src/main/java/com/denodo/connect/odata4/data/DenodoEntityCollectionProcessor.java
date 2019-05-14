@@ -21,9 +21,14 @@
  */
 package com.denodo.connect.odata4.data;
 
+import static com.denodo.connect.odata4.util.DenodoPreferenceName.ENTITY_STREAMING;
+
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
+import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +37,7 @@ import java.util.Map;
 
 import org.apache.commons.lang3.Range;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
 import org.apache.olingo.commons.api.data.ContextURL;
 import org.apache.olingo.commons.api.data.EntityCollection;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
@@ -42,10 +48,14 @@ import org.apache.olingo.commons.api.http.HttpHeader;
 import org.apache.olingo.commons.api.http.HttpStatusCode;
 import org.apache.olingo.server.api.OData;
 import org.apache.olingo.server.api.ODataApplicationException;
+import org.apache.olingo.server.api.ODataContentWriteErrorCallback;
+import org.apache.olingo.server.api.ODataContentWriteErrorContext;
 import org.apache.olingo.server.api.ODataLibraryException;
 import org.apache.olingo.server.api.ODataRequest;
 import org.apache.olingo.server.api.ODataResponse;
 import org.apache.olingo.server.api.ServiceMetadata;
+import org.apache.olingo.server.api.prefer.Preferences;
+import org.apache.olingo.server.api.prefer.Preferences.Preference;
 import org.apache.olingo.server.api.prefer.PreferencesApplied;
 import org.apache.olingo.server.api.processor.CountEntityCollectionProcessor;
 import org.apache.olingo.server.api.processor.ReferenceCollectionProcessor;
@@ -54,6 +64,7 @@ import org.apache.olingo.server.api.serializer.ODataSerializer;
 import org.apache.olingo.server.api.serializer.ReferenceCollectionSerializerOptions;
 import org.apache.olingo.server.api.serializer.SerializerException;
 import org.apache.olingo.server.api.serializer.SerializerResult;
+import org.apache.olingo.server.api.serializer.SerializerStreamResult;
 import org.apache.olingo.server.api.uri.UriInfo;
 import org.apache.olingo.server.api.uri.UriParameter;
 import org.apache.olingo.server.api.uri.UriResource;
@@ -76,12 +87,16 @@ import com.denodo.connect.odata4.util.URIUtils;
 @Component
 public class DenodoEntityCollectionProcessor extends DenodoAbstractProcessor implements CountEntityCollectionProcessor, ReferenceCollectionProcessor {
 
+    private static final Logger logger = Logger.getLogger(DenodoEntityCollectionProcessor.class);
 
     @Value("${server.pageSize}")
     private Integer serverPageSize;
 
     @Autowired
     private EntityAccessor entityAccessor;
+
+    @Autowired
+    private StreamingAccessor streamingAccessor;
     
     @Autowired
     private DenodoCommonProcessor denodoCommonProcessor;
@@ -119,7 +134,7 @@ public class DenodoEntityCollectionProcessor extends DenodoAbstractProcessor imp
     public void readEntityCollectionInternal(final ODataRequest request, final ODataResponse response, final UriInfo uriInfo,
             final ContentType responseFormat) throws ODataApplicationException, SerializerException {
 
-        UriResource uriResource = uriInfo.getUriResourceParts().get(0); 
+        UriResource uriResource = uriInfo.getUriResourceParts().get(0);
 
         UriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) uriResource;
         EdmEntitySet startEdmEntitySet = uriResourceEntitySet.getEntitySet();
@@ -132,27 +147,38 @@ public class DenodoEntityCollectionProcessor extends DenodoAbstractProcessor imp
 
         // $count
         SkipTokenOption skiptoken = uriInfo.getSkipTokenOption();
-        
+
         CountOption countOption = uriInfo.getCountOption();
         Integer count = null;
 
-        final Integer preferredPageSize = this.odata.createPreferences(request.getHeaders(HttpHeader.PREFER)).getMaxPageSize();
+        Preferences preferences = this.odata.createPreferences(request.getHeaders(HttpHeader.PREFER));
+
+        final Integer preferredPageSize = preferences.getMaxPageSize();
         final Integer pageSize = getPageSize(preferredPageSize, this.serverPageSize);
 
-        String stringSkipToken = String.valueOf(pageSize); 
+        String stringSkipToken = String.valueOf(pageSize);
         Integer startPagination = skip;
         Integer pageElements = pageSize;
+
         if (skiptoken != null) {
+
             stringSkipToken = String.valueOf(Integer.valueOf(skiptoken.getValue()).intValue() + pageSize.intValue());
             startPagination += Integer.valueOf(skiptoken.getValue()).intValue();
         }
-        
+
         int endPagination = startPagination + pageSize;
+
         Range<Integer> currentPage = Range.between(startPagination - skip, endPagination - skip);
-        if (top != null) { 
-            if (currentPage.contains(top) && !currentPage.isEndedBy(top)) { // Range is inclusive and our check is in an exclusive Range
+
+        if (top != null) {
+
+            // Range is inclusive and our check is in an exclusive Range
+            if (currentPage.contains(top) && !currentPage.isEndedBy(top)) {
+
                 pageElements = top % pageSize;
+
             } else if (top < startPagination) {
+
                 pageElements = 0;
             }
         }
@@ -167,109 +193,170 @@ public class DenodoEntityCollectionProcessor extends DenodoAbstractProcessor imp
         
         EntityCollection entityCollection = null;
         EdmEntitySet responseEdmEntitySet = null;
-        
+        DenodoEntityIterator entityIterator = null;
+
         // $expand
         ExpandOption expandOption = uriInfo.getExpandOption();
-        
+
+        Boolean enableStreaming = Boolean.parseBoolean(this.getEnableStreaming());
+        Boolean entityStreaming = getEntityStreaming(preferences, ENTITY_STREAMING.getName());
+        if (logger.isTraceEnabled()) {
+            logger.trace("Service configuration. Streaming " + (enableStreaming ? "enabled" : "disabled"));
+            logger.trace("Current request. Streaming " + (entityStreaming ? "enabled" : "disabled"));
+        }
+
         if (uriResourceNavigationList.isEmpty()) { // no navigation
 
-            responseEdmEntitySet = startEdmEntitySet; // the response body is built from
-                                              // the first (and only) entitySet
+            // the response body is built from the first (and only) entitySet
+            responseEdmEntitySet = startEdmEntitySet;
 
             keyProperties = responseEdmEntitySet.getEntityType().getKeyPredicateNames();
-            List<String> selectedItemsAsString = ProcessorUtils.getSelectedItems(uriInfo, keyProperties, responseEdmEntitySet);
-            
-            // 2nd: fetch the data from backend for this requested EntitySetName
-            // and deliver as EntitySet
-            entityCollection = this.entityAccessor.getEntityCollection(responseEdmEntitySet, pageElements, startPagination,
-                    uriInfo, selectedItemsAsString, getServiceRoot(request), expandOption);
-            
-            if (countOption!=null && countOption.getValue()) {
+            List<String> selectedItemsAsString = ProcessorUtils
+                .getSelectedItems(uriInfo, keyProperties, responseEdmEntitySet);
+
+            // 2nd: fetch the data from backend for this requested EntitySetName and deliver as EntitySet
+            if (enableStreaming && entityStreaming) {
+
+                entityIterator = this.streamingAccessor
+                    .getIterator(responseEdmEntitySet, null, uriInfo, selectedItemsAsString, getServiceRoot(request),
+                        expandOption);
+
+            } else {
+
+                entityCollection = this.entityAccessor
+                    .getEntityCollection(responseEdmEntitySet, pageElements, startPagination,
+                        uriInfo, selectedItemsAsString, getServiceRoot(request), expandOption);
+            }
+
+            if (countOption != null && countOption.getValue()) {
+
                 count = this.entityAccessor.getCountEntitySet(startEdmEntitySet, null, uriInfo, null);
             }
-            
+
         } else { // navigation
 
-            responseEdmEntitySet = ProcessorUtils.getNavigationTargetEntitySet(startEdmEntitySet, uriResourceNavigationList);
-        
+            responseEdmEntitySet = ProcessorUtils
+                .getNavigationTargetEntitySet(startEdmEntitySet, uriResourceNavigationList);
+
             keyProperties = responseEdmEntitySet.getEntityType().getKeyPredicateNames();
-            List<String> selectedItemsAsString = ProcessorUtils.getSelectedItems(uriInfo, keyProperties, responseEdmEntitySet);
+            List<String> selectedItemsAsString = ProcessorUtils
+                .getSelectedItems(uriInfo, keyProperties, responseEdmEntitySet);
 
             List<UriParameter> keyPredicates = uriResourceEntitySet.getKeyPredicates();
             Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
 
-            entityCollection = this.entityAccessor.getEntityCollectionByAssociation(startEdmEntitySet, keys, pageElements, startPagination,
-                    uriInfo, selectedItemsAsString, null, uriResourceNavigationList, getServiceRoot(request), responseEdmEntitySet, expandOption);
+            if (enableStreaming && entityStreaming) {
+
+                entityIterator = this.streamingAccessor
+                    .getIterator(responseEdmEntitySet, null, uriInfo,
+                        selectedItemsAsString, getServiceRoot(request), expandOption);
+
+            } else {
+
+                entityCollection = this.entityAccessor
+                    .getEntityCollectionByAssociation(startEdmEntitySet, keys, pageElements, startPagination,
+                        uriInfo, selectedItemsAsString, null, uriResourceNavigationList, getServiceRoot(request),
+                        responseEdmEntitySet, expandOption);
+            }
 
             if (countOption != null && countOption.getValue()) {
-                count = this.entityAccessor.getCountEntitySet(startEdmEntitySet, keys, uriInfo, uriResourceNavigationList);
+
+                count = this.entityAccessor
+                    .getCountEntitySet(startEdmEntitySet, keys, uriInfo, uriResourceNavigationList);
             }
         }
 
         if (entityCollection != null) {
+
             // Set count value. It may be null if the count option is false or it does not exist.
             entityCollection.setCount(count);
         }
-        
-        
+
         // Limit the number of returned entities and provide a "next" link if there are further entities.
         // Almost all system query options in the current request must be carried over to the URI for the "next" link,
         // with the exception of $skiptoken.
         if (entityCollection != null && hasMoreEntities(top, pageSize, entityCollection)) {
 
             try {
+
                 final String pathQueryURI = StringUtils.difference(request.getRawBaseUri(), request.getRawRequestUri());
                 URI nextURI = URIUtils.createNextURI(getServiceRoot(request), pathQueryURI, stringSkipToken);
                 entityCollection.setNext(nextURI);
+
             } catch (URISyntaxException e) {
+
                 throw new ODataRuntimeException("Unable to create next link: ", e);
             }
         }
-        
-        
+
         // Remove the extra element of entityCollection that we use to know if we need to set the "next" link
-        if (entityCollection != null && entityCollection.getEntities().size() == pageElements.intValue()) {
-            entityCollection.getEntities().remove(entityCollection.getEntities().size()-1);
+        if (!enableStreaming && entityCollection != null && entityCollection.getEntities().size() == pageElements.intValue()) {
+
+            entityCollection.getEntities().remove(entityCollection.getEntities().size() - 1);
         }
-        
-        
+
         // $select
         SelectOption selectOption = uriInfo.getSelectOption();
 
-        
-        // we need the property names of the $select, in order to build the
-        // context URL
+        // we need the property names of the $select, in order to build the context URL
         EdmEntityType edmEntityType = responseEdmEntitySet.getEntityType();
-        String selectList = this.odata.createUriHelper().buildContextURLSelectList(edmEntityType, expandOption, selectOption);
+        String selectList = this.odata.createUriHelper()
+            .buildContextURLSelectList(edmEntityType, expandOption, selectOption);
+
         ContextURL contextUrl = null;
+
         try {
-            contextUrl = ContextURL.with().entitySet(responseEdmEntitySet).selectList(selectList).serviceRoot(new URI(getServiceRoot(request) + "/")).build();
+
+            contextUrl = ContextURL.with().entitySet(responseEdmEntitySet).selectList(selectList)
+                .serviceRoot(new URI(getServiceRoot(request) + "/")).build();
+
         } catch (URISyntaxException e) {
+
             throw new ODataRuntimeException("Unable to create service root URI: ", e);
         }
-        
-        
+
         // adding the selectOption to the serializerOpts will actually tell the lib to do the job
         final String id = getServiceRoot(request) + "/" + responseEdmEntitySet.getName();
-        EntityCollectionSerializerOptions opts = EntityCollectionSerializerOptions.with().contextURL(contextUrl)
-                .count(uriInfo.getCountOption()).select(selectOption).expand(expandOption).id(id).build();
 
         // Create a serializer based on the requested format
         ODataSerializer serializer = this.odata.createSerializer(responseFormat);
 
-        // and serialize the content: transform from the EntitySet object to SerializerResult
-        SerializerResult serializerResult = serializer.entityCollection(this.serviceMetadata, edmEntityType, entityCollection, opts);
+        if (enableStreaming && entityStreaming) {
 
-        // Configure the response object: set the body, headers and status
-        // code
-        response.setContent(serializerResult.getContent());
+            EntityCollectionSerializerOptions opts = EntityCollectionSerializerOptions.with().contextURL(contextUrl)
+                .count(uriInfo.getCountOption()).select(selectOption).expand(expandOption).id(id)
+                .writeContentErrorCallback(errorCallback).build();
+
+            // and serialize the content: transform from the EntitySet object to SerializerResult
+            SerializerStreamResult serializerResult = serializer.entityCollectionStreamed(serviceMetadata,
+                edmEntityType, entityIterator, opts);
+
+            // Configure the response object: set the body
+            response.setODataContent(serializerResult.getODataContent());
+
+        } else {
+
+            EntityCollectionSerializerOptions opts = EntityCollectionSerializerOptions.with().contextURL(contextUrl)
+                .count(uriInfo.getCountOption()).select(selectOption).expand(expandOption).id(id).build();
+
+            // and serialize the content: transform from the EntitySet object to SerializerResult
+            SerializerResult serializerResult = serializer
+                .entityCollection(this.serviceMetadata, edmEntityType, entityCollection, opts);
+
+            // Configure the response object: set the body
+            response.setContent(serializerResult.getContent());
+        }
+
+        // Configure the response object: set the headers and status code
         response.setStatusCode(HttpStatusCode.OK.getStatusCode());
         response.setHeader(HttpHeader.CONTENT_TYPE, responseFormat.toContentTypeString());
-        
+
         if (preferredPageSize != null) {
+
+            // Configure the response object: set the preferred page size
             response.setHeader(HttpHeader.PREFERENCE_APPLIED,
                 PreferencesApplied.with().maxPageSize(pageSize).build().toValueString());
-          }
+        }
     }
 
 
@@ -283,6 +370,7 @@ public class DenodoEntityCollectionProcessor extends DenodoAbstractProcessor imp
     }
 
     private static Integer getTopValue(final UriInfo uriInfo) {
+
         TopOption topOption = uriInfo.getTopOption();
 
         Integer topNumber = null;
@@ -294,6 +382,7 @@ public class DenodoEntityCollectionProcessor extends DenodoAbstractProcessor imp
     }
 
     private static Integer getSkipValue(final UriInfo uriInfo) {
+
         SkipOption skipOption = uriInfo.getSkipOption();
 
         Integer skipNumber = 0;
@@ -304,21 +393,52 @@ public class DenodoEntityCollectionProcessor extends DenodoAbstractProcessor imp
         return skipNumber;
     }
 
-    
-    
+    private static boolean getEntityStreaming(Preferences preferences, final String name) {
+
+        if (preferences != null && preferences.getPreference(name) != null) {
+
+            return Boolean.parseBoolean(preferences.getPreference(name).getValue());
+        }
+
+        return false;
+    }
+
+    private ODataContentWriteErrorCallback errorCallback = new ODataContentWriteErrorCallback() {
+
+        @Override
+        public void handleError(ODataContentWriteErrorContext context, WritableByteChannel channel) {
+
+            String message = "An error occurred with message: ";
+
+            if (context.getException() != null) {
+
+                message += context.getException().getMessage();
+            }
+
+            try {
+
+                channel.write(ByteBuffer.wrap(message.getBytes()));
+
+            } catch (IOException e) {
+
+                throw new RuntimeException(e);
+            }
+        }
+    };
 
     @Override
     public void countEntityCollection(ODataRequest request, ODataResponse response, UriInfo uriInfo) throws ODataApplicationException,
             ODataLibraryException {
-        
 
-        // 1st retrieve the requested EntitySet from the uriInfo (representation
-        // of the parsed URI)
+        // 1st retrieve the requested EntitySet from the uriInfo (representation of the parsed URI)
         List<UriResource> resourceParts = uriInfo.getUriResourceParts();
 
         UriResource uriResource = resourceParts.get(0); // first segment is the EntitySet
+
         if (!(uriResource instanceof UriResourceEntitySet)) {
-            throw new ODataApplicationException("Only EntitySet is supported", HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
+
+            throw new ODataApplicationException("Only EntitySet is supported",
+                HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
         }
 
         UriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) uriResource;
@@ -341,8 +461,11 @@ public class DenodoEntityCollectionProcessor extends DenodoAbstractProcessor imp
         }
 
         if (count == null) {
+
             response.setStatusCode(HttpStatusCode.NO_CONTENT.getStatusCode());
+
         } else {
+
             String value = String.valueOf(count);
             ByteArrayInputStream serializerContent = new ByteArrayInputStream(value.getBytes(Charset.forName("UTF-8")));
             response.setContent(serializerContent);
@@ -353,18 +476,18 @@ public class DenodoEntityCollectionProcessor extends DenodoAbstractProcessor imp
 
     // Reference /$ref
     @Override
-    public void readReferenceCollection(ODataRequest request, ODataResponse response, UriInfo uriInfo, ContentType responseFormat)
-            throws ODataApplicationException, ODataLibraryException {
-        
-        UriResource uriResource = uriInfo.getUriResourceParts().get(0); 
+    public void readReferenceCollection(ODataRequest request, ODataResponse response, UriInfo uriInfo,
+        ContentType responseFormat) throws ODataApplicationException, ODataLibraryException {
+
+        UriResource uriResource = uriInfo.getUriResourceParts().get(0);
 
         UriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) uriResource;
-        
+
         EdmEntitySet startEdmEntitySet = uriResourceEntitySet.getEntitySet();
-        
+
         EntityCollection entityCollection = null;
         EdmEntitySet responseEdmEntitySet = null;
-        
+
         List<UriResourceNavigation> uriResourceNavigationList = ProcessorUtils.getNavigationSegments(uriInfo);
 
         // $skip
@@ -372,39 +495,42 @@ public class DenodoEntityCollectionProcessor extends DenodoAbstractProcessor imp
 
         // $top
         final Integer top = getTopValue(uriInfo);
-        
+
         responseEdmEntitySet = ProcessorUtils.getNavigationTargetEntitySet(startEdmEntitySet, uriResourceNavigationList);
 
         List<UriParameter> keyPredicates = uriResourceEntitySet.getKeyPredicates();
         Map<String, String> keys = ProcessorUtils.getKeyValues(keyPredicates);
 
-        entityCollection = this.entityAccessor.getEntityCollectionByAssociation(startEdmEntitySet, keys, top, skip, uriInfo, null, null,
+        entityCollection = this.entityAccessor
+            .getEntityCollectionByAssociation(startEdmEntitySet, keys, top, skip, uriInfo, null, null,
                 uriResourceNavigationList, getServiceRoot(request), responseEdmEntitySet, null);
 
         ContextURL contextUrl = null;
+
         try {
-            contextUrl = ContextURL.with().entitySet(responseEdmEntitySet).serviceRoot(new URI(getServiceRoot(request) + "/")).build();
+
+            contextUrl = ContextURL.with().entitySet(responseEdmEntitySet)
+                .serviceRoot(new URI(getServiceRoot(request) + "/")).build();
+
         } catch (URISyntaxException e) {
+
             throw new ODataRuntimeException("Unable to create service root URI: ", e);
         }
-        
+
         // adding the selectOption to the serializerOpts will actually tell the lib to do the job
         ReferenceCollectionSerializerOptions opts = ReferenceCollectionSerializerOptions.with().contextURL(contextUrl)
-                .count(uriInfo.getCountOption()).build();
+            .count(uriInfo.getCountOption()).build();
 
         // Create a serializer based on the requested format
         ODataSerializer serializer = this.odata.createSerializer(responseFormat);
 
         // and serialize the content: transform from the EntitySet object to SerializerResult
-        SerializerResult serializerResult = serializer.referenceCollection(this.serviceMetadata, responseEdmEntitySet, entityCollection, opts);
+        SerializerResult serializerResult = serializer
+            .referenceCollection(this.serviceMetadata, responseEdmEntitySet, entityCollection, opts);
 
-        // Configure the response object: set the body, headers and status
-        // code
+        // Configure the response object: set the body, headers and status code
         response.setContent(serializerResult.getContent());
         response.setStatusCode(HttpStatusCode.OK.getStatusCode());
         response.setHeader(HttpHeader.CONTENT_TYPE, responseFormat.toContentTypeString());
-        
     }
-    
-
 }

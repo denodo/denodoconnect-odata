@@ -28,7 +28,6 @@ import org.apache.olingo.server.api.ODataRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-
 @Component
 public class DenodoAbstractProcessor {
 
@@ -39,20 +38,35 @@ public class DenodoAbstractProcessor {
     
     @Value("${odataserver.address:}")
     private String serviceAddress;
+
+    @Value("${enable.streaming}")
+    private String enableStreaming;
     
     @PostConstruct
     void init() {
+
         this.serviceRoot = StringUtils.removeEnd(this.serviceRoot, SLASH);
         this.serviceAddress = StringUtils.removeStart(this.serviceAddress, SLASH);
-     }
-    
+    }
+
     public String getServiceRoot(ODataRequest request) {
-        
+
         if (StringUtils.isNotBlank(this.serviceRoot)) {
+
             String root = this.serviceRoot + SLASH + this.serviceAddress;
             return StringUtils.removeEnd(root, SLASH);
         }
+
         return request.getRawBaseUri();
-        
+    }
+
+    public String getEnableStreaming() {
+
+        if (StringUtils.isNotBlank(this.enableStreaming)) {
+
+            return this.enableStreaming;
+        }
+
+        return Boolean.TRUE.toString();
     }
 }

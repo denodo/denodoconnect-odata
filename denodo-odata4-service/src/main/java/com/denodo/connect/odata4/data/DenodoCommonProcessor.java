@@ -393,7 +393,7 @@ public class DenodoCommonProcessor {
     // Structs data should be represented as maps where the key is the name of the property
     static ComplexValue getStructAsComplexValue(final EdmPropertyImpl edmProperty, final String propertyName, 
             final Object[] structValues) throws SQLException {
-        
+
         final ComplexValue complexValue = new ComplexValue();
         
         List<String> propertyNames = null;
@@ -401,6 +401,7 @@ public class DenodoCommonProcessor {
         try {
             
             if (edmProperty.getType() instanceof EdmStructuredType) {
+
                 final EdmStructuredType edmStructuralType = ((EdmStructuredType) edmProperty.getType());
                 propertyNames = edmStructuralType.getPropertyNames();
 
@@ -419,7 +420,6 @@ public class DenodoCommonProcessor {
                             // Elements of arrays are Structs in VDP
                             if (arrayElement instanceof Struct) {
                                 final Object[] structValuesInArray = ((Struct) arrayElement).getAttributes();
-
                                 arrayValues.add(getStructAsComplexValue((EdmPropertyImpl) edmStructuralType.getProperty(propertyNames.get(i)),
                                         propertyNames.get(i), structValuesInArray));
                             }
@@ -444,7 +444,7 @@ public class DenodoCommonProcessor {
             logger.error("Error getting property data: " + propertyName, e);
             throw new SQLException("Error getting property data: " + propertyName, e);
         }
-        
+
         return complexValue;
     }
     

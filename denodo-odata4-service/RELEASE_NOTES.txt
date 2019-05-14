@@ -1,6 +1,7 @@
 CURRENT
 --------
 - Fixed #42688 - Fix documentation lacking explanation of the OAuth 2.0 support
+- Added #40505 - Enhancement to support entity collection streaming in OData service connector
 
 20190129
 --------

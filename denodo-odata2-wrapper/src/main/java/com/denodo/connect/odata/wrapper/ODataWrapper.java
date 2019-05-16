@@ -1187,8 +1187,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
             }
             
             // Update token cache
-            ODataAuthenticationCache.getInstance().saveAccessToken(accessToken);
             ODataAuthenticationCache.getInstance().saveOldAccessToken(this.oDataAuthenticationCache.getAccessToken());
+            ODataAuthenticationCache.getInstance().saveAccessToken(accessToken);
             
             return accessToken;
             

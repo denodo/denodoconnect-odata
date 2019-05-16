@@ -1,6 +1,7 @@
 CURRENT
 ========
 #41651 - Documentation error in user's manual, connection to microsoft sharepoint online appendix
+#43212 - The same token is saved in the "old token" and "current token" fields within the token cache
 
 20190125
 ========

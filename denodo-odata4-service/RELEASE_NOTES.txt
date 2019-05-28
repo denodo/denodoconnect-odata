@@ -2,6 +2,7 @@ CURRENT
 --------
 - Fixed #42688 - Fix documentation lacking explanation of the OAuth 2.0 support
 - Added #40505 - Enhancement to support entity collection streaming in OData service connector
+- Fixed #40963 - Default CORS config will be invalid with the next version of the embedded Tomcat
 
 20190129
 --------

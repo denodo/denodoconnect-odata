@@ -354,8 +354,12 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                     + " kind: " + edmProperty.getType().getKind().name());
                         }
 
-                        schemaParams.add(ODataEntityUtil.createSchemaOlingoParameter(edmProperty, loadBlobObjects));
-                        propertiesMap.put(property, edmProperty);
+                        final CustomWrapperSchemaParameter parameter =
+                                ODataEntityUtil.createSchemaOlingoParameter(edmProperty, loadBlobObjects);
+                        if (parameter != null) {
+                            schemaParams.add(parameter);
+                            propertiesMap.put(property, edmProperty);
+                        }
                     }
                     
                     // Add the properties belonging to the base type of the requested entity set, if exist
@@ -376,8 +380,12 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                             + " kind: " + edmProperty.getType().getKind().name());
                                 }
 
-                                schemaParams.add(ODataEntityUtil.createSchemaOlingoParameter(edmProperty, loadBlobObjects));
-                                propertiesMap.put(property, edmProperty);
+                                final CustomWrapperSchemaParameter parameter =
+                                        ODataEntityUtil.createSchemaOlingoParameter(edmProperty, loadBlobObjects);
+                                if (parameter != null) {
+                                    schemaParams.add(parameter);
+                                    propertiesMap.put(property, edmProperty);
+                                }
                             }
                         }
 
@@ -648,7 +656,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
                             } else {
 
-                                final Object value = ODataEntityUtil.getOutputValue(property);
+                                final Object value = ODataEntityUtil.getOutputValue(property, result.getSchema()[index]);
                                 logger.debug("==> " + property.toString() + "||" + value);
                                 params[index] = value;
                             }
@@ -759,14 +767,18 @@ public class ODataWrapper extends AbstractCustomWrapper {
                                 // 1 to 1 relantionships
                                 if (link.asInlineEntity() != null) {
                                     final ClientEntity realtedEntity = link.asInlineEntity().getEntity();
-                                    params[index] = ODataEntityUtil.getOutputValueForRelatedEntity(realtedEntity, client, uri, loadBlobObjects);
+                                    params[index] =
+                                            ODataEntityUtil.getOutputValueForRelatedEntity(
+                                                    realtedEntity, client, uri, loadBlobObjects, result.getSchema()[index]);
                                 }
 
                                 // 1 to many relationship
                                 if (link.asInlineEntitySet() != null) {
                                     final List<ClientEntity> realtedEntities = link.asInlineEntitySet().getEntitySet().getEntities();
                                     if (realtedEntities.size() > 0) {
-                                        params[index] = ODataEntityUtil.getOutputValueForRelatedEntityList(realtedEntities, client, uri, loadBlobObjects);
+                                        params[index] =
+                                                ODataEntityUtil.getOutputValueForRelatedEntityList(
+                                                        realtedEntities, client, uri, loadBlobObjects, result.getSchema()[index]);
                                     }
                                 }
 

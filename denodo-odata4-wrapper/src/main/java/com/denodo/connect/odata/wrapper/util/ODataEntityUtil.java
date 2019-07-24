@@ -25,10 +25,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.sql.Types;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.denodo.connect.odata.wrapper.exceptions.PropertyNotFoundException;
+import com.denodo.vdb.engine.customwrapper.CustomWrapperException;
+import com.denodo.vdb.engine.customwrapper.CustomWrapperSchemaParameter;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
@@ -69,10 +74,6 @@ import org.apache.olingo.commons.core.edm.primitivetype.EdmStream;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmString;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmTimeOfDay;
 
-import com.denodo.connect.odata.wrapper.exceptions.PropertyNotFoundException;
-import com.denodo.vdb.engine.customwrapper.CustomWrapperException;
-import com.denodo.vdb.engine.customwrapper.CustomWrapperSchemaParameter;
-
 public class ODataEntityUtil {
 
     public final static String STREAM_LINK_PROPERTY="MediaReadLink";
@@ -101,18 +102,30 @@ public class ODataEntityUtil {
             }  
             //array of complex types
             if(property.getType() instanceof EdmStructuredType){
+
                 final EdmStructuredType edmStructuralType = ((EdmStructuredType) property.getType());
                 final List<String> propertyNames = edmStructuralType.getPropertyNames();
-                final CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[propertyNames.size()];
-                int i = 0;
-                for (final String prop : propertyNames) {
-                    complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop),  loadBlobObjects);
-                    i++;
+
+                if (propertyNames.size() == 0) {
+                    // There are no properties inside this array. It might be only comprised of navigation properties,
+                    // but navigation properties inside arrays objects are not supported.
+                    return null;
                 }
 
-                // Complex data types
+                final List<CustomWrapperSchemaParameter> complexParams = new ArrayList<CustomWrapperSchemaParameter>();
+                for (final String prop : propertyNames) {
+                    final CustomWrapperSchemaParameter parameter =
+                            createSchemaOlingoParameter(edmStructuralType.getProperty(prop),  loadBlobObjects);
+                    if (parameter != null) {
+                        complexParams.add(parameter);
+                    }
+                }
 
-                return new CustomWrapperSchemaParameter(property.getName(), Types.ARRAY, complexParams, true /* isSearchable */, 
+
+                // Complex data types
+                final CustomWrapperSchemaParameter[] complexParamsArray =
+                        complexParams.toArray(new CustomWrapperSchemaParameter[complexParams.size()]);
+                return new CustomWrapperSchemaParameter(property.getName(), Types.ARRAY, complexParamsArray, true /* isSearchable */,
                         CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                         isNullable /*isNullable*/, false /*isMandatory*/);
             }
@@ -133,17 +146,31 @@ public class ODataEntityUtil {
             //complex type
                 final EdmStructuredType edmStructuralType = ((EdmStructuredType) property.getType());
                 final List<String> propertyNames = edmStructuralType.getPropertyNames();
-                final CustomWrapperSchemaParameter[] complexParams = new CustomWrapperSchemaParameter[propertyNames.size()];
-                int i = 0;
-                for (final String prop : propertyNames) {
-                    logger.info("property name: "+ prop);
-                    complexParams[i] = createSchemaOlingoParameter(edmStructuralType.getProperty(prop),  loadBlobObjects);
-                    i++;
+
+                if (propertyNames.size() == 0) {
+                    // There are no properties inside this complex. It might be only comprised of navigation properties,
+                    // but navigation properties inside complex objects are not supported.
+                    return null;
                 }
+
+                final List<CustomWrapperSchemaParameter> complexParams = new ArrayList<CustomWrapperSchemaParameter>();
+                for (final String prop : propertyNames) {
+                    if (logger.isTraceEnabled()) {
+                        logger.trace("Adding property to complex '" + property.getName() + "' with name: " + prop);
+                    }
+                    final CustomWrapperSchemaParameter parameter =
+                            createSchemaOlingoParameter(edmStructuralType.getProperty(prop),  loadBlobObjects);
+                    if (parameter != null) {
+                        complexParams.add(parameter);
+                    }
+                }
+
 
                 // Complex data types
 
-                return new CustomWrapperSchemaParameter(property.getName(), Types.STRUCT, complexParams,  true /* isSearchable */, 
+                final CustomWrapperSchemaParameter[] complexParamsArray =
+                        complexParams.toArray(new CustomWrapperSchemaParameter[complexParams.size()]);
+                return new CustomWrapperSchemaParameter(property.getName(), Types.STRUCT, complexParamsArray,  true /* isSearchable */,
                         CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
                         isNullable /*isNullable*/, false /*isMandatory*/);
                 }
@@ -194,7 +221,9 @@ public class ODataEntityUtil {
     }
 
 
-    public static Object getOutputValue(final ClientProperty property) throws CustomWrapperException {
+    public static Object getOutputValue(final ClientProperty property, final CustomWrapperSchemaParameter schemaParameter)
+            throws CustomWrapperException {
+
         logger.trace("returning value :" + property.toString());
         
 		if (property.hasPrimitiveValue()
@@ -211,13 +240,21 @@ public class ODataEntityUtil {
 
             Object[] complexOutput = null;
             if (complexValues != null) {
-                complexOutput = new Object[complexValues.size()];
+                final CustomWrapperSchemaParameter[] innerColumns = schemaParameter.getColumns();
+                final Map<String,CustomWrapperSchemaParameter> schemaParamsByName = new HashMap<String,CustomWrapperSchemaParameter>();
+                for (int i = 0; i < innerColumns.length; i++) {
+                    schemaParamsByName.put(innerColumns[i].getName(), innerColumns[i]);
+                }
+                complexOutput = new Object[Math.min(complexValues.size(), innerColumns.length)];
                 int i = 0;
                 final Iterator<ClientProperty> iterator = complexValues.iterator();
                 while (iterator.hasNext()) {
-                    complexOutput[i] = getOutputValue(iterator.next());
-                    i++;
-
+                    final ClientProperty clientProperty = iterator.next();
+                    final CustomWrapperSchemaParameter propertyParam = schemaParamsByName.get(clientProperty.getName());
+                    if (propertyParam != null) {
+                        complexOutput[i] = getOutputValue(clientProperty, propertyParam);
+                        i++;
+                    }
                 }
             }
             return complexOutput;
@@ -227,17 +264,20 @@ public class ODataEntityUtil {
 
             Object[] complexOutput = null;
             if (collectionValues != null) {
-                complexOutput = new Object[collectionValues.size()];
+                // Note inside collections we cannot know the names of the properties and therefore we cannot apply
+                // a filter on the name of the property matching the name of the schema column
+                complexOutput = new Object[Math.min(collectionValues.size(), schemaParameter.getColumns().length)];
                 int i = 0;
                 for (final ClientValue complexProp : collectionValues) {
-                    complexOutput[i] = getOutputValue(complexProp);
+                    final CustomWrapperSchemaParameter propertyParam = schemaParameter.getColumns()[i];
+                    complexOutput[i] = getOutputValue(complexProp, propertyParam);
                     i++;
                 }
             }
             return complexOutput;
         }
         if (property.hasEnumValue()) {
-            return getOutputValue(property.getEnumValue());
+            return getOutputValue(property.getEnumValue(), schemaParameter);
 
         }
         if (property.hasNullValue()) {
@@ -248,7 +288,9 @@ public class ODataEntityUtil {
     }
 
 
-    public static Object getOutputValue(final ClientValue property) throws CustomWrapperException {
+    public static Object getOutputValue(final ClientValue property, final CustomWrapperSchemaParameter schemaParameter)
+                throws CustomWrapperException {
+
         if (property.isPrimitive()) {
             logger.trace("added value: " + property.asPrimitive().toValue());
             return property.asPrimitive().toValue();
@@ -259,13 +301,21 @@ public class ODataEntityUtil {
 
             Object[] complexOutput = null;
             if (complexValues != null) {
-                complexOutput = new Object[complexValues.size()];
+                final CustomWrapperSchemaParameter[] innerColumns = schemaParameter.getColumns();
+                final Map<String,CustomWrapperSchemaParameter> schemaParamsByName = new HashMap<String,CustomWrapperSchemaParameter>();
+                for (int i = 0; i < innerColumns.length; i++) {
+                    schemaParamsByName.put(innerColumns[i].getName(), innerColumns[i]);
+                }
+                complexOutput = new Object[Math.min(complexValues.size(), innerColumns.length)];
                 int i = 0;
                 final Iterator<ClientProperty> iterator = complexValues.iterator();
                 while (iterator.hasNext()) {
-                    complexOutput[i] = getOutputValue(iterator.next());
-                    i++;
-
+                    final ClientProperty clientProperty = iterator.next();
+                    final CustomWrapperSchemaParameter propertyParam = schemaParamsByName.get(clientProperty.getName());
+                    if (propertyParam != null) {
+                        complexOutput[i] = getOutputValue(clientProperty, propertyParam);
+                        i++;
+                    }
                 }
             }
             return complexOutput;
@@ -274,11 +324,13 @@ public class ODataEntityUtil {
             final ClientCollectionValue<ClientValue> collectionValues = property.asCollection();
             Object[] complexOutput = null;
             if (collectionValues != null) {
-                complexOutput = new Object[collectionValues.size()];
+                // Note inside collections we cannot know the names of the properties and therefore we cannot apply
+                // a filter on the name of the property matching the name of the schema column
+                complexOutput = new Object[Math.min(collectionValues.size(), schemaParameter.getColumns().length)];
                 int i = 0;
-
                 for (final ClientValue complexProp : collectionValues) {
-                    complexOutput[i] = getOutputValue(complexProp);
+                    final CustomWrapperSchemaParameter propertyParam = schemaParameter.getColumns()[i];
+                    complexOutput[i] = getOutputValue(complexProp, propertyParam);
                     i++;
                 }
                 logger.trace("collection object " + collectionValues.toString());
@@ -305,34 +357,38 @@ public class ODataEntityUtil {
         navigationPropertiesMap.put(relName,new CustomNavigationProperty(type,( nav.isCollection()?CustomNavigationProperty.ComplexType.COLLECTION:CustomNavigationProperty.ComplexType.COMPLEX)));//add to cache
         if (type != null) {
             final List<String> props = type.getPropertyNames();
-            final int schemaSize = props.size() + (type.hasStream() ? 1 : 0); 
-            final CustomWrapperSchemaParameter[] schema = new CustomWrapperSchemaParameter[schemaSize];
-            
-            int i = 0;
+            final List<CustomWrapperSchemaParameter> schema = new ArrayList<CustomWrapperSchemaParameter>();
+
             for (final String property : props) {
-                schema[i] = ODataEntityUtil.createSchemaOlingoParameter(type.getProperty(property),  loadBlobObjects);
-                i++;
+                final CustomWrapperSchemaParameter parameter =
+                        ODataEntityUtil.createSchemaOlingoParameter(type.getProperty(property),  loadBlobObjects);
+                if (parameter != null) {
+                    schema.add(parameter);
+                }
             }
             
             if(type.hasStream()){
                 if (loadBlobObjects != null && loadBlobObjects.booleanValue()){
-                    schema[i] = new CustomWrapperSchemaParameter(STREAM_FILE_PROPERTY, Types.BLOB, null,  true /* isSearchable */, 
+                    schema.add(new CustomWrapperSchemaParameter(STREAM_FILE_PROPERTY, Types.BLOB, null,  true /* isSearchable */,
                             CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
-                            true /*isNullable*/, false /*isMandatory*/);
+                            true /*isNullable*/, false /*isMandatory*/));
                 } else{
-                    schema[i] = new CustomWrapperSchemaParameter(STREAM_LINK_PROPERTY, Types.VARCHAR, null,  true /* isSearchable */, 
+                    schema.add(new CustomWrapperSchemaParameter(STREAM_LINK_PROPERTY, Types.VARCHAR, null,  true /* isSearchable */,
                             CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */, true /* isUpdateable */, 
-                            true /*isNullable*/, false /*isMandatory*/);
+                            true /*isNullable*/, false /*isMandatory*/));
                 }
             }
 
+            final CustomWrapperSchemaParameter[] schemaArray =
+                    schema.toArray(new CustomWrapperSchemaParameter[schema.size()]);
+
             if (nav.isCollection()) {
                 // build an array for a one/many to many relationship
-                return new CustomWrapperSchemaParameter(relName, Types.ARRAY, schema, false, CustomWrapperSchemaParameter.NOT_SORTABLE,
+                return new CustomWrapperSchemaParameter(relName, Types.ARRAY, schemaArray, false, CustomWrapperSchemaParameter.NOT_SORTABLE,
                         false /* isUpdateable */, true, false /* isMandatory */);
             }
             // build a single record for a one/zero to one
-            return new CustomWrapperSchemaParameter(relName, Types.STRUCT, schema, false, CustomWrapperSchemaParameter.NOT_SORTABLE,
+            return new CustomWrapperSchemaParameter(relName, Types.STRUCT, schemaArray, false, CustomWrapperSchemaParameter.NOT_SORTABLE,
                     false /* isUpdateable */, true, false /* isMandatory */);
         }
         throw new CustomWrapperException("Error accesing to navigation properties");
@@ -349,17 +405,20 @@ public class ODataEntityUtil {
     }
 
     public static Object[] getOutputValueForRelatedEntity(final ClientEntity relatedEntity, final ODataClient client,
-            final String uri, final Boolean loadBlobObjects) throws CustomWrapperException, IOException {
+            final String uri, final Boolean loadBlobObjects, final CustomWrapperSchemaParameter schemaParameter)
+                throws CustomWrapperException, IOException {
         
         final boolean isMediaEntity = relatedEntity.isMediaEntity();
         final List<ClientProperty> properties = relatedEntity.getProperties();
         final List<ClientLink> mediaEditLinks = relatedEntity.getMediaEditLinks();
-        final Object[] output = new Object[properties.size() + mediaEditLinks.size() + (isMediaEntity ? 1 : 0)];
+        final Object[] output =
+                new Object[properties.size() + mediaEditLinks.size() + (isMediaEntity ? 1 : 0)];
         
         int i = 0;
         for (final ClientProperty prop : properties) {
             try {
-                output[i++] = getOutputValue(prop);
+                output[i] = getOutputValue(prop, schemaParameter.getColumns()[i]);
+                i++;
             } catch (final PropertyNotFoundException e) {
                 throw e;
             }
@@ -407,11 +466,12 @@ public class ODataEntityUtil {
     }
 
     public static Object[] getOutputValueForRelatedEntityList(final List<ClientEntity> relatedEntities, final ODataClient client, 
-            final String uri, final Boolean loadBlobObjects) throws CustomWrapperException, IOException {
+            final String uri, final Boolean loadBlobObjects, final CustomWrapperSchemaParameter schemaParameter)
+            throws CustomWrapperException, IOException {
         final Object[] output = new Object[relatedEntities.size()];
         int i = 0;
         for (final ClientEntity entity : relatedEntities) {
-            output[i] = getOutputValueForRelatedEntity(entity, client, uri, loadBlobObjects);
+            output[i] = getOutputValueForRelatedEntity(entity, client, uri, loadBlobObjects, schemaParameter.getColumns()[i]);
             i++;
         }
         return output;

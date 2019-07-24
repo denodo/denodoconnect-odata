@@ -1,3 +1,7 @@
+20190724
+========
+#43557 - Navigation properties being ignored from complex types at schema creation type
+
 20190329
 ========
 #42514 - Exception when querying the base view after the access token has expired

@@ -28,9 +28,9 @@
     <groupId>com.denodo.connect.odata</groupId>
     <artifactId>denodo-odata4-wrapper-6.0</artifactId>
     <packaging>jar</packaging>
-    <name>denodo-odata4-wrapper-6.0</name>
+    <name>${project.artifactId}</name>
 	<description>${project.artifactId}</description>
-    <version>20190724</version>
+    <version>20190902</version>
     <!-- *************************** -->
     <!-- PROFILES -->
     <!-- *************************** -->

@@ -234,7 +234,7 @@ public class ODataEntityUtil {
         if (property.hasPrimitiveValue()) {
             return property.getValue().asPrimitive().toValue();
         }
-        // Build complex objets (register)
+        // Build complex objects (register)
         if (property.hasComplexValue()) {
             final ClientComplexValue complexValues = property.getComplexValue();
 
@@ -266,11 +266,10 @@ public class ODataEntityUtil {
             if (collectionValues != null) {
                 // Note inside collections we cannot know the names of the properties and therefore we cannot apply
                 // a filter on the name of the property matching the name of the schema column
-                complexOutput = new Object[Math.min(collectionValues.size(), schemaParameter.getColumns().length)];
+                complexOutput = new Object[collectionValues.size()];
                 int i = 0;
                 for (final ClientValue complexProp : collectionValues) {
-                    final CustomWrapperSchemaParameter propertyParam = schemaParameter.getColumns()[i];
-                    complexOutput[i] = getOutputValue(complexProp, propertyParam);
+                    complexOutput[i] = getOutputValue(complexProp, schemaParameter);
                     i++;
                 }
             }
@@ -326,11 +325,10 @@ public class ODataEntityUtil {
             if (collectionValues != null) {
                 // Note inside collections we cannot know the names of the properties and therefore we cannot apply
                 // a filter on the name of the property matching the name of the schema column
-                complexOutput = new Object[Math.min(collectionValues.size(), schemaParameter.getColumns().length)];
+                complexOutput = new Object[collectionValues.size()];
                 int i = 0;
                 for (final ClientValue complexProp : collectionValues) {
-                    final CustomWrapperSchemaParameter propertyParam = schemaParameter.getColumns()[i];
-                    complexOutput[i] = getOutputValue(complexProp, propertyParam);
+                    complexOutput[i] = getOutputValue(complexProp, schemaParameter);
                     i++;
                 }
                 logger.trace("collection object " + collectionValues.toString());

@@ -1,5 +1,6 @@
-20190902
+20190905
 ========
+#44594 - Fixed: Exception parsing open curly braces in JSON text literals
 #44643 - Fixed: Wrong creation of array field structures
 
 20190724

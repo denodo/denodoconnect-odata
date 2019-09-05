@@ -30,7 +30,7 @@
     <packaging>jar</packaging>
     <name>${project.artifactId}</name>
     <description>${project.artifactId}</description>
-    <version>20190902</version>
+    <version>20190905</version>
     <!-- *************************** -->
     <!-- PROFILES -->
     <!-- *************************** -->
@@ -73,6 +73,17 @@
             </build>
         </profile>
     </profiles>
+
+
+    <repositories>
+        <repository>
+            <id>apache-snapshots</id>
+            <snapshots />
+            <url>https://repository.apache.org/content/groups/snapshots/</url>
+        </repository>
+    </repositories>
+
+
     <!-- *************************** -->
     <!-- BUILD INFO -->
     <!-- *************************** -->
@@ -283,9 +294,12 @@
         </dependency>
 
         <dependency>
+            <!-- TODO The OData client dependency has been set to a snapshot version because of this:  -->
+            <!-- TODO   https://issues.apache.org/jira/browse/OLINGO-1276                              -->
+            <!-- TODO Once OData 4.7.0 is published, we should update this dependency to that version. -->
             <groupId>org.apache.olingo</groupId>
             <artifactId>odata-client-core</artifactId>
-            <version>4.5.0</version>
+            <version>4.7.0-20190902.021344-15</version>
             <scope>compile</scope>
             <exclusions>
                 <exclusion>

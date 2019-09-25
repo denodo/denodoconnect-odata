@@ -98,6 +98,7 @@ public class MetadataAccessor {
 
 
             final DatabaseMetaData metadata = connection.getMetaData();
+            final int vdpVersion = metadata.getDatabaseMajorVersion();
 
 
             columnsRs = metadata.getColumns(connection.getCatalog(), null, entityName.getName(), null);
@@ -107,7 +108,7 @@ public class MetadataAccessor {
 
                 final CsdlProperty property = buildCsdlProperty(entityName, complexTypeNames, columnsRs,
                         "DATA_TYPE", "TYPE_NAME", "COLUMN_NAME", "NULLABLE", "DECIMAL_DIGITS", "COLUMN_SIZE",
-                        metadata.getDatabaseMajorVersion());
+                        vdpVersion);
 
                 entityProperties.add(property);
 

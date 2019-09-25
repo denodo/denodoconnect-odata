@@ -1,3 +1,8 @@
+20190925
+--------
+- Fixed #44994 - Reduce the amount of calls to VDBJDBCDatabaseMetaData.getDatabaseMajorVersion()
+                 in order to avoid a /$metadata performance issue.
+
 20190528
 --------
 - Fixed #42688 - Fix documentation lacking explanation of the OAuth 2.0 support

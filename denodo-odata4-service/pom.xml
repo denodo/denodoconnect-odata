@@ -28,8 +28,8 @@
     <artifactId>denodo-odata4-service-6.0</artifactId>
 	
     <name>${project.artifactId}</name>
-	<description>${project.artifactId}</description>
-    <version>20190528</version>
+    <description>${project.artifactId}</description>
+    <version>20190925</version>
 
     <organization>
         <name>Denodo Technologies</name>

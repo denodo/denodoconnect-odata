@@ -1,3 +1,7 @@
+20191112
+========
+#45574 - Separate DataSource / Base View configuration + add env-dependent properties
+
 20190905
 ========
 #44594 - Fixed: Exception parsing open curly braces in JSON text literals

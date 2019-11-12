@@ -32,7 +32,7 @@
         <include>LICENSE.txt</include>
         <include>NOTICE.txt</include>
         <include>RELEASE_NOTES.txt</include>
-        <include>MIGRATION_20160909.txt</include>
+        <include>MIGRATING_20191112.txt</include>
 		<include>README_DOCS.txt</include>     
       </includes>
     </fileSet>  

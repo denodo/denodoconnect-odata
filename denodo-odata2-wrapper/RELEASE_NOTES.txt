@@ -1,3 +1,7 @@
+20191112
+========
+#45574 - Separate DataSource / Base View configuration + add env-dependent properties
+
 20190610
 ========
 #41651 - Documentation error in user's manual, connection to microsoft sharepoint online appendix

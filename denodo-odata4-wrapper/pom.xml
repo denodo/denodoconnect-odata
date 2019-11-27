@@ -29,8 +29,8 @@
     <artifactId>denodo-odata4-wrapper-6.0</artifactId>
     <packaging>jar</packaging>
     <name>${project.artifactId}</name>
-	<description>${project.artifactId}</description>
-    <version>20191112</version>
+    <description>${project.artifactId}</description>
+    <version>20191127</version>
     <!-- *************************** -->
     <!-- PROFILES -->
     <!-- *************************** -->
@@ -157,32 +157,38 @@
         </configuration>
       </plugin>
 
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-        <version>2.1.2</version>
-        <configuration>
-          <archive>
-            <addMavenDescriptor>false</addMavenDescriptor>
-            <manifest>
-              <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
-              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-            </manifest>
-            <manifestEntries>
-              <!-- Setting this overrides the standard value, which is set to the user building the release -->
-              <Built-By>denodo</Built-By>
-            </manifestEntries>
-          </archive>
-        </configuration>         
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>jar</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.4</version>
+                <configuration>
+                    <archive>
+                        <addMavenDescriptor>false</addMavenDescriptor>
+                        <manifest>
+                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                        </manifest>
+                        <manifestEntries>
+                            <!-- Setting this overrides the standard value, 
+                                which is set to the user building the release -->
+                            <Built-By>denodo</Built-By>
+                        </manifestEntries>
+                        <manifestSections>
+                            <manifestSection>
+                                <name>com.denodo</name>
+                                <manifestEntries>
+                                    <Extension-Name>${project.artifactId}</Extension-Name>
+                                    <Extension-Description>${project.name}</Extension-Description>
+                                    <Extension-Version>${project.version}</Extension-Version>
+                                    <Extension-Target-Version>7.0</Extension-Target-Version>
+                                    <Extension-Target-Update>20190903</Extension-Target-Update>
+                                    <Extension-Website>http://support.denodo.com</Extension-Website>
+                                </manifestEntries>
+                            </manifestSection>
+                        </manifestSections>
+                    </archive>
+                </configuration>
+            </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -265,10 +271,56 @@
 
     </plugins>
 
-  </build>
+    <!-- ****************************************************************** -->
+    <!-- DEPENDENCIES -->
+    <!-- ****************************************************************** -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.fasterxml.jackson.dataformat</groupId>
+                <artifactId>jackson-dataformat-xml</artifactId>
+                <version>2.9.8</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>2.9.8</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>2.9.8</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>2.9.8</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+    <dependencies>
 
 
 
+        <dependency>
+            <!-- TODO The OData client dependency has been set to a snapshot version because of this:  -->
+            <!-- TODO   https://issues.apache.org/jira/browse/OLINGO-1276                              -->
+            <!-- TODO Once OData 4.7.0 is published, we should update this dependency to that version. -->
+            <groupId>org.apache.olingo</groupId>
+            <artifactId>odata-client-core</artifactId>
+            <version>4.7.0-20190902.021344-15</version>
+            <scope>compile</scope>
+<!--            <exclusions>-->
+<!--                <exclusion>-->
+<!--                    <groupId>com.fasterxml.jackson.core</groupId>-->
+<!--                    <artifactId>jackson-databind</artifactId>-->
+<!--                </exclusion>-->
+<!--                <exclusion>-->
+<!--                    <groupId>com.fasterxml.jackson.dataformat</groupId>-->
+<!--                    <artifactId>jackson-dataformat-xml</artifactId>-->
+<!--                </exclusion>-->
+<!--            </exclusions>-->
+        </dependency>
 
   <!-- ****************************************************************** -->
   <!-- DEPENDENCIES -->

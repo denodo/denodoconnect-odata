@@ -10,7 +10,7 @@
     <packaging>jar</packaging>
     <name>${project.artifactId}</name>
 	<description>${project.artifactId}</description>
-    <version>20191112</version>
+    <version>20191127</version>
     <properties>
         <java.version>1.8</java.version>
         <errorprone.javac.version>9+181-r4173-1</errorprone.javac.version>
@@ -159,6 +159,7 @@
                   <Extension-Description>${project.name}</Extension-Description>
                   <Extension-Version>${project.version}</Extension-Version>
                   <Extension-Target-Version>7.0</Extension-Target-Version>
+                  <Extension-Target-Update>20190903</Extension-Target-Update>
                   <Extension-Website>http://support.denodo.com</Extension-Website>
                 </manifestEntries>
               </manifestSection>

@@ -1,3 +1,8 @@
+20191127
+========
+#46150 - Set the Extension-Target-Update in the pom.xml
+#46163 - Fix Jackson dependencies versions
+
 20191112
 ========
 #45574 - Separate DataSource / Base View configuration + add env-dependent properties

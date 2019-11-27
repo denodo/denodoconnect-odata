@@ -30,7 +30,7 @@
     <packaging>jar</packaging>
     <name>${project.artifactId}</name>
     <description>${project.artifactId}</description>
-    <version>20191112</version>
+    <version>20191127</version>
     <!-- *************************** -->
     <!-- PROFILES -->
     <!-- *************************** -->
@@ -215,6 +215,7 @@
                                     <Extension-Description>${project.name}</Extension-Description>
                                     <Extension-Version>${project.version}</Extension-Version>
                                     <Extension-Target-Version>7.0</Extension-Target-Version>
+                                    <Extension-Target-Update>20190903</Extension-Target-Update>
                                     <Extension-Website>http://support.denodo.com</Extension-Website>
                                 </manifestEntries>
                             </manifestSection>
@@ -277,6 +278,30 @@
     <!-- ****************************************************************** -->
     <!-- DEPENDENCIES -->
     <!-- ****************************************************************** -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.fasterxml.jackson.dataformat</groupId>
+                <artifactId>jackson-dataformat-xml</artifactId>
+                <version>2.9.8</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>2.9.8</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>2.9.8</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>2.9.8</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     <dependencies>
 
         <dependency>
@@ -301,26 +326,16 @@
             <artifactId>odata-client-core</artifactId>
             <version>4.7.0-20190902.021344-15</version>
             <scope>compile</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>jackson-databind</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.fasterxml.jackson.dataformat</groupId>
-                    <artifactId>jackson-dataformat-xml</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.dataformat</groupId>
-            <artifactId>jackson-dataformat-xml</artifactId>
-            <version>2.8.11</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>2.8.11.3</version>
+<!--            <exclusions>-->
+<!--                <exclusion>-->
+<!--                    <groupId>com.fasterxml.jackson.core</groupId>-->
+<!--                    <artifactId>jackson-databind</artifactId>-->
+<!--                </exclusion>-->
+<!--                <exclusion>-->
+<!--                    <groupId>com.fasterxml.jackson.dataformat</groupId>-->
+<!--                    <artifactId>jackson-dataformat-xml</artifactId>-->
+<!--                </exclusion>-->
+<!--            </exclusions>-->
         </dependency>
 
         <dependency>

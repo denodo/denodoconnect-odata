@@ -2,6 +2,7 @@
 ========
 #46150 - Set the Extension-Target-Update in the pom.xml
 #46163 - Fix Jackson dependencies versions
+#46189 - Revert odata-client-core dependency version
 
 20191112
 ========

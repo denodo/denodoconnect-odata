@@ -73,6 +73,7 @@ import org.apache.olingo.commons.api.edm.EdmSchema;
 import org.apache.olingo.commons.api.edm.EdmStructuredType;
 import org.apache.olingo.commons.api.edm.EdmType;
 import org.apache.olingo.commons.api.format.ContentType;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
 
 import com.denodo.connect.odata.wrapper.http.BasicAuthHttpPreemptiveTimeoutClientFactory;
 import com.denodo.connect.odata.wrapper.http.DefaultHttpClientConnectionWithSSLFactory;
@@ -97,7 +98,6 @@ import com.denodo.vdb.engine.customwrapper.condition.CustomWrapperConditionHolde
 import com.denodo.vdb.engine.customwrapper.expression.CustomWrapperFieldExpression;
 import com.denodo.vdb.engine.customwrapper.input.type.CustomWrapperInputParameterTypeFactory;
 import com.denodo.vdb.engine.customwrapper.value.CustomWrapperStruct;
-import org.apache.olingo.commons.api.http.HttpStatusCode;
 
 public class ODataWrapper extends AbstractCustomWrapper {
 
@@ -1563,6 +1563,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
         String proxyPassword = null;
 
         client = ODataClientFactory.getClient();
+        boolean clientFactorySet = false;
 
         // NLTM
         if (((Boolean) getInputParameterValue(INPUT_PARAMETER_NTLM).getValue()).booleanValue()) {
@@ -1602,10 +1603,11 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
                 client.getConfiguration().setHttpClientFactory(new NTLMAuthHttpTimeoutClientFactory(user, password, null, domain,
                         (Integer) getInputParameterValue(INPUT_PARAMETER_TIMEOUT).getValue()));
-
+                clientFactorySet = true;
             } else {
 
                 client.getConfiguration().setHttpClientFactory(new NTLMAuthHttpTimeoutClientFactory(user, password, null, domain, null));
+                clientFactorySet = true;
             }
 
         // OAuth 2.0
@@ -1680,6 +1682,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                             (String) getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET).getValue(), credentialsInBody));
 
             logger.info("Using Oauth2 authentication");
+            clientFactorySet = true;
 
         // Basic auth
         } else {
@@ -1704,6 +1707,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 if (getInputParameterValue(INPUT_PARAMETER_TIMEOUT) != null) {
                     client.getConfiguration().setHttpClientFactory(new DefaultHttpClientConnectionWithSSLFactory(
                             (Integer) getInputParameterValue(INPUT_PARAMETER_TIMEOUT).getValue()));
+                    clientFactorySet = true;
                 }
 
             } else {
@@ -1712,12 +1716,14 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
                     client.getConfiguration().setHttpClientFactory(new BasicAuthHttpPreemptiveTimeoutClientFactory(user, password,
                             (Integer) getInputParameterValue(INPUT_PARAMETER_TIMEOUT).getValue()));
-
+                    clientFactorySet = true;
                 } else {
 
                     client.getConfiguration().setHttpClientFactory(new BasicAuthHttpPreemptiveTimeoutClientFactory(user, password, null));
+                    clientFactorySet = true;
                 }
             }
+
         }
 
         // PROXY
@@ -1757,9 +1763,16 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
                 client.getConfiguration().setHttpClientFactory(new ProxyWrappingHttpClientFactory(proxy, proxyUser, proxyPassword));
             }
-               
+
             logger.info("Client with proxy");
-        } 
+            clientFactorySet = true;
+        }
+
+        if (!clientFactorySet) {
+            // We force TLSv1.2 as it is not set by default in JDK 7 and might fail in some cases
+            client.getConfiguration().setHttpClientFactory(
+                new com.denodo.connect.odata.wrapper.http.DefaultHttpClientFactory());
+        }
 
         return client;
     }

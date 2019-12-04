@@ -1,3 +1,7 @@
+20191205
+========
+#46279 - Force TLSv1.2 when no authentication is provided in Denodo 6
+
 20191127
 ========
 #46150 - Set the Extension-Target-Update in the pom.xml

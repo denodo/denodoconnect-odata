@@ -360,7 +360,7 @@
       <version>1.7.7</version>
     </dependency>
 
-    <!-- This dependency is introduced because in the version 0.9 of aalto-xml 
+    <!-- This dependency is introduced because in the version 0.9 of aalto-xml
         has a bug with java 7 -->
     <dependency>
       <groupId>com.fasterxml</groupId>

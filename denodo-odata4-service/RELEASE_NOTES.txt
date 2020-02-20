@@ -1,3 +1,7 @@
+20200220
+--------
+- Fixed #47248 - Change the log checking Kerberos availability in the VDP Server and allow Basic Auth in the google chrome when kerberos auth is disabled
+
 20190925
 --------
 - Fixed #44994 - Reduce the amount of calls to VDBJDBCDatabaseMetaData.getDatabaseMajorVersion()

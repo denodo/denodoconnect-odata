@@ -209,9 +209,13 @@ public class DenodoODataFilter implements Filter {
 
                 if (!this.disabledKerberosAuth && authorizationHeader == null) {
 
-                    response.setHeader(AUTHORIZATION_CHALLENGE_ATTRIBUTE, NEGOTIATE);
+
                     if (!this.disabledBasicAuth) {
-                        response.addHeader(AUTHORIZATION_CHALLENGE_ATTRIBUTE, BASIC);
+                        //First header BASIC and after the header Negotiate, in this way  Microsoft edge gives the option of Basic Auth
+                        response.setHeader(AUTHORIZATION_CHALLENGE_ATTRIBUTE, BASIC);
+                        response.addHeader(AUTHORIZATION_CHALLENGE_ATTRIBUTE, NEGOTIATE);
+                    }else{
+                        response.setHeader(AUTHORIZATION_CHALLENGE_ATTRIBUTE, NEGOTIATE);
                     }
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     logger.trace("SPNEGO starts");
@@ -312,12 +316,19 @@ public class DenodoODataFilter implements Filter {
                 userAuthInfo = new UserAuthenticationInfo(dataBaseName, userAgent, serviceName, intermediateIp, clientIp);
 
             } else {
-
-                // No authentication method provided
-                logger.error("One of these authentication methods must be specified: " +
-                        "Basic Auth, OAuth 2.0 or Kerberos");
-                throw new IllegalArgumentException("One of these authentication methods must be specified: " +
-                        "Basic Auth, OAuth 2.0 or Kerberos");
+                clearRequestAuthentication();
+                if (!this.disabledBasicAuth) {
+                    response.setHeader(AUTHORIZATION_CHALLENGE_ATTRIBUTE, BASIC);
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    logger.trace("Basic authentication starts");
+                    return;
+                } else {
+//                     No authentication method provided
+                    logger.error("One of these authentication methods must be specified: "
+                        + "Basic Auth, OAuth 2.0 or Kerberos");
+                    throw new IllegalArgumentException("One of these authentication methods must be specified: "
+                        + "Basic Auth, OAuth 2.0 or Kerberos");
+                }
             }
 
             // Set connection parameters

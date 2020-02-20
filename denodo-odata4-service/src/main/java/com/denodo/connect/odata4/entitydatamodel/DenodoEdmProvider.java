@@ -227,7 +227,7 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
                     
                     if (logger.isInfoEnabled()) {
 
-                        logger.info(entityName.getName() + " entity avoided beacuse has no primary keys");
+                        logger.info(entityName.getName() + " entity avoided because has no primary keys");
 
                     }
                     

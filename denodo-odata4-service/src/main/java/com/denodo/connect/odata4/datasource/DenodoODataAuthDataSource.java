@@ -248,7 +248,7 @@ public class DenodoODataAuthDataSource implements DataSource {
                     throw new DenodoODataResourceNotFoundException(e);
                 }
                 if (e.getMessage().matches(KERBEROS_DISABLED)) { // Check Kerberos availability
-                    logger.error("Kerberos authentication is not enabled in VDP", e);
+                    logger.debug("Kerberos authentication is not enabled in VDP", e);
                     throw new DenodoODataKerberosDisabledException(e);
                 }
                 if (e.getMessage().matches(KERBEROS_INVALID_USER)) { // Check Kerberos authentication for the user

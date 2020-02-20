@@ -354,7 +354,7 @@ public class DenodoODataFilter implements Filter {
                     
                 } catch (final DenodoODataKerberosDisabledException e) {
                     
-                    logger.trace("Kerberos authentication is not enabled in VDP");
+                    logger.warn("Kerberos authentication is not enabled in VDP but it is enabled in the configuration of denodo-odata4-service.");
                     this.disabledKerberosAuth = true;
                     clearRequestAuthentication();
                     if (!this.disabledBasicAuth) {

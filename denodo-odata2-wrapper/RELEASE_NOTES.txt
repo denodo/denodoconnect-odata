@@ -1,3 +1,7 @@
+20200305
+========
+#47377 - Issue when dealing with illegal datetime values
+
 20191127
 ========
 #46152 - Set the Extension-Target-Update in the pom.xml

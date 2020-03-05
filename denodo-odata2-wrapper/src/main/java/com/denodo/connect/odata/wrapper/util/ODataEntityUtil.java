@@ -107,21 +107,23 @@ public class ODataEntityUtil {
         return Types.VARCHAR;
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public static Object getOutputValue(final OProperty<?> p) {
         if (p.getType().isSimple()) {
             // Odata4j uses Joda time instead of Java.util.data. It needs to be casted
             if (p.getValue() instanceof LocalDateTime) {
-                return ((LocalDateTime)p.getValue()).toDateTime().toCalendar(new Locale("en_US")).getTime();
-            }  else if (p.getValue() instanceof Guid) {
+                //Timezone doesn't apply to this data. So, this data is returned in this way to avoid problems with
+                // the timezones.
+                return ((LocalDateTime) p.getValue()).toString();
+            } else if (p.getValue() instanceof Guid) {
                 return p.getValue().toString();
             } else if (p.getType().equals(EdmSimpleType.TIME)) {
-            	return p.getValue().toString();
+                return p.getValue().toString();
             } else if (p.getType().equals(EdmSimpleType.DATETIMEOFFSET)) {
-            	return p.getValue().toString();
+                return p.getValue().toString();
             }
             return p.getValue();
-        } 
+        }
         //  Build complex objets (register)
         final List<OProperty<?>> complexValues = (List<OProperty<?>>) p.getValue();
         Object[] complexOutput = null;

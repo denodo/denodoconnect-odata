@@ -30,7 +30,7 @@
     <packaging>jar</packaging>
     <name>${project.artifactId}</name>
 	<description>${project.artifactId}</description>
-    <version>20191127</version>
+    <version>20200311</version>
     <properties>
         <java.version>1.8</java.version>
         <errorprone.javac.version>9+181-r4173-1</errorprone.javac.version>
@@ -304,7 +304,7 @@
     <dependency>
       <groupId>org.odata4j</groupId>
       <artifactId>odata4j-core</artifactId>
-      <version>0.8.0-denodo-20190123</version>
+      <version>0.8.0-denodo-20200305</version>
       <scope>compile</scope>
         <exclusions>
             <exclusion>
@@ -324,7 +324,7 @@
     <dependency>
       <groupId>org.odata4j</groupId>
       <artifactId>odata4j-cxf</artifactId>
-      <version>0.8.0-denodo-20190123</version>
+      <version>0.8.0-denodo-20200305</version>
     </dependency>
 
   </dependencies>

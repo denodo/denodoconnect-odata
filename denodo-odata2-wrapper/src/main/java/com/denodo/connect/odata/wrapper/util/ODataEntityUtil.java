@@ -112,7 +112,7 @@ public class ODataEntityUtil {
         if (p.getType().isSimple()) {
             // Odata4j uses Joda time instead of Java.util.data. It needs to be casted
             if (p.getValue() instanceof LocalDateTime) {
-                return ((LocalDateTime)p.getValue()).toDateTime().toCalendar(new Locale("en_US")).getTime();
+                return ((LocalDateTime)p.getValue()).toString();
             }  else if (p.getValue() instanceof Guid) {
                 return p.getValue().toString();
             } else if (p.getType().equals(EdmSimpleType.TIME)) {

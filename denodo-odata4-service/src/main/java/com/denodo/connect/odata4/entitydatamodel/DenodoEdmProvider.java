@@ -444,7 +444,9 @@ public class DenodoEdmProvider extends CsdlAbstractEdmProvider {
 
         }
 
-        throw new EdmException("COMMON");
+        // If no complex type obtained, we must return null because of the implementation of the method
+        // isPropertyComplex from Olingo (4.7.1)
+        return null;
     }
     
     

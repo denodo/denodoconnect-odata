@@ -589,5 +589,11 @@ public class DenodoFilterExpressionVisitor extends DenodoAbstractProcessor imple
                 HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
     }
 
-    
+    @Override
+    public Object visitBinaryOperator(BinaryOperatorKind binaryOperatorKind, Object o, List<Object> list)
+        throws ExpressionVisitException, ODataApplicationException {
+        throw new ODataApplicationException("Binaries are not implemented",
+            HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
+    }
+
 }

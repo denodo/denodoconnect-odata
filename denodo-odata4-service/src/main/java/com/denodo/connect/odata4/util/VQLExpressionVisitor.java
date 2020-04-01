@@ -459,4 +459,10 @@ public class VQLExpressionVisitor implements ExpressionVisitor<String> {
         throw new ODataApplicationException("Enums not supported.", HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
     }
 
+    @Override
+    public String visitBinaryOperator(BinaryOperatorKind binaryOperatorKind, String s, List<String> list)
+        throws ExpressionVisitException, ODataApplicationException {
+        throw new ODataApplicationException("Binaries not supported.", HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.getDefault());
+    }
+
 }

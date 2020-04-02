@@ -41,6 +41,8 @@ import org.apache.olingo.commons.core.edm.primitivetype.EdmString;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmTimeOfDay;
 import org.apache.olingo.server.api.uri.queryoption.expression.Literal;
 
+import com.denodo.vdb.jdbcdriver.DurationWrapper;
+
 public final class PropertyUtils {
     
     private static final String VDP_INTERVAL_YM_NAME = String.valueOf(VDPJDBCTypes.INTERVAL_YEAR_MONTH);
@@ -60,7 +62,13 @@ public final class PropertyUtils {
         if (normalizedValue != null) {
             final EdmType columnType = edmProperty.getType();
             if (columnType instanceof EdmDuration) {
-                normalizedValue = IntervalUtils.toOlingoDuration((Long) normalizedValue);
+                if (normalizedValue instanceof DurationWrapper) {
+                    // When the interval belongs to an $expand clause, the value comes inside a DurationWrapper
+                    long millis = (((DurationWrapper) normalizedValue)).getNanoseconds() / 1000000;
+                    normalizedValue = IntervalUtils.toOlingoDuration(millis);
+                } else {
+                    normalizedValue = IntervalUtils.toOlingoDuration((Long) normalizedValue);
+                }
             } else if (columnType instanceof EdmString && isVDPIntervalYearMonth(edmProperty)) {
                 normalizedValue = IntervalUtils.toVQLYearMonthInterval((Long) normalizedValue);
             }

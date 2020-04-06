@@ -1,6 +1,7 @@
 20200406
 --------
 - Fixed #47702 - Update the Olingo and Jackson versions
+- Fixed #47788 - Errors on queries with $expand and intervals
 
 20200220
 --------

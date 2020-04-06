@@ -1,3 +1,7 @@
+20200406
+--------
+- Fixed #47702 - Update the Olingo and Jackson versions
+
 20200220
 --------
 - Fixed #47248 - Change the log checking Kerberos availability in the VDP Server and allow Basic Auth in the google chrome when kerberos auth is disabled

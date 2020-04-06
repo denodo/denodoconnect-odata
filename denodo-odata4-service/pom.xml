@@ -29,7 +29,7 @@
 	
     <name>${project.artifactId}</name>
     <description>${project.artifactId}</description>
-    <version>20200220</version>
+    <version>20200406</version>
 
     <organization>
         <name>Denodo Technologies</name>

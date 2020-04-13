@@ -1,6 +1,4 @@
-﻿# Generated with Denodo Platform 7.0 update 20200310.
-
-ENTER SINGLE USER MODE;
+﻿ENTER SINGLE USER MODE;
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 # #######################################
@@ -28,9 +26,9 @@ CONNECT DATABASE "日本 OData Tests";
 # #######################################
 # DATASOURCES
 # #######################################
-CREATE OR REPLACE DATASOURCE JDBC "mysql_acme_日本"
+CREATE OR REPLACE DATASOURCE JDBC "porsche_pink_mysql_acme_日本"
     DRIVERCLASSNAME = 'com.mysql.jdbc.Driver'
-    DATABASEURI = 'jdbc:mysql://avenger.denodotechnologies.denodo.com:3306/acme_crm'
+    DATABASEURI = 'jdbc:mysql://porsche-pink.denodo.com:3306/acme_crm'
     USERNAME = 'acme_user'
     USERPASSWORD = 'TnE8hsEl82UNkdoybRGyn8Q6RSbmjQk8DCDj6SI16tPYElZLm/I8hsGJ4dgCdkbAptHcLwxpw3RMWBQaiBRmqWOZX/+ngZOQZdt6NI8mbcOyzb8J7nods1CIBVUJBcqU' ENCRYPTED
     CLASSPATH = 'mysql-5'
@@ -53,13 +51,13 @@ CREATE OR REPLACE DATASOURCE JDBC "mysql_acme_日本"
     MAXSLEEPINGPS = 4
     INITIALCAPACITYPS = 8;
 
-CHOWN admin DATASOURCE JDBC "mysql_acme_日本" LASTMODIFICATIONUSER admin;
+CHOWN admin DATASOURCE JDBC "porsche_pink_mysql_acme_日本" LASTMODIFICATIONUSER admin;
 
-CREATE OR REPLACE DATASOURCE JDBC oracle_avenger
+CREATE OR REPLACE DATASOURCE JDBC porsche_pink_oracle_odata_test
     DRIVERCLASSNAME = 'oracle.jdbc.OracleDriver'
-    DATABASEURI = 'jdbc:oracle:thin:@//avenger.denodotechnologies.denodo.com:1521/XE'
-    USERNAME = 'denodotestingtool_test'
-    USERPASSWORD = 'a1EgN/VxTkSdUXyfY6EMjbj1Fy2o0YByG9u7XFynE5OdzYENsalqEuCJlX8F3TjZXgEHCmCbLVfKBL1Lh08/1jc04sTPU968x8I+lkE2OSJdIVzQslcC69XDvXw8ow4N8dCIFzgVr2uPv6cmORMhsA==' ENCRYPTED
+    DATABASEURI = 'jdbc:oracle:thin:@porsche-pink.denodo.com:1521:XE'
+    USERNAME = 'system'
+    USERPASSWORD = 'pbdcjlPPwGK6Eb+fK6cB/3KfrPCasWA2bepkFGuASZNDMHuw5A7anIl+u3ha/DXTpGVRsoQ4OlYaeKew+JndCkk/fI7u9jKjfwAkWlKoQ7S9sNt5AA8UDHpBPX3QMoZl' ENCRYPTED
     CLASSPATH = 'oracle-11g'
     DATABASENAME = 'oracle'
     DATABASEVERSION = '11g'
@@ -77,14 +75,13 @@ CREATE OR REPLACE DATASOURCE JDBC oracle_avenger
     NUMTESTPEREVICTION = 3
     MINEVICTABLETIME = 1800000
     POOLPREPAREDSTATEMENTS = false
-    MAXSLEEPINGPS = 4
-    INITIALCAPACITYPS = 8
-    PROPERTIES ('remarksReporting'='false', 'includeSynonyms'='false')
+    MAXOPENPREPAREDSTATEMENTS = -1
+    PROPERTIES ('includeSynonyms'='false', 'remarksReporting'='false')
     DATA_LOAD_CONFIGURATION (
         BATCHINSERTSIZE = 200
     );
 
-CHOWN admin DATASOURCE JDBC oracle_avenger LASTMODIFICATIONUSER admin;
+CHOWN admin DATASOURCE JDBC porsche_pink_oracle_odata_test LASTMODIFICATIONUSER admin;
 
 # #######################################
 # DATABASE CONFIGURATION
@@ -96,8 +93,8 @@ ALTER DATABASE "日本 OData Tests"
 # WRAPPERS
 # #######################################
 CREATE OR REPLACE WRAPPER JDBC "DATETEST"
-    DATASOURCENAME=oracle_avenger
-    SCHEMANAME='DENODOTESTINGTOOL_TEST' 
+    DATASOURCENAME=porsche_pink_oracle_odata_test
+    SCHEMANAME='ODATA_TEST' 
     RELATIONNAME='DATETEST' 
     OUTPUTSCHEMA (
         "NAME" = 'NAME' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypesize='40', sourcetypeid='12', sourcetypename='VARCHAR2')  SORTABLE,
@@ -107,8 +104,8 @@ CREATE OR REPLACE WRAPPER JDBC "DATETEST"
 CHOWN admin WRAPPER JDBC "DATETEST" LASTMODIFICATIONUSER admin;
 
 CREATE OR REPLACE WRAPPER JDBC "INTERVALTEST"
-    DATASOURCENAME=oracle_avenger
-    SCHEMANAME='DENODOTESTINGTOOL_TEST' 
+    DATASOURCENAME=porsche_pink_oracle_odata_test
+    SCHEMANAME='ODATA_TEST' 
     RELATIONNAME='INTERVALTEST' 
     OUTPUTSCHEMA (
         "INTERVALYM" = 'INTERVALYM' :'java.time.Period' (OPT) (sourcetypedecimals='0', sourcetyperadix='10', sourcetypesize='2', sourcetypeid='-103', sourcetypename='INTERVAL YEAR(2) TO MONTH')  NOT SORTABLE,
@@ -118,13 +115,13 @@ CREATE OR REPLACE WRAPPER JDBC "INTERVALTEST"
 CHOWN admin WRAPPER JDBC "INTERVALTEST" LASTMODIFICATIONUSER admin;
 
 CREATE OR REPLACE WRAPPER JDBC "PHONE_ARRAY_TABLE"
-    DATASOURCENAME=oracle_avenger
-    SCHEMANAME='DENODOTESTINGTOOL_TEST' 
+    DATASOURCENAME=porsche_pink_oracle_odata_test
+    SCHEMANAME='ODATA_TEST' 
     RELATIONNAME='PHONE_ARRAY_TABLE' 
     OUTPUTSCHEMA (
         "NAME" = 'NAME' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypesize='20', sourcetypeid='12', sourcetypename='VARCHAR2')  NOT NULL SORTABLE,
         "PHONE_NUMBERS" = 'PHONE_NUMBERS': ARRAY OF (
-            "DENODOTESTINGTOOL_TEST.PHONE_ARRAY" = 'DENODOTESTINGTOOL_TEST.PHONE_ARRAY' : REGISTER OF (
+            "ODATA_TEST.PHONE_ARRAY" = 'ODATA_TEST.PHONE_ARRAY' : REGISTER OF (
                 value = 'value' :'java.lang.String' (sourcetypeid='12', sourcetypename='VARCHAR')  NOT NULL NOT SORTABLE
             ) NOT SORTABLE NOT UPDATEABLE
         ) NOT SORTABLE NOT UPDATEABLE ISTABLE
@@ -133,8 +130,8 @@ CREATE OR REPLACE WRAPPER JDBC "PHONE_ARRAY_TABLE"
 CHOWN admin WRAPPER JDBC "PHONE_ARRAY_TABLE" LASTMODIFICATIONUSER admin;
 
 CREATE OR REPLACE WRAPPER JDBC "STRUCT7_TABLE"
-    DATASOURCENAME=oracle_avenger
-    SCHEMANAME='DENODOTESTINGTOOL_TEST' 
+    DATASOURCENAME=porsche_pink_oracle_odata_test
+    SCHEMANAME='ODATA_TEST' 
     RELATIONNAME='STRUCT7_TABLE' 
     OUTPUTSCHEMA (
         id = 'id' :'java.math.BigDecimal' (OPT) (sourcetyperadix='10', sourcetypeid='3', sourcetypename='NUMBER')  ESCAPE SORTABLE,
@@ -146,41 +143,41 @@ CREATE OR REPLACE WRAPPER JDBC "STRUCT7_TABLE"
             "TIMESTAMPCONTZ" = 'TIMESTAMPCONTZ' :'java.time.OffsetDateTime' (sourcetypeid='-101', sourcetypename='TIMESTAMP WITH TIME ZONE')  NOT SORTABLE,
             "DATEDATE" = 'DATEDATE' :'java.time.LocalDateTime' (sourcetypeid='91', sourcetypename='DATE')  NOT SORTABLE,
             "TIMESTAMPTIMESTAMP" = 'TIMESTAMPTIMESTAMP' :'java.time.LocalDateTime' (sourcetypeid='93', sourcetypename='TIMESTAMP')  NOT SORTABLE
-        ) (sourcetypeid='1111', sourcetypename='DENODOTESTINGTOOL_TEST.TYPE7_STRUCT')  NOT SORTABLE NOT UPDATEABLE
+        ) (sourcetypeid='1111', sourcetypename='ODATA_TEST.TYPE7_STRUCT')  NOT SORTABLE NOT UPDATEABLE
     );
 
 CHOWN admin WRAPPER JDBC "STRUCT7_TABLE" LASTMODIFICATIONUSER admin;
 
 CREATE OR REPLACE WRAPPER JDBC "STRUCT_TABLE"
-    DATASOURCENAME=oracle_avenger
-    SCHEMANAME='DENODOTESTINGTOOL_TEST' 
+    DATASOURCENAME=porsche_pink_oracle_odata_test
+    SCHEMANAME='ODATA_TEST' 
     RELATIONNAME='STRUCT_TABLE' 
     OUTPUTSCHEMA (
         "ID" = 'ID' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypesize='4', sourcetypeid='12', sourcetypename='VARCHAR2')  NOT NULL SORTABLE,
         "EMPLOYEE" = 'EMPLOYEE' : REGISTER OF (
             "NAME" = 'NAME' :'java.lang.String' (sourcetypeid='12', sourcetypename='VARCHAR')  NOT SORTABLE,
             "SALARY" = 'SALARY' :'java.math.BigDecimal' (sourcetypeid='2', sourcetypename='NUMBER')  NOT SORTABLE
-        ) (sourcetypeid='1111', sourcetypename='DENODOTESTINGTOOL_TEST.TYPE_STRUCT')  NOT SORTABLE NOT UPDATEABLE
+        ) (sourcetypeid='1111', sourcetypename='ODATA_TEST.TYPE_STRUCT')  NOT SORTABLE NOT UPDATEABLE
     );
 
 CHOWN admin WRAPPER JDBC "STRUCT_TABLE" LASTMODIFICATIONUSER admin;
 
 CREATE OR REPLACE WRAPPER JDBC "STRUCT_TABLE_copy"
-    DATASOURCENAME=oracle_avenger
-    SCHEMANAME='DENODOTESTINGTOOL_TEST' 
+    DATASOURCENAME=porsche_pink_oracle_odata_test
+    SCHEMANAME='ODATA_TEST' 
     RELATIONNAME='STRUCT_TABLE' 
     OUTPUTSCHEMA (
         "ID" = 'ID' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypesize='4', sourcetypeid='12', sourcetypename='VARCHAR2')  NOT NULL SORTABLE,
         "EMPLOYEE" = 'EMPLOYEE' : REGISTER OF (
             "NAME" = 'NAME' :'java.lang.String' (sourcetypeid='12', sourcetypename='VARCHAR')  NOT SORTABLE,
             "SALARY" = 'SALARY' :'java.math.BigDecimal' (sourcetypeid='2', sourcetypename='NUMBER')  NOT SORTABLE
-        ) (sourcetypeid='1111', sourcetypename='DENODOTESTINGTOOL_TEST.TYPE_STRUCT')  NOT SORTABLE NOT UPDATEABLE
+        ) (sourcetypeid='1111', sourcetypename='ODATA_TEST.TYPE_STRUCT')  NOT SORTABLE NOT UPDATEABLE
     );
 
 CHOWN admin WRAPPER JDBC "STRUCT_TABLE_copy" LASTMODIFICATIONUSER admin;
 
 CREATE OR REPLACE WRAPPER JDBC address
-    DATASOURCENAME="mysql_acme_日本"
+    DATASOURCENAME="porsche_pink_mysql_acme_日本"
     CATALOGNAME='acme_crm' 
     RELATIONNAME='address' 
     OUTPUTSCHEMA (
@@ -198,7 +195,7 @@ CREATE OR REPLACE WRAPPER JDBC address
 CHOWN admin WRAPPER JDBC address LASTMODIFICATIONUSER admin;
 
 CREATE OR REPLACE WRAPPER JDBC client
-    DATASOURCENAME="mysql_acme_日本"
+    DATASOURCENAME="porsche_pink_mysql_acme_日本"
     CATALOGNAME='acme_crm' 
     RELATIONNAME='client' 
     OUTPUTSCHEMA (
@@ -215,7 +212,7 @@ CREATE OR REPLACE WRAPPER JDBC client
 CHOWN admin WRAPPER JDBC client LASTMODIFICATIONUSER admin;
 
 CREATE OR REPLACE WRAPPER JDBC date_time_types
-    DATASOURCENAME="mysql_acme_日本"
+    DATASOURCENAME="porsche_pink_mysql_acme_日本"
     CATALOGNAME='acme_crm' 
     RELATIONNAME='date_time_types' 
     OUTPUTSCHEMA (
@@ -228,7 +225,7 @@ CREATE OR REPLACE WRAPPER JDBC date_time_types
 CHOWN admin WRAPPER JDBC date_time_types LASTMODIFICATIONUSER admin;
 
 CREATE OR REPLACE WRAPPER JDBC film
-    DATASOURCENAME="mysql_acme_日本"
+    DATASOURCENAME="porsche_pink_mysql_acme_日本"
     CATALOGNAME='acme_crm' 
     RELATIONNAME='film' 
     OUTPUTSCHEMA (
@@ -247,13 +244,7 @@ CREATE OR REPLACE WRAPPER JDBC film
         last_update = 'last_update' :'java.sql.Timestamp' (OPT) (sourcetyperadix='10', sourcetypename='TIMESTAMP', sourcetypeid='93', sourcetypesize='19')  NOT NULL SORTABLE
     )
     CONSTRAINT 'PRIMARY' PRIMARY KEY ( 'film_id' )
-    CONSTRAINT 'fk_film_language' FOREIGN KEY ( 'language_id' ) 
-    REFERENCES 'sakila'.'language'( 'language_id' )  ON UPDATE CASCADE  ON DELETE NO ACTION NOT DEFERRABLE 
-    CONSTRAINT 'fk_film_language_original' FOREIGN KEY ( 'original_language_id' ) 
-    REFERENCES 'sakila'.'language'( 'language_id' )  ON UPDATE CASCADE  ON DELETE NO ACTION NOT DEFERRABLE 
     INDEX 'PRIMARY' CLUSTER UNIQUE PRIMARY ( 'film_id' )
-    INDEX 'idx_fk_language_id' OTHER ( 'language_id' )
-    INDEX 'idx_fk_original_language_id' OTHER ( 'original_language_id' )
     INDEX 'idx_title' OTHER ( 'title' );
 
 CHOWN admin WRAPPER JDBC film LASTMODIFICATIONUSER admin;
@@ -265,7 +256,7 @@ CHOWN admin WRAPPER JDBC film LASTMODIFICATIONUSER admin;
 # #######################################
 # TYPES
 # #######################################
-CREATE OR REPLACE TYPE "PHONE_ARRAY_TABLE_PHONE_NUMBERS_DENODOTESTINGTOOL_TEST.PHONE_ARRAY" AS REGISTER OF (value:text (sourcetypeid = '12'));
+CREATE OR REPLACE TYPE "PHONE_ARRAY_TABLE_PHONE_NUMBERS_ODATA_TEST.PHONE_ARRAY" AS REGISTER OF (value:text (sourcetypeid = '12'));
 
 CREATE OR REPLACE TYPE "STRUCT7_TABLE_EMPLOYEE7" AS REGISTER OF ("NAME":text (sourcetypeid = '12'), "SALARY":decimal (sourcetypeid = '3'), "INTERVALYM":intervalyearmonth, "INTERVALDS":intervaldaysecond, "TIMESTAMPCONTZ":timestamptz (sourcetypeid = '2014'), "DATEDATE":timestamp (sourcetypeid = '93'), "TIMESTAMPTIMESTAMP":timestamp (sourcetypeid = '93'));
 
@@ -299,7 +290,7 @@ CREATE OR REPLACE TYPE _register_value0_date_type_case AS REGISTER OF (value0:in
 
 CREATE OR REPLACE TYPE _register_value0_date_type_datetime_type_timestamp_type_time_type_id_case AS REGISTER OF (value0:int, date_type:localdate, datetime_type:timestamp, timestamp_type:timestamptz, time_type:time, id:int, "case":boolean);
 
-CREATE OR REPLACE TYPE "PHONE_ARRAY_TABLE_PHONE_NUMBERS" AS ARRAY OF "PHONE_ARRAY_TABLE_PHONE_NUMBERS_DENODOTESTINGTOOL_TEST.PHONE_ARRAY";
+CREATE OR REPLACE TYPE "PHONE_ARRAY_TABLE_PHONE_NUMBERS" AS ARRAY OF "PHONE_ARRAY_TABLE_PHONE_NUMBERS_ODATA_TEST.PHONE_ARRAY";
 
 CREATE OR REPLACE TYPE "_array_register_INTERVALDS" AS ARRAY OF "_register_INTERVALDS";
 

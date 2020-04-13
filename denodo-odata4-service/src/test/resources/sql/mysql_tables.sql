@@ -21,8 +21,7 @@ use acme_crm;
 #
 # CREATE DATABASE address
 #
-DROP TABLE `address`;
-CREATE TABLE `address` (
+CREATE TABLE IF NOT EXISTS `address` (
   `client_identifier` varchar(50) NOT NULL,
   `street` varchar(100) DEFAULT NULL,
   `city` varchar(100) DEFAULT NULL,
@@ -32,6 +31,7 @@ CREATE TABLE `address` (
   `country` varchar(45) DEFAULT 'US',
   PRIMARY KEY (`client_identifier`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+TRUNCATE TABLE `address`;
 
 INSERT INTO address (client_identifier,street,city,zip,state,primary_phone,country) VALUES 
 ('C001','3989 Middlefield Rd','San Jose','94085','CA','(408) 813-9318','UNITED STATES')
@@ -134,14 +134,13 @@ INSERT INTO address (client_identifier,street,city,zip,state,primary_phone,count
 #
 # CREATE DATABASE date_time_types
 #
-DROP TABLE `date_time_types`;
-CREATE TABLE `date_time_types` (
+CREATE TABLE IF NOT EXISTS `date_time_types` (
   `date_type` date DEFAULT NULL,
   `datetime_type` datetime DEFAULT NULL,
   `timestamp_type` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `time_type` time DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
+TRUNCATE TABLE `date_time_types`;
 
 INSERT INTO date_time_types (date_type,datetime_type,timestamp_type,time_type) VALUES 
 ('2018-02-04','2018-02-04 17:07:06.000','2018-02-04 17:07:06.000','16:06:11')
@@ -151,8 +150,7 @@ INSERT INTO date_time_types (date_type,datetime_type,timestamp_type,time_type) V
 #
 # CREATE DATABASE film
 #
-DROP TABLE `film`;
-CREATE TABLE `film` (
+CREATE TABLE IF NOT EXISTS `film` (
   `film_id` smallint(5) unsigned NOT NULL AUTO_INCREMENT,
   `title` varchar(255) NOT NULL,
   `description` text,
@@ -171,7 +169,7 @@ CREATE TABLE `film` (
   KEY `idx_fk_language_id` (`language_id`),
   KEY `idx_fk_original_language_id` (`original_language_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1001 DEFAULT CHARSET=utf8;
-
+TRUNCATE TABLE `film`;
 
 INSERT INTO film (film_id,title,description,release_year,language_id,original_language_id,rental_duration,rental_rate,`length`,replacement_cost,rating,special_features,last_update) VALUES 
 (1,'ACADEMY DINOSAUR','A Epic Drama of a Feminist And a Mad Scientist who must Battle a Teacher in The Canadian Rockies','2006-01-01',1,NULL,6,0.99,86,20.99,'PG','Deleted Scenes,Behind the Scenes','2006-02-15 04:03:42.000')

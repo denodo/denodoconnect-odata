@@ -25,11 +25,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.denodo.connect.odata4</groupId>
-    <artifactId>denodo-odata4-service-7.0</artifactId>
+    <artifactId>denodo-odata4-service-8.0</artifactId>
 	
     <name>${project.artifactId}</name>
     <description>${project.artifactId}</description>
-    <version>20200406</version>
+    <version>20200413</version>
 
     <organization>
         <name>Denodo Technologies</name>
@@ -44,7 +44,8 @@
         <version.commons.codec>1.10</version.commons.codec>
         <version.commons.dbcp>1.4</version.commons.dbcp>
         <version.commons.lang>3.5</version.commons.lang>
-        <version.denodovdpjdbcdriver>7.0.6</version.denodovdpjdbcdriver>
+        <!-- TODO #XXXXX - denodo-vdp-jdbcdriver dependency version for Denodo 8 -->
+        <version.denodovdpjdbcdriver>8.0.0-dev-20200406</version.denodovdpjdbcdriver>
         <version.olingo>4.7.1</version.olingo>
         <version.servlet.api>2.4</version.servlet.api>
         <version.slf4j>1.7.1</version.slf4j>

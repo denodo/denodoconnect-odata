@@ -23,12 +23,12 @@ package com.denodo.connect.odata.wrapper.exceptions;
 
 import org.apache.commons.lang.exception.NestableRuntimeException;
 
-
 public class PropertyNotFoundException extends NestableRuntimeException {
+
     private static final long serialVersionUID = -3642408615843489702L;
 
     public PropertyNotFoundException(String property) {
-        super("Property "+property+" not found in schema");
+        super("Property " + property + " not found in schema");
     }
     
     public PropertyNotFoundException() {

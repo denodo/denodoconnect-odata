@@ -21,6 +21,9 @@
  */
 package com.denodo.connect.odata.wrapper.util;
 
+import static com.denodo.connect.odata.wrapper.util.Naming.STREAM_FILE_PROPERTY;
+import static com.denodo.connect.odata.wrapper.util.Naming.STREAM_LINK_PROPERTY;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -75,9 +78,6 @@ import org.apache.olingo.commons.core.edm.primitivetype.EdmString;
 import org.apache.olingo.commons.core.edm.primitivetype.EdmTimeOfDay;
 
 public class ODataEntityUtil {
-
-    public final static String STREAM_LINK_PROPERTY="MediaReadLink";
-    public final static String STREAM_FILE_PROPERTY="MediaFile";
     
     private static final Logger logger = Logger.getLogger(ODataEntityUtil.class);
 

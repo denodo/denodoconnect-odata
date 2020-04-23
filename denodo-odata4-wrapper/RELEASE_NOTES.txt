@@ -1,3 +1,7 @@
+20200423
+========
+#41031 - Support for adding extra parameters to the HTTP requests that refresh an expired access token
+
 20191205
 ========
 #46279 - Force TLSv1.2 when no authentication is provided in Denodo 6

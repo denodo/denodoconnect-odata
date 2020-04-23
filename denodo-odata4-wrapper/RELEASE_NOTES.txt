@@ -1,3 +1,7 @@
+20200423
+========
+#41031 - Support for adding extra parameters to the HTTP requests that refresh an expired access token
+
 20191127
 ========
 #46150 - Set the Extension-Target-Update in the pom.xml

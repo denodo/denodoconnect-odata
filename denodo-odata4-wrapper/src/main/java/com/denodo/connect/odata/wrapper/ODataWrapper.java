@@ -97,6 +97,7 @@ import com.denodo.vdb.engine.customwrapper.condition.CustomWrapperCondition;
 import com.denodo.vdb.engine.customwrapper.condition.CustomWrapperConditionHolder;
 import com.denodo.vdb.engine.customwrapper.expression.CustomWrapperFieldExpression;
 import com.denodo.vdb.engine.customwrapper.input.type.CustomWrapperInputParameterTypeFactory;
+import com.denodo.vdb.engine.customwrapper.input.value.CustomWrapperInputParameterValue;
 import com.denodo.vdb.engine.customwrapper.value.CustomWrapperStruct;
 
 public class ODataWrapper extends AbstractCustomWrapper {
@@ -127,6 +128,10 @@ public class ODataWrapper extends AbstractCustomWrapper {
     private final static String INPUT_PARAMETER_TOKEN_ENDPOINT_URL = "Token Endpoint URL";
     private final static String INPUT_PARAMETER_CUSTOM_QUERY_OPTIONS = "Custom Query Options";
     private final static String INPUT_PARAMETER_HTTP_HEADERS = "HTTP Headers";
+    private final static String INPUT_PARAMETER_GRANT_TYPE = "Grant Type";
+    private final static String INPUT_PARAMETER_GRANT_TYPE_REFRESH_TOKEN = "Refresh Token";
+    private final static String INPUT_PARAMETER_GRANT_TYPE_CLIENT_CREDENTIALS = "Client Credentials";
+    private final static String INPUT_PARAMETER_OAUTH_EXTRA_PARAMETERS = "OAuth Extra Parameters";
     private final static String INPUT_PARAMETER_AUTH_METHOD_SERVERS = "Refr. Token Auth. Method";
     private final static String INPUT_PARAMETER_AUTH_METHOD_SERVERS_BODY = "Include the client credentials in the body of the request";
     private final static String INPUT_PARAMETER_AUTH_METHOD_SERVERS_BASIC = "Send client credentials using the HTTP Basic authentication scheme";
@@ -149,6 +154,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
     public final static String CONTAINSTARGET = "@odata.context";
     private static final String EDM_STREAM_TYPE = "Edm.Stream";
     private static final String EDM_ENUM = "ENUM";
+    private static final String GRANT_TYPE_REFRESH_TOKEN = "refresh_token";
+    private static final String GRANT_TYPE_CLIENT_CREDENTIALS = "client_credentials";
 
     ODataAuthenticationCache oDataAuthenticationCache = ODataAuthenticationCache.getInstance();
 
@@ -244,6 +251,15 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 new String[]{INPUT_PARAMETER_AUTH_METHOD_SERVERS_BODY, INPUT_PARAMETER_AUTH_METHOD_SERVERS_BASIC})),
         new CustomWrapperInputParameter(INPUT_PARAMETER_HTTP_HEADERS,
             "Custom headers to be used in the underlying HTTP client",
+            false, true,
+            CustomWrapperInputParameterTypeFactory.stringType()),
+        new CustomWrapperInputParameter(INPUT_PARAMETER_GRANT_TYPE,
+            "The grant_type to be used in the refresh token requests",
+            false, true,
+            CustomWrapperInputParameterTypeFactory.enumStringType(
+                new String[]{INPUT_PARAMETER_GRANT_TYPE_REFRESH_TOKEN, INPUT_PARAMETER_GRANT_TYPE_CLIENT_CREDENTIALS})),
+        new CustomWrapperInputParameter(INPUT_PARAMETER_OAUTH_EXTRA_PARAMETERS,
+            "Extra parameters of the refresh token requests",
             false, true,
             CustomWrapperInputParameterTypeFactory.stringType())
     };
@@ -1745,24 +1761,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
         } else if (((Boolean) getInputParameterValue(INPUT_PARAMETER_OAUTH2).getValue()).booleanValue()) {
 
             //OAUTH2
-            if ((getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN) == null)
-                || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN).getValue())
-                || (getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN) == null)
-                || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN).getValue())
-                || (getInputParameterValue(INPUT_PARAMETER_TOKEN_ENDPOINT_URL) == null)
-                || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_TOKEN_ENDPOINT_URL).getValue())
-                || (getInputParameterValue(INPUT_PARAMETER_CLIENT_ID) == null)
-                || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_CLIENT_ID).getValue())
-                || (getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET) == null)
-                || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET).getValue())) {
-
-                logger.error(
-                    "For Oauth2 authentication: the access token, the refresh token, client id, client secret and the token endpoint "
-                        + "URL are required.");
-                throw new CustomWrapperException(
-                    "For Oauth2 authentication: the access token, the refresh token, client id, client secret and the token endpoint "
-                        + "URL are required.");
-            }
+            validateOAuthInputParameters();
 
             String accessToken = (String) getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN).getValue();
 
@@ -1811,12 +1810,23 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 || INPUT_PARAMETER_AUTH_METHOD_SERVERS_BODY
                 .equals(getInputParameterValue(INPUT_PARAMETER_AUTH_METHOD_SERVERS).getValue());
 
+            String grantType = getOAuthGrantType(getInputParameterValue(INPUT_PARAMETER_GRANT_TYPE));
+
+            String refreshToken = getRefreshTokenFromInput();
+
+            Map<String, String> oAuthExtraParameters = new HashMap<>();
+            if (getInputParameterValue(INPUT_PARAMETER_OAUTH_EXTRA_PARAMETERS) != null) {
+                oAuthExtraParameters = getOAuthExtraParameters((String) getInputParameterValue(
+                    INPUT_PARAMETER_OAUTH_EXTRA_PARAMETERS).getValue());
+            }
+
             client.getConfiguration().setHttpClientFactory(
                 new OdataOAuth2HttpClientFactory(
                     (String) getInputParameterValue(INPUT_PARAMETER_TOKEN_ENDPOINT_URL).getValue(),
-                    accessToken, (String) getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN).getValue(),
+                    accessToken, refreshToken,
                     (String) getInputParameterValue(INPUT_PARAMETER_CLIENT_ID).getValue(),
-                    (String) getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET).getValue(), credentialsInBody));
+                    (String) getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET).getValue(), credentialsInBody,
+                    grantType, oAuthExtraParameters));
 
             logger.info("Using Oauth2 authentication");
 
@@ -1905,6 +1915,73 @@ public class ODataWrapper extends AbstractCustomWrapper {
         }
 
         return client;
+    }
+
+    private String getRefreshTokenFromInput() {
+        String refreshToken = null;
+        if (getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN) != null
+            && StringUtils.isNotBlank((String) getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN).getValue())) {
+            refreshToken = (String) getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN).getValue();
+        }
+        return refreshToken;
+    }
+
+    private void validateOAuthInputParameters() throws CustomWrapperException {
+
+        // Mandatory fields
+        if ((getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN) == null)
+            || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_ACCESS_TOKEN).getValue())
+            || (getInputParameterValue(INPUT_PARAMETER_TOKEN_ENDPOINT_URL) == null)
+            || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_TOKEN_ENDPOINT_URL).getValue())
+            || (getInputParameterValue(INPUT_PARAMETER_CLIENT_ID) == null)
+            || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_CLIENT_ID).getValue())
+            || (getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET) == null)
+            || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_CLIENT_SECRET).getValue())) {
+
+            logger.error(
+                "For Oauth2 authentication: the access token, the refresh token, client id, client secret and the "
+                    + "token endpoint URL are required.");
+            throw new CustomWrapperException(
+                "For Oauth2 authentication: the access token, the refresh token, client id, client secret and the "
+                    + "token endpoint URL are required.");
+        }
+
+        // Grant type validations: Refresh token field only set for the Refresh token grant type
+        if ((getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN) != null)
+            && StringUtils.isNotBlank((String) getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN).getValue())
+            && (getInputParameterValue(INPUT_PARAMETER_GRANT_TYPE) != null)
+            && !getInputParameterValue(INPUT_PARAMETER_GRANT_TYPE).getValue().equals(INPUT_PARAMETER_GRANT_TYPE_REFRESH_TOKEN)) {
+            logger.error(
+                "For Oauth2 authentication: Refresh Token field can only be set when Refresh Token grant type is selected.");
+            throw new CustomWrapperException(
+                "For Oauth2 authentication: Refresh Token field can only be set when Refresh Token grant type is selected.");
+        }
+
+        if (((getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN) == null)
+            || StringUtils.isBlank((String) getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN).getValue()))
+            && (getInputParameterValue(INPUT_PARAMETER_GRANT_TYPE) != null)
+            && getInputParameterValue(INPUT_PARAMETER_GRANT_TYPE).getValue().equals(INPUT_PARAMETER_GRANT_TYPE_REFRESH_TOKEN)) {
+            logger.error(
+                "For Oauth2 authentication: Refresh Token field is mandatory when Refresh Token grant type is selected.");
+            throw new CustomWrapperException(
+                "For Oauth2 authentication: Refresh Token field is mandatory when Refresh Token grant type is selected.");
+        }
+
+    }
+
+    private String getOAuthGrantType(CustomWrapperInputParameterValue value) {
+
+        if (value != null && value.getValue() != null) {
+
+            // OAuth flows
+            switch (String.valueOf(value)) {
+                case INPUT_PARAMETER_GRANT_TYPE_CLIENT_CREDENTIALS : return GRANT_TYPE_CLIENT_CREDENTIALS;
+                case INPUT_PARAMETER_GRANT_TYPE_REFRESH_TOKEN : return GRANT_TYPE_REFRESH_TOKEN;
+            }
+        }
+
+        // By default, refresh token
+        return GRANT_TYPE_REFRESH_TOKEN;
     }
 
     private static Map<String, EdmEntitySet> getEntitySetMap(final Edm edm) {
@@ -2340,4 +2417,42 @@ public class ODataWrapper extends AbstractCustomWrapper {
             logger.info("Accept: " + accept);
         }
     }
+
+    private static Map<String, String> getOAuthExtraParameters(String input) throws CustomWrapperException {
+
+        final Map<String, String> map = new HashMap<>();
+
+        // Unescape JavaScript backslash escape character
+        input = StringEscapeUtils.unescapeJavaScript(input);
+
+        // Parameters are introduced with the following format: field1="value1";field2="value2";...;fieldn="valuen";
+        // They are splitted by the semicolon character (";") to get pairs field="value"
+        final String[] parameters = input.split(";(?=([^\"]*\"[^\"]*\")*[^\"]*$)");
+        for (final String parameter : parameters) {
+
+            // Once the split has been done, each parameter must have this format: field="value"
+            // In order to get the parameter and its value, split by the first equals character ("=")
+            final String[] parts = parameter.split("=", 2);
+
+            if (parts.length != 2
+                || (parts.length == 2 && parts[1].length() < 1 )) {
+                throw new CustomWrapperException("Parameters must be defined with the format name=\"value\"");
+            }
+
+            final String key = parts[0].trim();
+            String value = parts[1].trim();
+
+            if (!value.startsWith("\"") || !value.endsWith("\"")) {
+                throw new CustomWrapperException("Parameters must be defined with the format name=\"value\"");
+            }
+
+            // Remove initial and final double quotes
+            value = value.replaceAll("^\"|\"$", "");
+
+            map.put(key, value);
+        }
+
+        return map;
+    }
+
 }

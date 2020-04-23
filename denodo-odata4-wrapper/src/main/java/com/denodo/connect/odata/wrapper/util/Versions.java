@@ -1,5 +1,7 @@
 package com.denodo.connect.odata.wrapper.util;
 
+import static com.denodo.connect.odata.wrapper.util.Naming.FILE_VERSION;
+
 import java.io.InputStream;
 import java.util.Properties;
 
@@ -15,7 +17,7 @@ public final class Versions {
 		
 		try {
 			
-			final String filename = "version.properties";
+			final String filename = FILE_VERSION;
             final InputStream input = ResourcesUtil.loadResourceAsStream(filename);            
 
             final Properties properties = new Properties();

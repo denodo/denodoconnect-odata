@@ -21,6 +21,54 @@
  */
 package com.denodo.connect.odata.wrapper;
 
+import static com.denodo.connect.odata.wrapper.util.Naming.CONTAINSTARGET;
+import static com.denodo.connect.odata.wrapper.util.Naming.DELETE_OPERATION;
+import static com.denodo.connect.odata.wrapper.util.Naming.EDM_ENUM;
+import static com.denodo.connect.odata.wrapper.util.Naming.EDM_STREAM_TYPE;
+import static com.denodo.connect.odata.wrapper.util.Naming.GRANT_TYPE_CLIENT_CREDENTIALS;
+import static com.denodo.connect.odata.wrapper.util.Naming.GRANT_TYPE_REFRESH_TOKEN;
+import static com.denodo.connect.odata.wrapper.util.Naming.HTTP_PROXY_HOST;
+import static com.denodo.connect.odata.wrapper.util.Naming.HTTP_PROXY_PORT;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_ACCESS_TOKEN;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_AUTH_METHOD_SERVERS;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_AUTH_METHOD_SERVERS_BASIC;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_AUTH_METHOD_SERVERS_BODY;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_CLIENT_ID;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_CLIENT_SECRET;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_CUSTOM_QUERY_OPTIONS;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_ENDPOINT;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_ENTITY_COLLECTION;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_ENTITY_NAME;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_EXPAND;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_FORMAT;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_FORMAT_ATOM;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_FORMAT_JSON;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_GRANT_TYPE;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_GRANT_TYPE_CLIENT_CREDENTIALS;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_GRANT_TYPE_REFRESH_TOKEN;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_HTTP_HEADERS;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_LIMIT;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_LOAD_MEDIA_LINK_RESOURCES;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_NTLM;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_NTLM_DOMAIN;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_OAUTH2;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_OAUTH_EXTRA_PARAMETERS;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_PASSWORD;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_PROXY_HOST;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_PROXY_PASSWORD;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_PROXY_PORT;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_PROXY_USER;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_REFRESH_TOKEN;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_TIMEOUT;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_TOKEN_ENDPOINT_URL;
+import static com.denodo.connect.odata.wrapper.util.Naming.INPUT_PARAMETER_USER;
+import static com.denodo.connect.odata.wrapper.util.Naming.PAGINATION_FETCH;
+import static com.denodo.connect.odata.wrapper.util.Naming.PAGINATION_OFFSET;
+import static com.denodo.connect.odata.wrapper.util.Naming.SELECT_OPERATION;
+import static com.denodo.connect.odata.wrapper.util.Naming.STREAM_FILE_PROPERTY;
+import static com.denodo.connect.odata.wrapper.util.Naming.STREAM_LINK_PROPERTY;
+import static com.denodo.connect.odata.wrapper.util.Naming.UPDATE_OPERATION;
+
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -102,60 +150,7 @@ import com.denodo.vdb.engine.customwrapper.value.CustomWrapperStruct;
 
 public class ODataWrapper extends AbstractCustomWrapper {
 
-    private final static String INPUT_PARAMETER_ENTITY_COLLECTION = "Entity Collection *";
-    private final static String INPUT_PARAMETER_ENTITY_NAME = "Entity Name";
-    private final static String INPUT_PARAMETER_ENDPOINT = "Service Endpoint *";
-    private final static String INPUT_PARAMETER_EXPAND = "Expand Related Entities";
-    private final static String INPUT_PARAMETER_NTLM = "Use NTLM Authentication";
-    private final static String INPUT_PARAMETER_FORMAT = "Service Format *";
-    private final static String INPUT_PARAMETER_FORMAT_JSON = "JSON";
-    private final static String INPUT_PARAMETER_FORMAT_ATOM = "XML-Atom";
-    private final static String INPUT_PARAMETER_LIMIT = "Enable Pagination";
-    private final static String INPUT_PARAMETER_LOAD_MEDIA_LINK_RESOURCES = "Load Streams";
-    private final static String INPUT_PARAMETER_PROXY_PORT = "Proxy Port";
-    private final static String INPUT_PARAMETER_PROXY_HOST = "Proxy Host";
-    private final static String INPUT_PARAMETER_USER = "User";
-    private final static String INPUT_PARAMETER_PASSWORD = "Password";
-    private final static String INPUT_PARAMETER_PROXY_USER = "Proxy User";
-    private final static String INPUT_PARAMETER_PROXY_PASSWORD = "Proxy Password";
-    private final static String INPUT_PARAMETER_NTLM_DOMAIN = "NTLM Domain";
-    private final static String INPUT_PARAMETER_TIMEOUT = "Timeout";
-    private final static String INPUT_PARAMETER_ACCESS_TOKEN = "Access Token";
-    private final static String INPUT_PARAMETER_REFRESH_TOKEN = "Refresh Token";
-    private final static String INPUT_PARAMETER_CLIENT_ID = "Client Id";
-    private final static String INPUT_PARAMETER_CLIENT_SECRET = "Client Secret";
-    private final static String INPUT_PARAMETER_OAUTH2 = "Use OAuth2";
-    private final static String INPUT_PARAMETER_TOKEN_ENDPOINT_URL = "Token Endpoint URL";
-    private final static String INPUT_PARAMETER_CUSTOM_QUERY_OPTIONS = "Custom Query Options";
-    private final static String INPUT_PARAMETER_HTTP_HEADERS = "HTTP Headers";
-    private final static String INPUT_PARAMETER_GRANT_TYPE = "Grant Type";
-    private final static String INPUT_PARAMETER_GRANT_TYPE_REFRESH_TOKEN = "Refresh Token";
-    private final static String INPUT_PARAMETER_GRANT_TYPE_CLIENT_CREDENTIALS = "Client Credentials";
-    private final static String INPUT_PARAMETER_OAUTH_EXTRA_PARAMETERS = "OAuth Extra Parameters";
-    private final static String INPUT_PARAMETER_AUTH_METHOD_SERVERS = "Refr. Token Auth. Method";
-    private final static String INPUT_PARAMETER_AUTH_METHOD_SERVERS_BODY = "Include the client credentials in the body of the request";
-    private final static String INPUT_PARAMETER_AUTH_METHOD_SERVERS_BASIC = "Send client credentials using the HTTP Basic authentication scheme";
 
-    public final static String PAGINATION_FETCH = "fetch_size";
-    public final static String PAGINATION_OFFSET = "offset_size";
-    public final static String USE_NTLM_AUTH = "http.ntlm.auth";
-    public final static String HTTP_PROXY_HOST = "http.proxyHost";
-    public final static String HTTP_PROXY_PORT = "http.proxyPort";
-    public final static String HTTP_PROXY_USER = "http.proxyUser";
-    public final static String HTTP_PROXY_PASSWORD = "http.proxyPassword";
-    public final static String NTLM_USER = "ntlm.user";
-    public final static String NTLM_PASS = "ntlm.pass";
-    public final static String NTLM_DOMAIN = "ntlm.domain";
-    public final static String TIMEOUT = "http.timeout";
-    public final static String INSERT_OPERATION = "INSERT";
-    public final static String UPDATE_OPERATION = "UPDATE";
-    public final static String DELETE_OPERATION = "DELETE";
-    public final static String SELECT_OPERATION = "SELECT";
-    public final static String CONTAINSTARGET = "@odata.context";
-    private static final String EDM_STREAM_TYPE = "Edm.Stream";
-    private static final String EDM_ENUM = "ENUM";
-    private static final String GRANT_TYPE_REFRESH_TOKEN = "refresh_token";
-    private static final String GRANT_TYPE_CLIENT_CREDENTIALS = "client_credentials";
 
     ODataAuthenticationCache oDataAuthenticationCache = ODataAuthenticationCache.getInstance();
 
@@ -245,7 +240,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
             false, true,
             CustomWrapperInputParameterTypeFactory.stringType()),
         new CustomWrapperInputParameter(INPUT_PARAMETER_AUTH_METHOD_SERVERS,
-            "Authentication method used by the authorization servers while refreshing the access token (credentials in the body by default)",
+            "Authentication method used by the authorization servers while refreshing the access token (credentials "
+                + "in the body by default)",
             false, true,
             CustomWrapperInputParameterTypeFactory.enumStringType(
                 new String[]{INPUT_PARAMETER_AUTH_METHOD_SERVERS_BODY, INPUT_PARAMETER_AUTH_METHOD_SERVERS_BASIC})),
@@ -471,23 +467,23 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
                             logger.trace("Adding property: Stream .Type: Blob ");
                             schemaParams.add(
-                                new CustomWrapperSchemaParameter(ODataEntityUtil.STREAM_FILE_PROPERTY, Types.BLOB, null,
+                                new CustomWrapperSchemaParameter(STREAM_FILE_PROPERTY, Types.BLOB, null,
                                     true /* isSearchable */,
                                     CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */,
                                     true /* isUpdateable */,
                                     true /*isNullable*/, false /*isMandatory*/));
-                            propertiesMap.put(ODataEntityUtil.STREAM_FILE_PROPERTY, null);
+                            propertiesMap.put(STREAM_FILE_PROPERTY, null);
 
                         } else {
 
                             logger.trace("Adding property: Stream Link .Type: String ");
                             schemaParams.add(
-                                new CustomWrapperSchemaParameter(ODataEntityUtil.STREAM_LINK_PROPERTY, Types.VARCHAR,
+                                new CustomWrapperSchemaParameter(STREAM_LINK_PROPERTY, Types.VARCHAR,
                                     null, true /* isSearchable */,
                                     CustomWrapperSchemaParameter.ASC_AND_DESC_SORT/* sortableStatus */,
                                     true /* isUpdateable */,
                                     true /*isNullable*/, false /*isMandatory*/));
-                            propertiesMap.put(ODataEntityUtil.STREAM_LINK_PROPERTY, null);
+                            propertiesMap.put(STREAM_LINK_PROPERTY, null);
                         }
                     }
 
@@ -798,7 +794,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                         if (loadBlobObjects != null && loadBlobObjects) {
 
                             final int index = projectedFields
-                                .indexOf(new CustomWrapperFieldExpression(ODataEntityUtil.STREAM_FILE_PROPERTY));
+                                .indexOf(new CustomWrapperFieldExpression(STREAM_FILE_PROPERTY));
 
                             if (index != -1) {
 
@@ -831,16 +827,16 @@ public class ODataWrapper extends AbstractCustomWrapper {
                         } else {
 
                             final int index = projectedFields
-                                .indexOf(new CustomWrapperFieldExpression(ODataEntityUtil.STREAM_LINK_PROPERTY));
+                                .indexOf(new CustomWrapperFieldExpression(STREAM_LINK_PROPERTY));
 
                             if (index != -1) {
                                 value = uri + "/" + product.getMediaContentSource();
                                 params[index] = value;
 
                             } else {
-
                                 logger.debug(
-                                    "The media read link is not among the projected fields. It was not added in the output object.");
+                                    "The media read link is not among the projected fields. It was not added in the "
+                                        + "output object.");
                             }
                         }
                     }
@@ -1639,13 +1635,13 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
                     for (final CustomWrapperFieldExpression field : completeConditionMap.keySet()) {
 
-                        if (field.getName().equals(ODataWrapper.PAGINATION_FETCH)) {
+                        if (field.getName().equals(PAGINATION_FETCH)) {
 
                             final Integer value = (Integer) completeConditionMap.get(field);
                             uribuilder = uribuilder.top(value.intValue());
                             oDataQuery += "&$top=" + value.intValue();
 
-                        } else if (field.getName().equals(ODataWrapper.PAGINATION_OFFSET)) {
+                        } else if (field.getName().equals(PAGINATION_OFFSET)) {
 
                             final Integer value = (Integer) completeConditionMap.get(field);
                             uribuilder = uribuilder.skip(value.intValue());
@@ -1690,10 +1686,10 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
         for (final CustomWrapperFieldExpression projectedField : projectedFields) {
 
-            if (!projectedField.getName().equals(ODataWrapper.PAGINATION_FETCH)
-                && !projectedField.getName().equals(ODataWrapper.PAGINATION_OFFSET)
-                && !projectedField.getName().equals(ODataEntityUtil.STREAM_FILE_PROPERTY)
-                && !projectedField.getName().equals(ODataEntityUtil.STREAM_LINK_PROPERTY)) {
+            if (!projectedField.getName().equals(PAGINATION_FETCH)
+                && !projectedField.getName().equals(PAGINATION_OFFSET)
+                && !projectedField.getName().equals(STREAM_FILE_PROPERTY)
+                && !projectedField.getName().equals(STREAM_LINK_PROPERTY)) {
                 fields.add(projectedField.getName());
             }
         }
@@ -1774,7 +1770,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
                     if (!oldAccessToken.equals(accessToken)) {
 
-                        //Check if the paramater Acces_token were updated
+                        // Check if the parameter Access_token was updated
                         this.oDataAuthenticationCache.saveAccessToken("");
                         this.oDataAuthenticationCache.saveOldAccessToken("");
 
@@ -2300,9 +2296,9 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
                     if (edmType.hasStream()) {
                         if (loadBlobObjects) {
-                            propertiesMap.put(ODataEntityUtil.STREAM_FILE_PROPERTY, null);
+                            propertiesMap.put(STREAM_FILE_PROPERTY, null);
                         } else {
-                            propertiesMap.put(ODataEntityUtil.STREAM_LINK_PROPERTY, null);
+                            propertiesMap.put(STREAM_LINK_PROPERTY, null);
                         }
                     }
 
@@ -2420,39 +2416,8 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
     private static Map<String, String> getOAuthExtraParameters(String input) throws CustomWrapperException {
 
-        final Map<String, String> map = new HashMap<>();
-
-        // Unescape JavaScript backslash escape character
-        input = StringEscapeUtils.unescapeJavaScript(input);
-
-        // Parameters are introduced with the following format: field1="value1";field2="value2";...;fieldn="valuen";
-        // They are splitted by the semicolon character (";") to get pairs field="value"
-        final String[] parameters = input.split(";(?=([^\"]*\"[^\"]*\")*[^\"]*$)");
-        for (final String parameter : parameters) {
-
-            // Once the split has been done, each parameter must have this format: field="value"
-            // In order to get the parameter and its value, split by the first equals character ("=")
-            final String[] parts = parameter.split("=", 2);
-
-            if (parts.length != 2
-                || (parts.length == 2 && parts[1].length() < 1 )) {
-                throw new CustomWrapperException("Parameters must be defined with the format name=\"value\"");
-            }
-
-            final String key = parts[0].trim();
-            String value = parts[1].trim();
-
-            if (!value.startsWith("\"") || !value.endsWith("\"")) {
-                throw new CustomWrapperException("Parameters must be defined with the format name=\"value\"");
-            }
-
-            // Remove initial and final double quotes
-            value = value.replaceAll("^\"|\"$", "");
-
-            map.put(key, value);
-        }
-
-        return map;
+        // The logic has been already defined for the http headers
+        return getHttpHeaders(input);
     }
 
 }

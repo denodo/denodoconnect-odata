@@ -21,6 +21,13 @@
  */
 package com.denodo.connect.odata.wrapper.util;
 
+import static com.denodo.connect.odata.wrapper.util.Naming.EDM_GUID_TYPE;
+import static com.denodo.connect.odata.wrapper.util.Naming.FILE_CW;
+import static com.denodo.connect.odata.wrapper.util.Naming.PAGINATION_FETCH;
+import static com.denodo.connect.odata.wrapper.util.Naming.PAGINATION_OFFSET;
+import static com.denodo.connect.odata.wrapper.util.Naming.STREAM_LINK_PROPERTY;
+import static com.denodo.connect.odata.wrapper.util.Naming.TIMEFORMAT;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
@@ -51,18 +58,15 @@ import com.denodo.vdb.engine.customwrapper.expression.CustomWrapperSimpleExpress
 public class ODataQueryUtils {
     
     private static final Logger logger = Logger.getLogger(ODataQueryUtils.class);
-    
     private static Properties properties;
-    
-    private static final String FILENAME = "customwrapper.properties";
-    private static final String TIMEFORMAT = "timeformat";
-    private static final String EDM_GUID_TYPE = "Edm.Guid";
-    public static String buildSimpleCondition(Map<CustomWrapperFieldExpression, Object> conditionMap, String[] rels,  BaseViewMetadata baseViewMetadata) throws CustomWrapperException {
+
+    public static String buildSimpleCondition(Map<CustomWrapperFieldExpression, Object> conditionMap, String[] rels,
+        BaseViewMetadata baseViewMetadata) throws CustomWrapperException {
 
         List<String> filterClause = new ArrayList<String>();
         for (CustomWrapperFieldExpression field : conditionMap.keySet()) {
             Object value = conditionMap.get(field);
-            if (!field.getName().equals(ODataWrapper.PAGINATION_FETCH) && !field.getName().equals(ODataWrapper.PAGINATION_OFFSET) ) {
+            if (!field.getName().equals(PAGINATION_FETCH) && !field.getName().equals(PAGINATION_OFFSET) ) {
               
                 filterClause.add(normalizeFieldName(field.getStringRepresentation()) + " eq " + prepareValueForQuery(value,   baseViewMetadata,field.getStringRepresentation()));
             }
@@ -76,24 +80,25 @@ public class ODataQueryUtils {
         if (complexCondition.isSimpleCondition()) {
             CustomWrapperSimpleCondition simpleCondition = (CustomWrapperSimpleCondition)complexCondition;
             String field = simpleCondition.getField().toString();
-            if (!field.equals(ODataWrapper.PAGINATION_FETCH) && !field.equals(ODataWrapper.PAGINATION_OFFSET)
-                  ) {
+            if (!field.equals(PAGINATION_FETCH) && !field.equals(PAGINATION_OFFSET)) {
               
                 // Contains is implemented using substringof
                 if (simpleCondition.getOperator() == CustomWrapperCondition.OPERATOR_ISCONTAINED) {
-                    return "substringof(" +prepareValueForQuery((simpleCondition.getRightExpression()[0]).toString(),  baseViewMetadata,null) +","+simpleCondition.getField()+")";
+                    return "substringof(" + prepareValueForQuery((simpleCondition.getRightExpression()[0]).toString(),
+                        baseViewMetadata,null) + "," + simpleCondition.getField() + ")";
                 }
                 return normalizeFieldName(simpleCondition.getField().toString()) +
                 mapOperations(simpleCondition.getOperator()) + 
-                prepareValueForQuery(((CustomWrapperSimpleExpression)simpleCondition.getRightExpression()[0]).getValue(),  baseViewMetadata,simpleCondition.getField().toString());
+                prepareValueForQuery(((CustomWrapperSimpleExpression)simpleCondition.getRightExpression()[0]).getValue(),
+                    baseViewMetadata,simpleCondition.getField().toString());
             }
             return null;
         } else if (complexCondition.isAndCondition()) {
             List<String> individualConditions = new ArrayList<String>();
             for (CustomWrapperCondition individualCondition : ((CustomWrapperAndCondition)complexCondition).getConditions()) {
-                String condString = buildComplexCondition(individualCondition, rels,   baseViewMetadata);
-                if (condString!= null  && !condString.isEmpty()) {
-                    individualConditions.add("("+condString+")");
+                String condString = buildComplexCondition(individualCondition, rels, baseViewMetadata);
+                if (condString!= null && !condString.isEmpty()) {
+                    individualConditions.add("(" + condString + ")");
                 }
             }
             return StringUtils.join(individualConditions, " and ");
@@ -102,12 +107,13 @@ public class ODataQueryUtils {
             for (CustomWrapperCondition individualCondition : ((CustomWrapperOrCondition)complexCondition).getConditions()) {
                 String condString = buildComplexCondition(individualCondition, rels,  baseViewMetadata);
                 if (condString!= null  && !condString.isEmpty()) {
-                    individualConditions.add("("+condString+")");
+                    individualConditions.add("(" + condString + ")");
                 }
             }
             return StringUtils.join(individualConditions, " or ");
         } else if (complexCondition.isNotCondition()) {
-            return "not("+buildComplexCondition(((CustomWrapperNotCondition)complexCondition).getCondition(), rels,  baseViewMetadata)+")";
+            return "not(" + buildComplexCondition(((CustomWrapperNotCondition)complexCondition).getCondition(), rels,
+                baseViewMetadata) + ")";
         }
         throw new OperationNotSupportedException();
     }
@@ -116,39 +122,41 @@ public class ODataQueryUtils {
         if (baseViewMetadata != null){
             if(baseViewMetadata.getProperties().get(property)!=null){
                 return baseViewMetadata.getProperties().get(property).getType();
-            }else if(property.equals(ODataEntityUtil.STREAM_LINK_PROPERTY)){
-                throw new CustomWrapperException("It is not allowed filter by "+property+ ". The search by \"media read links\" is not supported. ");
+            }else if(property.equals(STREAM_LINK_PROPERTY)){
+                throw new CustomWrapperException("It is not allowed filter by " +property +
+                    ". The search by \"media read links\" is not supported. ");
             }    
             else{
 
                 //Complex types
                 String[] names = property.split("\\.");
-                String nameProperty= names[0];
+                String nameProperty = names[0];
 
-                if(nameProperty!=null ){
-                    EdmProperty edmProperty =   baseViewMetadata.getProperties().get(nameProperty);
-                    if(edmProperty!=null){
+                if(nameProperty != null ){
+                    EdmProperty edmProperty = baseViewMetadata.getProperties().get(nameProperty);
+                    if(edmProperty != null){
                         for (int i = 1; i < names.length; i++) {
 
                             if (edmProperty.isCollection()) {
                                 //Odata does not support searchs over collection properties 
-                                throw new CustomWrapperException("It is not allowed filter by the property:"+nameProperty +". Filtering by properties of a array is not supported in OData");
+                                throw new CustomWrapperException("It is not allowed filter by the property:"
+                                    + nameProperty + ". Filtering by properties of a array is not supported in OData");
                             }
 
                             if (edmProperty.getType() instanceof EdmStructuredType) {
                                 //complex type
                                 EdmStructuredType edmStructuralType = ((EdmStructuredType) edmProperty.getType());
                                 edmProperty=(EdmProperty) edmStructuralType.getProperty(names[i]);
-
                             }
                         }
                         return edmProperty.getType();
                     }else{
                         CustomNavigationProperty navigationProperty = baseViewMetadata.getNavigationProperties().get(nameProperty);
-                        if(navigationProperty!=null){
-                            if( navigationProperty.getComplexType().equals(CustomNavigationProperty.ComplexType.COLLECTION)){
-                                throw new CustomWrapperException("It is not allowed filter by the property:"+nameProperty +". Filtering by properties of a array is not supported in OData");
-                                //Odata does not support searchs over collection properties 
+                        if(navigationProperty != null){
+                            if(navigationProperty.getComplexType().equals(CustomNavigationProperty.ComplexType.COLLECTION)){
+                                throw new CustomWrapperException("It is not allowed filter by the property:"
+                                    + nameProperty + ". Filtering by properties of a array is not supported in OData");
+                                // Odata does not support searchs over collection properties
                             }else{
                                 EdmEntityType entityType=navigationProperty.getEntityType();
                                 EdmElement edmElement= entityType.getProperty(names[1]);
@@ -163,26 +171,16 @@ public class ODataQueryUtils {
                                 }  
                                 return edmElement.getType();
                             }
-
-
-
                         }
                     }
-
-                    throw new CustomWrapperException("The type of the property "+property+ " is not found. ");
-
+                    throw new CustomWrapperException("The type of the property " + property+ " is not found. ");
                 }
-
-                   
-                }
-
-
             }
-       
+        }
         throw new CustomWrapperException("The type of the property "+property+ " is not found. ");
-
     }
-    
+
+    // TODO: 23/04/2020 switch with constants
     private static String mapOperations(String operation) throws OperationNotSupportedException {
         if (CustomWrapperCondition.OPERATOR_EQ.equals(operation)) {
             return " eq ";
@@ -260,18 +258,18 @@ public class ODataQueryUtils {
             Class<ODataQueryUtils> cls = ODataQueryUtils.class;
             ClassLoader classLoader = cls.getClassLoader();
             properties = new Properties();
-            InputStream inputStream = classLoader.getResourceAsStream(FILENAME);
+            InputStream inputStream = classLoader.getResourceAsStream(FILE_CW);
             if (inputStream != null) {
                 try {
                     properties.load(inputStream);
-                    logger.info("File '" + FILENAME + "' loaded correctly.");
+                    logger.info("File '" + FILE_CW + "' loaded correctly.");
                     inputStream.close();
                 } catch (IOException e) {
-                    logger.error("There is a problem loading file '" + FILENAME + "': ", e);
+                    logger.error("There is a problem loading file '" + FILE_CW + "': ", e);
                 }
               
             }else{
-                logger.error("File '" + FILENAME + "' not found in classpath");
+                logger.error("File '" + FILE_CW + "' not found in classpath");
             }
         }
         return properties;

@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
@@ -52,6 +53,8 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
     private String clientId;
     private String clientSecret;
     private boolean credentialsInBody;
+    private String grantType;
+    private Map<String, String> oAuthExtraParameters;
 
     private static final int REFRESH_MAX_ATTEMPTS = 1;
     private int refreshAttempts = 0;
@@ -60,22 +63,7 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
 
     public OdataOAuth2HttpClientFactory(final String tokenEndpointURL, final String accessToken,
             final String refreshToken, final String clientId, final String clientSecret,
-            final HttpClientConnectionManagerFactory httpClientFactory, final boolean credentialsInBody) {
-
-        this.oauth2TokenServiceURI = URI.create(tokenEndpointURL);
-        this.refreshToken = refreshToken;
-        this.accessToken = accessToken;
-        this.wrapped = httpClientFactory;
-        this.clientId = clientId;
-        this.clientSecret = clientSecret;
-        this.credentialsInBody = credentialsInBody;
-
-    }
-
-    public OdataOAuth2HttpClientFactory(final String tokenEndpointURL, final String accessToken,
-            final String refreshToken, final String clientId, final String clientSecret,
-            final boolean credentialsInBody) {
-
+            final boolean credentialsInBody, final String grantType, final Map<String, String> oAuthExtraParameters) {
         this.oauth2TokenServiceURI = URI.create(tokenEndpointURL);
         this.refreshToken = refreshToken;
         this.accessToken = accessToken;
@@ -83,7 +71,8 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.credentialsInBody = credentialsInBody;
-
+        this.grantType = grantType;
+        this.oAuthExtraParameters = oAuthExtraParameters;
     }
 
     protected void accessToken(final DefaultHttpClient client) throws OAuth2Exception {
@@ -172,8 +161,7 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
     protected void refreshToken(final DefaultHttpClient client) throws OAuth2Exception {
 
         final List<BasicNameValuePair> data = new ArrayList<BasicNameValuePair>();
-        data.add(new BasicNameValuePair("grant_type", "refresh_token"));
-        data.add(new BasicNameValuePair("refresh_token", this.refreshToken));
+        data.add(new BasicNameValuePair("grant_type", this.grantType));
 
         if (this.credentialsInBody) {
             // When the client credentials are included in the body of the
@@ -182,6 +170,25 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
             // id
             // must be included on the request
             data.add(new BasicNameValuePair("client_id", this.clientId));
+            if (this.clientSecret != null && this.clientSecret.length() > 0) {
+                data.add(new BasicNameValuePair("client_secret", this.clientSecret));
+            } else {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Client secret value not set");
+                }
+            }
+        }
+
+        // Body properties by grant type
+        if (this.grantType.equals("refresh_token")) {
+            data.add(new BasicNameValuePair("refresh_token", this.refreshToken));
+        }
+
+        // Extra properties
+        if (this.oAuthExtraParameters != null && !this.oAuthExtraParameters.isEmpty()) {
+            for (Map.Entry<String, String> entry : this.oAuthExtraParameters.entrySet()) {
+                data.add(new BasicNameValuePair(entry.getKey(), entry.getValue()));
+            }
         }
 
         fetchAccessToken(this.wrapped.create(null, null), data);

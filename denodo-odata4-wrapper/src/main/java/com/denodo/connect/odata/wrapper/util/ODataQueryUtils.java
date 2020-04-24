@@ -21,6 +21,10 @@
  */
 package com.denodo.connect.odata.wrapper.util;
 
+import static com.denodo.connect.odata.wrapper.util.Naming.PAGINATION_FETCH;
+import static com.denodo.connect.odata.wrapper.util.Naming.PAGINATION_OFFSET;
+import static com.denodo.connect.odata.wrapper.util.Naming.STREAM_LINK_PROPERTY;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
@@ -62,7 +66,7 @@ public class ODataQueryUtils {
         List<String> filterClause = new ArrayList<String>();
         for (CustomWrapperFieldExpression field : conditionMap.keySet()) {
             Object value = conditionMap.get(field);
-            if (!field.getName().equals(ODataWrapper.PAGINATION_FETCH) && !field.getName().equals(ODataWrapper.PAGINATION_OFFSET) ) {
+            if (!field.getName().equals(PAGINATION_FETCH) && !field.getName().equals(PAGINATION_OFFSET) ) {
               
                 filterClause.add(normalizeFieldName(field.getStringRepresentation()) + " eq " + prepareValueForQuery(value,   baseViewMetadata,field.getStringRepresentation()));
             }
@@ -76,7 +80,7 @@ public class ODataQueryUtils {
         if (complexCondition.isSimpleCondition()) {
             CustomWrapperSimpleCondition simpleCondition = (CustomWrapperSimpleCondition)complexCondition;
             String field = simpleCondition.getField().toString();
-            if (!field.equals(ODataWrapper.PAGINATION_FETCH) && !field.equals(ODataWrapper.PAGINATION_OFFSET)
+            if (!field.equals(PAGINATION_FETCH) && !field.equals(PAGINATION_OFFSET)
                   ) {
               
                 // Contains is implemented using substringof
@@ -116,7 +120,7 @@ public class ODataQueryUtils {
         if (baseViewMetadata != null){
             if(baseViewMetadata.getProperties().get(property)!=null){
                 return baseViewMetadata.getProperties().get(property).getType();
-            }else if(property.equals(ODataEntityUtil.STREAM_LINK_PROPERTY)){
+            }else if(property.equals(STREAM_LINK_PROPERTY)){
                 throw new CustomWrapperException("It is not allowed filter by "+property+ ". The search by \"media read links\" is not supported. ");
             }    
             else{

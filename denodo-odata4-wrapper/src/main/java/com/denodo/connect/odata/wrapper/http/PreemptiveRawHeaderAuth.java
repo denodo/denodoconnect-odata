@@ -1,5 +1,8 @@
 package com.denodo.connect.odata.wrapper.http;
 
+import static com.denodo.connect.odata.wrapper.util.Naming.AUTHORIZATION_HEADER_CHARSET_NAME;
+import static com.denodo.connect.odata.wrapper.util.Naming.AUTH_HEADER;
+
 import java.io.IOException;
 import java.nio.charset.Charset;
 
@@ -13,9 +16,6 @@ import org.apache.http.protocol.HttpContext;
 class PreemptiveRawHeaderAuth implements HttpRequestInterceptor {
     private final String username;
     private final String password;
-    private final String AUTH_HEADER="Basic ";
-    private final String AUTHORIZATION_HEADER_CHARSET_NAME="ISO-8859-1";
-    
     
     public PreemptiveRawHeaderAuth(String username, String password) {
         this.username = username;
@@ -29,8 +29,8 @@ class PreemptiveRawHeaderAuth implements HttpRequestInterceptor {
         // The wrapper should respond with a authorization header to the server, but it doesn't this.
         String auth = this.username + ":" +this.password;
         byte[] encodedAuth = Base64.encodeBase64(
-                auth.getBytes(Charset.forName(this.AUTHORIZATION_HEADER_CHARSET_NAME)));
-        String authHeader = this.AUTH_HEADER+ new String(encodedAuth);
+                auth.getBytes(Charset.forName(AUTHORIZATION_HEADER_CHARSET_NAME)));
+        String authHeader = AUTH_HEADER+ new String(encodedAuth);
         request.setHeader(HttpHeaders.AUTHORIZATION, authHeader);
       
     }

@@ -1,5 +1,12 @@
 package com.denodo.connect.odata.wrapper.http;
 
+import static com.denodo.connect.odata.wrapper.util.Naming.ACCESS_TOKEN;
+import static com.denodo.connect.odata.wrapper.util.Naming.AUTH_HEADER;
+import static com.denodo.connect.odata.wrapper.util.Naming.CLIENT_ID;
+import static com.denodo.connect.odata.wrapper.util.Naming.CLIENT_SECRET;
+import static com.denodo.connect.odata.wrapper.util.Naming.GRANT_TYPE;
+import static com.denodo.connect.odata.wrapper.util.Naming.REFRESH_TOKEN;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -105,7 +112,7 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
                 final Base64 base = new Base64();
                 String encoded = base.encodeAsString(new String(userPassword).getBytes());
                 encoded = encoded.replaceAll("\r\n?", "");
-                post.setHeader(HttpHeaders.AUTHORIZATION, "Basic " + encoded);
+                post.setHeader(HttpHeaders.AUTHORIZATION, AUTH_HEADER + encoded);
 
             }
 
@@ -115,8 +122,8 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
             this.token = (ObjectNode) new ObjectMapper().readTree(tokenResponse);
             ODataAuthenticationCache.getInstance().saveOldAccessToken(this.accessToken);
             
-            if (this.token.get("access_token") != null) {
-                setAccessToken(this.token.get("access_token").asText());
+            if (this.token.get(ACCESS_TOKEN) != null) {
+                setAccessToken(this.token.get(ACCESS_TOKEN).asText());
                 if (logger.isDebugEnabled()) {
                     logger.debug("Access token was obtained with refresh token");
                 }                
@@ -129,8 +136,8 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
                 logger.debug("Access token saved in the cache");
             }
             
-            if (this.token.get("refresh_token") != null) {
-                setRefreshToken(this.token.get("refresh_token").asText());                
+            if (this.token.get(REFRESH_TOKEN) != null) {
+                setRefreshToken(this.token.get(REFRESH_TOKEN).asText());
             }
 
         } catch (final Exception e) {
@@ -161,7 +168,7 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
     protected void refreshToken(final DefaultHttpClient client) throws OAuth2Exception {
 
         final List<BasicNameValuePair> data = new ArrayList<BasicNameValuePair>();
-        data.add(new BasicNameValuePair("grant_type", this.grantType));
+        data.add(new BasicNameValuePair(GRANT_TYPE, this.grantType));
 
         if (this.credentialsInBody) {
             // When the client credentials are included in the body of the
@@ -169,9 +176,9 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
             // in addition to the grant type and the refresh token, the client
             // id
             // must be included on the request
-            data.add(new BasicNameValuePair("client_id", this.clientId));
+            data.add(new BasicNameValuePair(CLIENT_ID, this.clientId));
             if (this.clientSecret != null && this.clientSecret.length() > 0) {
-                data.add(new BasicNameValuePair("client_secret", this.clientSecret));
+                data.add(new BasicNameValuePair(CLIENT_SECRET, this.clientSecret));
             } else {
                 if (logger.isDebugEnabled()) {
                     logger.debug("Client secret value not set");
@@ -180,8 +187,8 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
         }
 
         // Body properties by grant type
-        if (this.grantType.equals("refresh_token")) {
-            data.add(new BasicNameValuePair("refresh_token", this.refreshToken));
+        if (this.grantType.equals(REFRESH_TOKEN)) {
+            data.add(new BasicNameValuePair(REFRESH_TOKEN, this.refreshToken));
         }
 
         // Extra properties

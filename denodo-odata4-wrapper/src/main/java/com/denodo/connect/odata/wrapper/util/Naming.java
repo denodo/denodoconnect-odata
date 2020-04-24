@@ -37,16 +37,8 @@ public final class Naming {
     public final static String INPUT_PARAMETER_AUTH_METHOD_SERVERS_BASIC = "Send client credentials using the HTTP Basic authentication scheme";
     public final static String PAGINATION_FETCH = "fetch_size";
     public final static String PAGINATION_OFFSET = "offset_size";
-    public final static String USE_NTLM_AUTH = "http.ntlm.auth";
     public final static String HTTP_PROXY_HOST = "http.proxyHost";
     public final static String HTTP_PROXY_PORT = "http.proxyPort";
-    public final static String HTTP_PROXY_USER = "http.proxyUser";
-    public final static String HTTP_PROXY_PASSWORD = "http.proxyPassword";
-    public final static String NTLM_USER = "ntlm.user";
-    public final static String NTLM_PASS = "ntlm.pass";
-    public final static String NTLM_DOMAIN = "ntlm.domain";
-    public final static String TIMEOUT= "http.timeout";
-    public final static String INSERT_OPERATION= "INSERT";
     public final static String UPDATE_OPERATION= "UPDATE";
     public final static String DELETE_OPERATION= "DELETE";
     public final static String SELECT_OPERATION= "SELECT";

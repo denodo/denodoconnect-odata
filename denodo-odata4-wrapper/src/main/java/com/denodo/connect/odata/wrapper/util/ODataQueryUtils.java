@@ -242,22 +242,7 @@ public class ODataQueryUtils {
     public static Object prepareValueForInsert( Object value) {
         return value;
     }
-    
 
-    
-    private static boolean isExpandedField(String[] rels, String field){
-        if(rels!=null && rels.length>0){
-            for(String rel: rels){
-                logger.debug("Checking " + rel + " with field " + field);
-                if(normalizeFieldName(field).equalsIgnoreCase(rel)){
-                    return true;
-                }
-            }
-            return false;
-        }
-        return false;
-       
-    }
     
     private static Properties getProperties(){
         if(properties == null){

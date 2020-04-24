@@ -6,29 +6,19 @@ import org.apache.olingo.commons.api.edm.EdmProperty;
 
 public class BaseViewMetadata {
 
-    Boolean openType;
-    Boolean streamEntity;
-    Map<String, EdmProperty > properties;
-    Map<String, CustomNavigationProperty > navigationProperties;
+    private Boolean openType;
+    private Boolean streamEntity;
+    private Map<String, EdmProperty > properties;
+    private Map<String, CustomNavigationProperty > navigationProperties;
     
     // This variable is used to keep the name of an entity in the metadata document for a given 
     // entity collection name. This last value appears in the url field of the service document. 
     // These two values are usually the same but they can be different.
-    String entityNameMetadata;
+    private String entityNameMetadata;
     
     public BaseViewMetadata() {
     }
-    
-   
-    public BaseViewMetadata(Boolean openType, Boolean streamEntity, Map<String, EdmProperty> properties,
-            Map<String, CustomNavigationProperty> navigationProperties, String entityNameMetadata) {
-        super();
-        this.openType = openType;
-        this.streamEntity = streamEntity;
-        this.properties = properties;
-        this.navigationProperties = navigationProperties;
-        this.entityNameMetadata = entityNameMetadata;
-    }
+
 
 
     public Boolean getOpenType() {

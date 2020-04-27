@@ -36,8 +36,6 @@ import java.util.Map;
 
 import com.denodo.vdb.engine.customwrapper.CustomWrapperException;
 import com.denodo.vdb.engine.customwrapper.CustomWrapperSchemaParameter;
-import com.denodo.vdb.engine.customwrapper.value.CustomWrapperStruct;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
@@ -53,11 +51,9 @@ import org.apache.olingo.client.api.domain.ClientValue;
 import org.apache.olingo.client.api.uri.URIBuilder;
 import org.apache.olingo.commons.api.edm.Edm;
 import org.apache.olingo.commons.api.edm.EdmElement;
-import org.apache.olingo.commons.api.edm.EdmEntitySet;
 import org.apache.olingo.commons.api.edm.EdmEntityType;
 import org.apache.olingo.commons.api.edm.EdmNavigationProperty;
 import org.apache.olingo.commons.api.edm.EdmProperty;
-import org.apache.olingo.commons.api.edm.EdmSchema;
 import org.apache.olingo.commons.api.edm.EdmStructuredType;
 import org.apache.olingo.commons.api.edm.EdmType;
 import org.apache.olingo.commons.api.edm.constants.EdmTypeKind;
@@ -467,150 +463,6 @@ public class ODataEntityUtil {
         return output;
     }
 
-    public static Map<EdmEntityType, EdmEntityType> getBaseTypeMap(final Edm edm) {
 
-        final Map<EdmEntityType, EdmEntityType> baseTypeMap = new HashMap<EdmEntityType, EdmEntityType>();
-
-        final List<EdmSchema> schemas = edm.getSchemas();
-
-        for (final EdmSchema schema : schemas) {
-            if (schema.getEntityContainer() != null) {
-                final List<EdmEntityType> schemaEntityTypes = schema.getEntityTypes();
-                if (schemaEntityTypes != null) {
-                    for (final EdmEntityType edmEntityType : schemaEntityTypes) {
-                        if (edmEntityType != null && edmEntityType.getBaseType() != null) {
-                            baseTypeMap.put(edmEntityType, edmEntityType.getBaseType());
-                        }
-                    }
-                }
-            }
-        }
-
-        return baseTypeMap;
-    }
-
-    public static Map<String, EdmEntitySet> getEntitySetMap(final Edm edm) {
-
-        final Map<String, EdmEntitySet> entitySets = new HashMap<String, EdmEntitySet>();
-
-        final List<EdmSchema> schemas = edm.getSchemas();
-
-        for (final EdmSchema schema : schemas) {
-            if (schema.getEntityContainer() != null) {
-                for (final EdmEntitySet es : schema.getEntityContainer().getEntitySets()) {
-                    entitySets.put(es.getName(), es);
-                }
-            }
-        }
-
-        return entitySets;
-    }
-
-    public static ClientComplexValue getComplexValue(final ODataClient client, final String fieldName,
-        final CustomWrapperSchemaParameter[] schemaParameters, final Object value,
-        final Map<String, EdmProperty> edmProperties) {
-
-        return getComplexValue(client, fieldName, schemaParameters, value, edmProperties, null);
-    }
-
-    public static ClientComplexValue getComplexValue(final ODataClient client, final String fieldName,
-        final CustomWrapperSchemaParameter[] schemaParameters, final Object value,
-        final Map<String, EdmProperty> edmProperties, final EdmType edmType) {
-
-        if (value instanceof CustomWrapperStruct) {
-
-            EdmType complexEdmType = edmType;
-            CustomWrapperSchemaParameter[] params = schemaParameters;
-
-            final EdmProperty edmProperty = edmProperties.get(fieldName);
-
-            if (edmType == null) {
-
-                complexEdmType = edmProperty.getType();
-
-                params = SchemaParameterUtils.getSchemaParameterColumns(fieldName, schemaParameters);
-            }
-
-            final Map<String, EdmProperty> newEdmProperties = new HashMap<String, EdmProperty>();
-            final EdmStructuredType edmStructuralType = ((EdmStructuredType) edmProperty.getType());
-            final List<String> propertyNames = edmStructuralType.getPropertyNames();
-
-            for (final String p : propertyNames) {
-                newEdmProperties.put(p, (EdmProperty) edmStructuralType.getProperty(p));
-            }
-
-            final ClientComplexValue complex = client.getObjectFactory().newComplexValue(complexEdmType.getFullQualifiedName().toString());
-
-            final CustomWrapperStruct cws = (CustomWrapperStruct) value;
-            final Object[] atts = cws.getAttributes();
-
-            for (int i = 0; i < params.length; i++) {
-
-                final String newFieldName = params[i].getName();
-
-                if (params[i].getType() == Types.STRUCT) {
-
-                    complex.add(client.getObjectFactory().newComplexProperty(newFieldName, getComplexValue(client, newFieldName,
-                        SchemaParameterUtils.getSchemaParameterColumns(newFieldName, params), atts[i], newEdmProperties,
-                        newEdmProperties.get(newFieldName).getType())));
-
-                } else if (params[i].getType() == Types.ARRAY) {
-
-                    complex.add(client.getObjectFactory().newCollectionProperty(newFieldName, getCollectionValue(client, newFieldName,
-                        SchemaParameterUtils.getSchemaParameterColumns(newFieldName, params), atts[i], newEdmProperties)));
-
-                } else {
-
-                    complex.add(client.getObjectFactory().newPrimitiveProperty(
-                        newFieldName,
-                        client.getObjectFactory().newPrimitiveValueBuilder()
-                            .setType(DataTableColumnType.fromJDBCType(params[i].getType()).getEdmSimpleType())
-                            .setValue(atts[i]).build()));
-                }
-
-                if (logger.isInfoEnabled()) {
-                    logger.info("Getting complex param: " + params[i].getName() + ", value: " + atts[i].toString());
-                }
-            }
-
-            return complex;
-        }
-
-        return null;
-    }
-
-
-    public static ClientCollectionValue<ClientValue> getCollectionValue(final ODataClient client, final String fieldName,
-        final CustomWrapperSchemaParameter[] schemaParameters, final Object value, final Map<String, EdmProperty> edmProperties) {
-
-        final EdmType edmType = edmProperties.get(fieldName).getType();
-
-        final ClientCollectionValue<ClientValue> collection = client.getObjectFactory().newCollectionValue("Collection(" + edmType.getFullQualifiedName().toString() + ")");
-
-        final Object[] arrayElements = (Object[]) value;
-
-        if (edmType instanceof EdmStructuredType) {
-
-            final CustomWrapperSchemaParameter[] params = SchemaParameterUtils.getSchemaParameterColumns(fieldName, schemaParameters);
-
-            for (final Object arrayElement : arrayElements) {
-                // Array's elements are structs
-                final ClientValue newComplexValue = getComplexValue(client, fieldName, params, arrayElement, edmProperties, edmType);
-                collection.add(newComplexValue);
-            }
-
-        } else {
-
-            // It is a primitive type
-            for (final Object arrayElement : arrayElements) {
-                collection.add(client.getObjectFactory().newPrimitiveValueBuilder().setType(edmType).setValue(((CustomWrapperStruct) arrayElement).getAttributes()[0]).build());
-                if (logger.isInfoEnabled()) {
-                    logger.info("Getting collection value: " + ((CustomWrapperStruct) arrayElement).getAttributes()[0].toString());
-                }
-            }
-        }
-
-        return collection;
-    }
 
 }

@@ -34,7 +34,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import com.denodo.connect.odata.wrapper.exceptions.PropertyNotFoundException;
 import com.denodo.vdb.engine.customwrapper.CustomWrapperException;
 import com.denodo.vdb.engine.customwrapper.CustomWrapperSchemaParameter;
 import org.apache.commons.io.IOUtils;
@@ -52,7 +51,6 @@ import org.apache.olingo.client.api.domain.ClientValue;
 import org.apache.olingo.client.api.uri.URIBuilder;
 import org.apache.olingo.commons.api.edm.Edm;
 import org.apache.olingo.commons.api.edm.EdmElement;
-import org.apache.olingo.commons.api.edm.EdmEntitySet;
 import org.apache.olingo.commons.api.edm.EdmEntityType;
 import org.apache.olingo.commons.api.edm.EdmNavigationProperty;
 import org.apache.olingo.commons.api.edm.EdmProperty;
@@ -346,7 +344,9 @@ public class ODataEntityUtil {
                 false /* isUpdateable */, true /* is Nullable */, false /* isMandatory */);
     }
 
-    public static CustomWrapperSchemaParameter createSchemaOlingoFromNavigation(final EdmNavigationProperty nav, final Edm edm, final boolean isMandatory, final Boolean loadBlobObjects,  final Map<String,  CustomNavigationProperty> navigationPropertiesMap )
+    public static CustomWrapperSchemaParameter createSchemaOlingoFromNavigation(final EdmNavigationProperty nav,
+        final Edm edm, final Boolean loadBlobObjects,
+        final Map<String, CustomNavigationProperty> navigationPropertiesMap)
             throws CustomWrapperException {
         final String relName = nav.getName(); // Field name
         
@@ -392,16 +392,6 @@ public class ODataEntityUtil {
         throw new CustomWrapperException("Error accesing to navigation properties");
     }
 
-    public static EdmEntityType getEdmEntityType(final String name, final Map<String, EdmEntitySet> entitySets) {
-        for (final EdmEntitySet entitySet : entitySets.values()) {
-            final EdmEntityType type = entitySet.getEntityType();
-            if (type.getName().equals(name)) {
-                return type;
-            }
-        }
-        return null;
-    }
-
     public static Object[] getOutputValueForRelatedEntity(final ClientEntity relatedEntity, final ODataClient client,
             final String uri, final Boolean loadBlobObjects, final CustomWrapperSchemaParameter schemaParameter)
                 throws CustomWrapperException, IOException {
@@ -417,7 +407,7 @@ public class ODataEntityUtil {
             try {
                 output[i] = getOutputValue(prop, schemaParameter.getColumns()[i]);
                 i++;
-            } catch (final PropertyNotFoundException e) {
+            } catch (final CustomWrapperException e) {
                 throw e;
             }
         }

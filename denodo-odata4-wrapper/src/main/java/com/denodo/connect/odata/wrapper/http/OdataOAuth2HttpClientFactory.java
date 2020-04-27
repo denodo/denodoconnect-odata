@@ -49,7 +49,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory implements WrappingHttpClientFactory {
 
-    final String REASON_PHRASE = "The SAML2 token is not valid because its validity period has ended.";
     final HttpClientConnectionManagerFactory wrapped;
     final URI oauth2TokenServiceURI;
     HttpUriRequest currentRequest;
@@ -166,7 +165,7 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
         this.refreshToken = refreshToken;
     }
 
-    protected void refreshToken(final DefaultHttpClient client) throws OAuth2Exception {
+    protected void refreshToken() throws OAuth2Exception {
 
         final List<BasicNameValuePair> data = new ArrayList<BasicNameValuePair>();
         data.add(new BasicNameValuePair(GRANT_TYPE, this.grantType));
@@ -291,7 +290,7 @@ public class OdataOAuth2HttpClientFactory extends AbstractHttpClientFactory impl
                         }
 
                         // Refresh OAuth credentials
-                        refreshToken(httpClient);
+                        refreshToken();
                         accessToken(httpClient);
                         refreshAttempts++;
 

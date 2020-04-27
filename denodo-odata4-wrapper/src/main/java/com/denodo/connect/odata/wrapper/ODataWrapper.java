@@ -387,7 +387,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 collectionNameMetadata = entityName;
             } else {
                 final String entityCollectionNameMetadata = getEntityCollectionNameMetadata(client, uri,
-                    entityCollection, headers, contentType);
+                    entityCollection, headers);
                 collectionNameMetadata =
                     entityCollectionNameMetadata == null ? entityCollection : entityCollectionNameMetadata;
             }
@@ -503,7 +503,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                             }
 
                             schemaParams.add(ODataEntityUtil
-                                .createSchemaOlingoFromNavigation(edmNavigationProperty, edm, false, loadBlobObjects,
+                                .createSchemaOlingoFromNavigation(edmNavigationProperty, edm, loadBlobObjects,
                                     navigationPropertiesMap));
                         }
                     }
@@ -1582,7 +1582,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
         if ((conditionMap != null) && !conditionMap.isEmpty()) {
             // Simple condition
 
-            final String simpleFilterQuery = ODataQueryUtils.buildSimpleCondition(conditionMap, rels, baseViewMetadata);
+            final String simpleFilterQuery = ODataQueryUtils.buildSimpleCondition(conditionMap, baseViewMetadata);
             if (logger.isTraceEnabled()) {
                 logger.trace("Filter simple :" + simpleFilterQuery);
             }
@@ -2218,7 +2218,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
                 collectionNameMetadata = entityName;
             } else {
                 final String entityCollectionNameMetadata = getEntityCollectionNameMetadata(client, uri,
-                    entityCollection, headers, contentType);
+                    entityCollection, headers);
                 collectionNameMetadata =
                     entityCollectionNameMetadata == null ? entityCollection : entityCollectionNameMetadata;
             }
@@ -2319,7 +2319,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
 
     private static String getEntityCollectionNameMetadata(final ODataClient client, final String uri,
-        final String entityCollectionName, final String headers, final String contentType)
+        final String entityCollectionName, final String headers)
         throws CustomWrapperException {
 
         // Service document data 

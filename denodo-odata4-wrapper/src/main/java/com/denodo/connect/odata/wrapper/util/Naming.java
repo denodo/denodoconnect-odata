@@ -57,6 +57,9 @@ public final class Naming {
     public final static String AUTH_HEADER = "Basic ";
     public final static String AUTHORIZATION_HEADER_CHARSET_NAME = "ISO-8859-1";
     public final static String FILE_VERSIONS = "version.properties";
+    public static final String FILE_CW = "customwrapper.properties";
+    public static final String TIMEFORMAT = "timeformat";
+    public static final String EDM_GUID_TYPE = "Edm.Guid";
 
     private Naming() {}
 

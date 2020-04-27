@@ -21,9 +21,12 @@
  */
 package com.denodo.connect.odata.wrapper.util;
 
+import static com.denodo.connect.odata.wrapper.util.Naming.EDM_GUID_TYPE;
+import static com.denodo.connect.odata.wrapper.util.Naming.FILE_CW;
 import static com.denodo.connect.odata.wrapper.util.Naming.PAGINATION_FETCH;
 import static com.denodo.connect.odata.wrapper.util.Naming.PAGINATION_OFFSET;
 import static com.denodo.connect.odata.wrapper.util.Naming.STREAM_LINK_PROPERTY;
+import static com.denodo.connect.odata.wrapper.util.Naming.TIMEFORMAT;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,7 +44,6 @@ import org.apache.olingo.commons.api.edm.EdmProperty;
 import org.apache.olingo.commons.api.edm.EdmStructuredType;
 import org.apache.olingo.commons.api.edm.EdmType;
 
-import com.denodo.connect.odata.wrapper.ODataWrapper;
 import com.denodo.connect.odata.wrapper.exceptions.OperationNotSupportedException;
 import com.denodo.vdb.engine.customwrapper.CustomWrapperException;
 import com.denodo.vdb.engine.customwrapper.condition.CustomWrapperAndCondition;
@@ -57,10 +59,7 @@ public class ODataQueryUtils {
     private static final Logger logger = Logger.getLogger(ODataQueryUtils.class);
     
     private static Properties properties;
-    
-    private static final String FILENAME = "customwrapper.properties";
-    private static final String TIMEFORMAT = "timeformat";
-    private static final String EDM_GUID_TYPE = "Edm.Guid";
+
     public static String buildSimpleCondition(Map<CustomWrapperFieldExpression, Object> conditionMap, String[] rels,  BaseViewMetadata baseViewMetadata) throws CustomWrapperException {
 
         List<String> filterClause = new ArrayList<String>();
@@ -249,18 +248,18 @@ public class ODataQueryUtils {
             Class<ODataQueryUtils> cls = ODataQueryUtils.class;
             ClassLoader classLoader = cls.getClassLoader();
             properties = new Properties();
-            InputStream inputStream = classLoader.getResourceAsStream(FILENAME);
+            InputStream inputStream = classLoader.getResourceAsStream(FILE_CW);
             if (inputStream != null) {
                 try {
                     properties.load(inputStream);
-                    logger.info("File '" + FILENAME + "' loaded correctly.");
+                    logger.info("File '" + FILE_CW + "' loaded correctly.");
                     inputStream.close();
                 } catch (IOException e) {
-                    logger.error("There is a problem loading file '" + FILENAME + "': ", e);
+                    logger.error("There is a problem loading file '" + FILE_CW + "': ", e);
                 }
               
             }else{
-                logger.error("File '" + FILENAME + "' not found in classpath");
+                logger.error("File '" + FILE_CW + "' not found in classpath");
             }
         }
         return properties;

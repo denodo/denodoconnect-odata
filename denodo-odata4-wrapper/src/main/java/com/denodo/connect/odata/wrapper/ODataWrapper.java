@@ -1585,7 +1585,7 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
             String grantType = OAuthUtils.getOAuthGrantType(getInputParameterValue(INPUT_PARAMETER_GRANT_TYPE));
 
-            String refreshToken = getRefreshTokenFromInput();
+            String refreshToken = OAuthUtils.getRefreshTokenFromInput(getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN));
 
             Map<String, String> oAuthExtraParameters = new HashMap<>();
             if (getInputParameterValue(INPUT_PARAMETER_OAUTH_EXTRA_PARAMETERS) != null) {
@@ -1689,16 +1689,6 @@ public class ODataWrapper extends AbstractCustomWrapper {
 
         return client;
     }
-
-    private String getRefreshTokenFromInput() {
-        String refreshToken = null;
-        if (getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN) != null
-            && StringUtils.isNotBlank((String) getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN).getValue())) {
-            refreshToken = (String) getInputParameterValue(INPUT_PARAMETER_REFRESH_TOKEN).getValue();
-        }
-        return refreshToken;
-    }
-
 
     private void printProxyData() {
 

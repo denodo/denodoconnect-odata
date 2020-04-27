@@ -44,7 +44,6 @@ import org.apache.olingo.commons.api.edm.EdmProperty;
 import org.apache.olingo.commons.api.edm.EdmStructuredType;
 import org.apache.olingo.commons.api.edm.EdmType;
 
-import com.denodo.connect.odata.wrapper.ODataWrapper;
 import com.denodo.connect.odata.wrapper.exceptions.OperationNotSupportedException;
 import com.denodo.vdb.engine.customwrapper.CustomWrapperException;
 import com.denodo.vdb.engine.customwrapper.condition.CustomWrapperAndCondition;
@@ -60,7 +59,7 @@ public class ODataQueryUtils {
     private static final Logger logger = Logger.getLogger(ODataQueryUtils.class);
     private static Properties properties;
 
-    public static String buildSimpleCondition(Map<CustomWrapperFieldExpression, Object> conditionMap, String[] rels,
+    public static String buildSimpleCondition(Map<CustomWrapperFieldExpression, Object> conditionMap,
         BaseViewMetadata baseViewMetadata) throws CustomWrapperException {
 
         List<String> filterClause = new ArrayList<String>();
@@ -236,22 +235,7 @@ public class ODataQueryUtils {
     public static Object prepareValueForInsert( Object value) {
         return value;
     }
-    
 
-    
-    private static boolean isExpandedField(String[] rels, String field){
-        if(rels!=null && rels.length>0){
-            for(String rel: rels){
-                logger.debug("Checking " + rel + " with field " + field);
-                if(normalizeFieldName(field).equalsIgnoreCase(rel)){
-                    return true;
-                }
-            }
-            return false;
-        }
-        return false;
-       
-    }
     
     private static Properties getProperties(){
         if(properties == null){

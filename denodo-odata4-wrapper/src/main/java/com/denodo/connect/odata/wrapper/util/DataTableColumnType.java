@@ -29,50 +29,20 @@ public enum DataTableColumnType {
 
     // See: http://msdn.microsoft.com/en-us/library/bb896344.aspx for EdmSimpleTypes
 
-    BOOLEAN(Types.BOOLEAN, EdmPrimitiveTypeKind.Boolean),
-    VARCHAR(Types.VARCHAR, EdmPrimitiveTypeKind.String),
-    BIGINT(Types.BIGINT, EdmPrimitiveTypeKind.Int64),
-    INTEGER(Types.INTEGER, EdmPrimitiveTypeKind.Int32),
-    DOUBLE(Types.DOUBLE, EdmPrimitiveTypeKind.Double),
-    TEXT(Types.CLOB, EdmPrimitiveTypeKind.String),
-    DATE(Types.DATE, EdmPrimitiveTypeKind.Date),
-    DATETIME(Types.TIMESTAMP, EdmPrimitiveTypeKind.DateTimeOffset),
-    BLOB(Types.BLOB, EdmPrimitiveTypeKind.Binary);
+    BOOLEAN(EdmPrimitiveTypeKind.Boolean),
+    VARCHAR(EdmPrimitiveTypeKind.String),
+    BIGINT(EdmPrimitiveTypeKind.Int64),
+    INTEGER(EdmPrimitiveTypeKind.Int32),
+    DOUBLE(EdmPrimitiveTypeKind.Double),
+    TEXT(EdmPrimitiveTypeKind.String),
+    DATE(EdmPrimitiveTypeKind.Date),
+    DATETIME(EdmPrimitiveTypeKind.DateTimeOffset),
+    BLOB(EdmPrimitiveTypeKind.Binary);
 
-    private final int sqlType;
     private final EdmPrimitiveTypeKind edmType;
 
-    private DataTableColumnType(final int sqlType, final EdmPrimitiveTypeKind edmType) {
-        this.sqlType = sqlType;
+    DataTableColumnType(final EdmPrimitiveTypeKind edmType) {
         this.edmType = edmType;
-    }
-
-    /**
-     * @return the sqlType
-     */
-    public int getSqlType() {
-        return this.sqlType;
-    }
-
-    public static DataTableColumnType fromString(final String typeToCheck) {
-        if (typeToCheck.toLowerCase().contains("char"))
-            return VARCHAR;
-        if (typeToCheck.toLowerCase().contains("text"))
-            return TEXT;
-        if (typeToCheck.toLowerCase().contains("blob"))
-            return BLOB;
-        if (typeToCheck.toLowerCase().contains("double")
-                || typeToCheck.contains("float"))
-            return DOUBLE;
-        if (typeToCheck.toLowerCase().contains("bool"))
-            return BOOLEAN;
-        if (typeToCheck.toLowerCase().contains("int"))
-            return BIGINT;
-        if (typeToCheck.toLowerCase().contains("time"))
-            return DATETIME;
-        if (typeToCheck.toLowerCase().equals("date"))
-            return DATE;
-        return TEXT;
     }
 
     public static DataTableColumnType fromJDBCType(final int type) {
@@ -100,28 +70,6 @@ public enum DataTableColumnType {
         }
         return TEXT;
 
-    }
-
-    public static int[] getAllSQLTypes() {
-        final int types[] = { Types.ARRAY, Types.BIGINT, Types.BINARY, Types.BIT, Types.BLOB, Types.BOOLEAN, Types.CHAR, Types.CLOB, Types.DATALINK, Types.DATE,
-                Types.DECIMAL, Types.DISTINCT, Types.DOUBLE, Types.FLOAT, Types.INTEGER, Types.JAVA_OBJECT, Types.LONGNVARCHAR, Types.LONGVARBINARY,
-                Types.LONGVARCHAR, Types.NCHAR, Types.NCLOB, Types.NULL, Types.NVARCHAR, Types.OTHER, Types.REAL, Types.REF, Types.ROWID, Types.SMALLINT,
-                Types.SQLXML, Types.STRUCT, Types.TIME, Types.TIMESTAMP, Types.TINYINT, Types.VARBINARY, Types.VARCHAR };
-        return types;
-    }
-
-    /**
-     * @return
-     */
-    public boolean isNumeric() {
-        if (this == DOUBLE || this == BIGINT)
-            return true;
-
-        return false;
-    }
-
-    public String getLabel() {
-        return name();
     }
 
     public EdmPrimitiveTypeKind getEdmSimpleType() {

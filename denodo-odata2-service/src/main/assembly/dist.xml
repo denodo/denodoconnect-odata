@@ -49,7 +49,7 @@
             <source>src/main/scripts/denodo-odata2-service.xml</source>
             <outputDirectory>scripts</outputDirectory>
             <filtered>true</filtered>
-            <destName>denodo-odata2-service-7.0.xml</destName>
+            <destName>denodo-odata2-service-8.0.xml</destName>
         </file>
     </files>
 

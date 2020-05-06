@@ -8,7 +8,7 @@ its databases using an OData 2.0 interface.
 The project is distributed as a binary war file (Java Web application ARchive)
 
 In order to run the Denodo OData Service you need to deploy this war file in
-a Java web application container. Apache Tomcat 8.5 is recommended.
+a Java web application container. Apache Tomcat 9 is recommended.
 
 By default, the Denodo OData Service will try to connect with a local Denodo
 Platform installation listening on localhost:9999. This can be changed at the
@@ -22,8 +22,8 @@ URLs are of the form:
 
 Note that the value for <WEBAPP_CONTEXT> will depend on the way the .war is
 deployed into the application server. Apache Tomcat will create by default a
-context called "denodo-odata2-service-7.0" for a .war file called
-"denodo-odata2-service-7.0.war".
+context called "denodo-odata2-service-8.0" for a .war file called
+"denodo-odata2-service-8.0.war".
 
 For providing VDP credentials, HTTP Basic Auth is used. Credentials are passed
 through to the underlying VDP server for authentication.
@@ -36,4 +36,4 @@ For more info, see the User Manual at the /doc folder.
 
 This software is part of the DenodoConnect component collection.
 
-Copyright (c) 2018, denodo technologies (http://www.denodo.com)
+Copyright (c) 2020, denodo technologies (http://www.denodo.com)

@@ -1,22 +1,3 @@
-20190129
+20200505
 --------
-- Fixed #40968 - RuntimeExceptions being swallowed when produced by Olingo encoding infrastructure
-- Added #41476 - Check and fix errors and CVE with error-prone and dependency check
-- Added #41566 - Added profile errorprone to execute error prone
-
-20181107
---------
-- Fixed #40357 - When service is accessed through Chrome or Internet explorer, HTTP 405 Method Not Allowed is returned
-- Fixed #40445 - Authentication disabled mode is not working when all authentication types are disabled
-
-20180814
---------
-- Added #37782 - Update all instances of the Spring Framework in order to include fixes for the latest CVEs
-- Fixed #37932 - The service fails while obtaining the PKs for a view if the user only has metadata privileges over it
-- Fixed #38380 - Avoid entities without key properties
-- Added #34745 - Add User Agent support to OData 2 Service
-- Added #32298 - Support for Oauth authentication 
-
-20180426
---------
-- First version of the Denodo OData 2 Service for Denodo 7.0.
+- First version of the Denodo OData 2 Service for Denodo 8.0.

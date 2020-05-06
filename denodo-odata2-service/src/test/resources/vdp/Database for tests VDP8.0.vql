@@ -1,0 +1,725 @@
+﻿ENTER SINGLE USER MODE;
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+# #######################################
+# USER CREATION
+# #######################################
+CREATE OR REPLACE USER odata 'hkk+JaRIemLgwb8K+zk26I8b8T03gccPG2DQrIDT4/QVnonhmztTPYuDJp+jeRhjMH42t21kGs8lx4JJfGIi7h7Jmi9VTMWB'  ENCRYPTED SHA512  'Testing required privileges for OData Service';
+
+# #######################################
+# ROLE CREATION
+# #######################################
+
+# 0 ====================================================================
+
+# #######################################
+# DATABASE
+# #######################################
+CREATE OR REPLACE DATABASE "日本 OData Tests" '';
+
+CONNECT DATABASE "日本 OData Tests";
+
+# #######################################
+# LISTENERS JMS
+# #######################################
+# No listeners jms
+# #######################################
+# DATASOURCES
+# #######################################
+CREATE OR REPLACE DATASOURCE JDBC "porsche_pink_mysql_acme_日本"
+    DRIVERCLASSNAME = 'com.mysql.jdbc.Driver'
+    DATABASEURI = 'jdbc:mysql://porsche-pink.denodo.com:3306/acme_crm'
+    USERNAME = 'acme_user'
+    USERPASSWORD = 'TnE8hsEl82UNkdoybRGyn8Q6RSbmjQk8DCDj6SI16tPYElZLm/I8hsGJ4dgCdkbAptHcLwxpw3RMWBQaiBRmqWOZX/+ngZOQZdt6NI8mbcOyzb8J7nods1CIBVUJBcqU' ENCRYPTED
+    CLASSPATH = 'mysql-5'
+    DATABASENAME = 'mysql'
+    DATABASEVERSION = '5'
+    FETCHSIZE = 1000
+    VALIDATIONQUERY = '/* ping */ SELECT 1'
+    INITIALSIZE = 4
+    MAXIDLE = -1
+    MINIDLE = 0
+    MAXACTIVE = 20
+    EXHAUSTEDACTION = 1
+    TESTONBORROW = true
+    TESTONRETURN = false
+    TESTWHILEIDLE = false
+    TIMEBETWEENEVICTION = -1
+    NUMTESTPEREVICTION = 3
+    MINEVICTABLETIME = 1800000
+    POOLPREPAREDSTATEMENTS = false
+    MAXSLEEPINGPS = 4
+    INITIALCAPACITYPS = 8;
+
+CHOWN admin DATASOURCE JDBC "porsche_pink_mysql_acme_日本" LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE DATASOURCE JDBC porsche_pink_oracle_odata_test
+    DRIVERCLASSNAME = 'oracle.jdbc.OracleDriver'
+    DATABASEURI = 'jdbc:oracle:thin:@porsche-pink.denodo.com:1521:XE'
+    USERNAME = 'system'
+    USERPASSWORD = 'pbdcjlPPwGK6Eb+fK6cB/3KfrPCasWA2bepkFGuASZNDMHuw5A7anIl+u3ha/DXTpGVRsoQ4OlYaeKew+JndCkk/fI7u9jKjfwAkWlKoQ7S9sNt5AA8UDHpBPX3QMoZl' ENCRYPTED
+    CLASSPATH = 'oracle-11g'
+    DATABASENAME = 'oracle'
+    DATABASEVERSION = '11g'
+    FETCHSIZE = 1000
+    VALIDATIONQUERY = 'SELECT COUNT(*) FROM SYS.DUAL'
+    INITIALSIZE = 4
+    MAXIDLE = -1
+    MINIDLE = 0
+    MAXACTIVE = 20
+    EXHAUSTEDACTION = 1
+    TESTONBORROW = true
+    TESTONRETURN = false
+    TESTWHILEIDLE = false
+    TIMEBETWEENEVICTION = -1
+    NUMTESTPEREVICTION = 3
+    MINEVICTABLETIME = 1800000
+    POOLPREPAREDSTATEMENTS = false
+    MAXOPENPREPAREDSTATEMENTS = -1
+    PROPERTIES ('includeSynonyms'='false', 'remarksReporting'='false')
+    DATA_LOAD_CONFIGURATION (
+        BATCHINSERTSIZE = 200
+    );
+
+CHOWN admin DATASOURCE JDBC porsche_pink_oracle_odata_test LASTMODIFICATIONUSER admin;
+
+# #######################################
+# DATABASE CONFIGURATION
+# #######################################
+ALTER DATABASE "日本 OData Tests"
+  CHARSET UNICODE;
+
+# #######################################
+# WRAPPERS
+# #######################################
+CREATE OR REPLACE WRAPPER JDBC "DATETEST"
+    DATASOURCENAME=porsche_pink_oracle_odata_test
+    SCHEMANAME='ODATA_TEST' 
+    RELATIONNAME='DATETEST' 
+    OUTPUTSCHEMA (
+        "NAME" = 'NAME' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypesize='40', sourcetypeid='12', sourcetypename='VARCHAR2')  SORTABLE,
+        "STARTDATE" = 'STARTDATE' :'java.sql.Timestamp' (OPT) (sourcetyperadix='10', sourcetypename='TIMESTAMP', sourcetypeid='93', sourcetypesize='7')  SORTABLE
+    );
+
+CHOWN admin WRAPPER JDBC "DATETEST" LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE WRAPPER JDBC "INTERVALTEST"
+    DATASOURCENAME=porsche_pink_oracle_odata_test
+    SCHEMANAME='ODATA_TEST' 
+    RELATIONNAME='INTERVALTEST' 
+    OUTPUTSCHEMA (
+        "INTERVALYM" = 'INTERVALYM' :'java.time.Period' (OPT) (sourcetypedecimals='0', sourcetyperadix='10', sourcetypesize='2', sourcetypeid='-103', sourcetypename='INTERVAL YEAR(2) TO MONTH')  NOT SORTABLE,
+        "INTERVALDS" = 'INTERVALDS' :'java.time.Duration' (OPT) (sourcetypedecimals='6', sourcetyperadix='10', sourcetypesize='2', sourcetypeid='-104', sourcetypename='INTERVAL DAY(2) TO SECOND(6)')  NOT SORTABLE
+    );
+
+CHOWN admin WRAPPER JDBC "INTERVALTEST" LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE WRAPPER JDBC "PHONE_ARRAY_TABLE"
+    DATASOURCENAME=porsche_pink_oracle_odata_test
+    SCHEMANAME='ODATA_TEST' 
+    RELATIONNAME='PHONE_ARRAY_TABLE' 
+    OUTPUTSCHEMA (
+        "NAME" = 'NAME' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypesize='20', sourcetypeid='12', sourcetypename='VARCHAR2')  NOT NULL SORTABLE,
+        "PHONE_NUMBERS" = 'PHONE_NUMBERS': ARRAY OF (
+            "ODATA_TEST.PHONE_ARRAY" = 'ODATA_TEST.PHONE_ARRAY' : REGISTER OF (
+                value = 'value' :'java.lang.String' (sourcetypeid='12', sourcetypename='VARCHAR')  NOT NULL NOT SORTABLE
+            ) NOT SORTABLE NOT UPDATEABLE
+        ) NOT SORTABLE NOT UPDATEABLE ISTABLE
+    );
+
+CHOWN admin WRAPPER JDBC "PHONE_ARRAY_TABLE" LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE WRAPPER JDBC "STRUCT7_TABLE"
+    DATASOURCENAME=porsche_pink_oracle_odata_test
+    SCHEMANAME='ODATA_TEST' 
+    RELATIONNAME='STRUCT7_TABLE' 
+    OUTPUTSCHEMA (
+        id = 'id' :'java.math.BigDecimal' (OPT) (sourcetyperadix='10', sourcetypeid='3', sourcetypename='NUMBER')  ESCAPE SORTABLE,
+        "EMPLOYEE7" = 'EMPLOYEE7' : REGISTER OF (
+            "NAME" = 'NAME' :'java.lang.String' (sourcetypeid='12', sourcetypename='VARCHAR')  NOT SORTABLE,
+            "SALARY" = 'SALARY' :'java.math.BigDecimal' (sourcetypeid='2', sourcetypename='NUMBER')  NOT SORTABLE,
+            "INTERVALYM" = 'INTERVALYM' :'java.lang.String' (sourcetypeid='-103', sourcetypename='INTERVALYM')  NOT SORTABLE,
+            "INTERVALDS" = 'INTERVALDS' :'java.lang.String' (sourcetypeid='-104', sourcetypename='INTERVALDS')  NOT SORTABLE,
+            "TIMESTAMPCONTZ" = 'TIMESTAMPCONTZ' :'java.time.OffsetDateTime' (sourcetypeid='-101', sourcetypename='TIMESTAMP WITH TIME ZONE')  NOT SORTABLE,
+            "DATEDATE" = 'DATEDATE' :'java.time.LocalDateTime' (sourcetypeid='91', sourcetypename='DATE')  NOT SORTABLE,
+            "TIMESTAMPTIMESTAMP" = 'TIMESTAMPTIMESTAMP' :'java.time.LocalDateTime' (sourcetypeid='93', sourcetypename='TIMESTAMP')  NOT SORTABLE
+        ) (sourcetypeid='1111', sourcetypename='ODATA_TEST.TYPE7_STRUCT')  NOT SORTABLE NOT UPDATEABLE
+    );
+
+CHOWN admin WRAPPER JDBC "STRUCT7_TABLE" LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE WRAPPER JDBC "STRUCT_TABLE"
+    DATASOURCENAME=porsche_pink_oracle_odata_test
+    SCHEMANAME='ODATA_TEST' 
+    RELATIONNAME='STRUCT_TABLE' 
+    OUTPUTSCHEMA (
+        "ID" = 'ID' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypesize='4', sourcetypeid='12', sourcetypename='VARCHAR2')  NOT NULL SORTABLE,
+        "EMPLOYEE" = 'EMPLOYEE' : REGISTER OF (
+            "NAME" = 'NAME' :'java.lang.String' (sourcetypeid='12', sourcetypename='VARCHAR')  NOT SORTABLE,
+            "SALARY" = 'SALARY' :'java.math.BigDecimal' (sourcetypeid='2', sourcetypename='NUMBER')  NOT SORTABLE
+        ) (sourcetypeid='1111', sourcetypename='ODATA_TEST.TYPE_STRUCT')  NOT SORTABLE NOT UPDATEABLE
+    );
+
+CHOWN admin WRAPPER JDBC "STRUCT_TABLE" LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE WRAPPER JDBC "STRUCT_TABLE_copy"
+    DATASOURCENAME=porsche_pink_oracle_odata_test
+    SCHEMANAME='ODATA_TEST' 
+    RELATIONNAME='STRUCT_TABLE' 
+    OUTPUTSCHEMA (
+        "ID" = 'ID' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypesize='4', sourcetypeid='12', sourcetypename='VARCHAR2')  NOT NULL SORTABLE,
+        "EMPLOYEE" = 'EMPLOYEE' : REGISTER OF (
+            "NAME" = 'NAME' :'java.lang.String' (sourcetypeid='12', sourcetypename='VARCHAR')  NOT SORTABLE,
+            "SALARY" = 'SALARY' :'java.math.BigDecimal' (sourcetypeid='2', sourcetypename='NUMBER')  NOT SORTABLE
+        ) (sourcetypeid='1111', sourcetypename='ODATA_TEST.TYPE_STRUCT')  NOT SORTABLE NOT UPDATEABLE
+    );
+
+CHOWN admin WRAPPER JDBC "STRUCT_TABLE_copy" LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE WRAPPER JDBC address
+    DATASOURCENAME="porsche_pink_mysql_acme_日本"
+    CATALOGNAME='acme_crm' 
+    RELATIONNAME='address' 
+    OUTPUTSCHEMA (
+        client_identifier = 'client_identifier' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypename='VARCHAR', sourcetypeid='12', description='', sourcetypesize='50')  NOT NULL SORTABLE,
+        city = 'city' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypename='VARCHAR', sourcetypeid='12', description='', sourcetypesize='100')  SORTABLE,
+        zip = 'zip' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypename='VARCHAR', sourcetypeid='12', description='', sourcetypesize='100')  SORTABLE,
+        state = 'state' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypename='VARCHAR', sourcetypeid='12', description='', sourcetypesize='100')  SORTABLE,
+        primary_phone = 'primary_phone' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypename='VARCHAR', sourcetypeid='12', description='', sourcetypesize='100')  SORTABLE,
+        country = 'country' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypename='VARCHAR', sourcetypeid='12', description='', sourcetypesize='45')  SORTABLE,
+        "street日本" = 'street' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypename='VARCHAR', sourcetypeid='12', description='', sourcetypesize='100')  SORTABLE
+    )
+    CONSTRAINT 'PRIMARY' PRIMARY KEY ( 'client_identifier' )
+    INDEX 'PRIMARY' CLUSTER UNIQUE PRIMARY ( 'client_identifier' );
+
+CHOWN admin WRAPPER JDBC address LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE WRAPPER JDBC client
+    DATASOURCENAME="porsche_pink_mysql_acme_日本"
+    CATALOGNAME='acme_crm' 
+    RELATIONNAME='client' 
+    OUTPUTSCHEMA (
+        client_id = 'client_id' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypename='VARCHAR', sourcetypeid='12', description='', sourcetypesize='50')  NOT NULL SORTABLE,
+        name = 'name' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypename='VARCHAR', sourcetypeid='12', description='', sourcetypesize='100')  NOT NULL SORTABLE,
+        surname = 'surname' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypename='VARCHAR', sourcetypeid='12', description='', sourcetypesize='100')  NOT NULL SORTABLE,
+        client_type = 'client_type' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypename='VARCHAR', sourcetypeid='12', description='', sourcetypesize='2')  NOT NULL SORTABLE,
+        company_code = 'company_code' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypename='VARCHAR', sourcetypeid='12', description='', sourcetypesize='50')  NOT NULL SORTABLE,
+        ssn = 'ssn' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypename='VARCHAR', sourcetypeid='12', description='', sourcetypesize='45')  SORTABLE
+    )
+    CONSTRAINT 'PRIMARY' PRIMARY KEY ( 'client_id' )
+    INDEX 'PRIMARY' CLUSTER UNIQUE PRIMARY ( 'client_id' );
+
+CHOWN admin WRAPPER JDBC client LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE WRAPPER JDBC date_time_types
+    DATASOURCENAME="porsche_pink_mysql_acme_日本"
+    CATALOGNAME='acme_crm' 
+    RELATIONNAME='date_time_types' 
+    OUTPUTSCHEMA (
+        date_type = 'date_type' :'java.time.LocalDate' (OPT) (sourcetyperadix='10', sourcetypesize='10', description='', sourcetypeid='91', sourcetypename='DATE')  SORTABLE,
+        datetime_type = 'datetime_type' :'java.time.LocalDateTime' (OPT) (sourcetyperadix='10', sourcetypesize='19', description='', sourcetypeid='93', sourcetypename='DATETIME')  SORTABLE,
+        timestamp_type = 'timestamp_type' :'java.time.OffsetDateTime' (OPT) (sourcetyperadix='10', sourcetypesize='19', description='', sourcetypeid='93', sourcetypename='TIMESTAMP')  NOT NULL NOT SORTABLE,
+        time_type = 'time_type' :'java.time.LocalTime' (OPT) (sourcetyperadix='10', sourcetypesize='8', description='', sourcetypeid='92', sourcetypename='TIME')  SORTABLE
+    );
+
+CHOWN admin WRAPPER JDBC date_time_types LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE WRAPPER JDBC film
+    DATASOURCENAME="porsche_pink_mysql_acme_日本"
+    CATALOGNAME='acme_crm' 
+    RELATIONNAME='film' 
+    OUTPUTSCHEMA (
+        film_id = 'film_id' :'java.lang.Short' (OPT) (sourcetyperadix='10', sourcetypename='SMALLINT UNSIGNED', sourcetypeid='5', sourcetypedecimals='0', sourcetypesize='5')  NOT NULL SORTABLE IS_AUTOINCREMENT,
+        title = 'title' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypename='VARCHAR', sourcetypeid='12', sourcetypesize='255')  NOT NULL SORTABLE,
+        description = 'description' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypename='TEXT', sourcetypeid='-1', sourcetypesize='65535')  SORTABLE,
+        release_year = 'release_year' :'java.sql.Date' (OPT) (sourcetypeid='91', sourcetyperadix='10', sourcetypename='YEAR')  SORTABLE,
+        language_id = 'language_id' :'java.lang.Byte' (OPT) (sourcetyperadix='10', sourcetypename='TINYINT UNSIGNED', sourcetypeid='-6', sourcetypedecimals='0', sourcetypesize='3')  NOT NULL SORTABLE,
+        original_language_id = 'original_language_id' :'java.lang.Byte' (OPT) (sourcetyperadix='10', sourcetypename='TINYINT UNSIGNED', sourcetypeid='-6', sourcetypedecimals='0', sourcetypesize='3')  SORTABLE,
+        rental_duration = 'rental_duration' :'java.lang.Byte' (OPT) (sourcetyperadix='10', sourcetypename='TINYINT UNSIGNED', sourcetypeid='-6', sourcetypedecimals='0', sourcetypesize='3')  NOT NULL SORTABLE,
+        rental_rate = 'rental_rate' :'java.math.BigDecimal' (OPT) (sourcetyperadix='10', sourcetypename='DECIMAL', sourcetypeid='3', sourcetypedecimals='2', sourcetypesize='4')  NOT NULL SORTABLE,
+        length = 'length' :'java.lang.Short' (OPT) (sourcetyperadix='10', sourcetypename='SMALLINT UNSIGNED', sourcetypeid='5', sourcetypedecimals='0', sourcetypesize='5')  SORTABLE,
+        replacement_cost = 'replacement_cost' :'java.math.BigDecimal' (OPT) (sourcetyperadix='10', sourcetypename='DECIMAL', sourcetypeid='3', sourcetypedecimals='2', sourcetypesize='5')  NOT NULL SORTABLE,
+        rating = 'rating' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypename='ENUM', sourcetypeid='1', sourcetypesize='5')  SORTABLE,
+        special_features = 'special_features' :'java.lang.String' (OPT) (sourcetyperadix='10', sourcetypename='SET', sourcetypeid='1', sourcetypesize='54')  SORTABLE,
+        last_update = 'last_update' :'java.sql.Timestamp' (OPT) (sourcetyperadix='10', sourcetypename='TIMESTAMP', sourcetypeid='93', sourcetypesize='19')  NOT NULL SORTABLE
+    )
+    CONSTRAINT 'PRIMARY' PRIMARY KEY ( 'film_id' )
+    INDEX 'PRIMARY' CLUSTER UNIQUE PRIMARY ( 'film_id' )
+    INDEX 'idx_title' OTHER ( 'title' );
+
+CHOWN admin WRAPPER JDBC film LASTMODIFICATIONUSER admin;
+
+# #######################################
+# STORED PROCEDURES
+# #######################################
+# No stored procedures
+# #######################################
+# TYPES
+# #######################################
+CREATE OR REPLACE TYPE "PHONE_ARRAY_TABLE_PHONE_NUMBERS_ODATA_TEST.PHONE_ARRAY" AS REGISTER OF (value:text (sourcetypeid = '12'));
+
+CREATE OR REPLACE TYPE "STRUCT7_TABLE_EMPLOYEE7" AS REGISTER OF ("NAME":text (sourcetypeid = '12'), "SALARY":decimal (sourcetypeid = '3'), "INTERVALYM":intervalyearmonth, "INTERVALDS":intervaldaysecond, "TIMESTAMPCONTZ":timestamptz (sourcetypeid = '2014'), "DATEDATE":timestamp (sourcetypeid = '93'), "TIMESTAMPTIMESTAMP":timestamp (sourcetypeid = '93'));
+
+CREATE OR REPLACE TYPE "STRUCT_TABLE_EMPLOYEE" AS REGISTER OF ("NAME":text (sourcetypeid = '12'), "SALARY":decimal (sourcetypeid = '3'));
+
+CREATE OR REPLACE TYPE "_register_INTERVALDS" AS REGISTER OF ("INTERVALDS":intervaldaysecond);
+
+CREATE OR REPLACE TYPE "_register_INTERVALYM" AS REGISTER OF ("INTERVALYM":intervalyearmonth);
+
+CREATE OR REPLACE TYPE "_register_INTERVALYM_INTERVALDS_id" AS REGISTER OF ("INTERVALYM":intervalyearmonth, "INTERVALDS":intervaldaysecond, id:int);
+
+CREATE OR REPLACE TYPE _register_city AS REGISTER OF (city:text);
+
+CREATE OR REPLACE TYPE _register_client_id_name_surname_client_type_company_code_ssn AS REGISTER OF (client_id:text, name:text, surname:text, client_type:text, company_code:text, ssn:text);
+
+CREATE OR REPLACE TYPE "_register_client_identifier_street日本_city_zip_state_primary_phone_country" AS REGISTER OF (client_identifier:text, "street日本":text, city:text, zip:text, state:text, primary_phone:text, country:text);
+
+CREATE OR REPLACE TYPE _register_date_type AS REGISTER OF (date_type:localdate);
+
+CREATE OR REPLACE TYPE _register_date_type_datetime_type_timestamp_type_time_type_id AS REGISTER OF (date_type:localdate, datetime_type:timestamp, timestamp_type:timestamptz, time_type:time, id:int);
+
+CREATE OR REPLACE TYPE "_register_street日本" AS REGISTER OF ("street日本":text);
+
+CREATE OR REPLACE TYPE "_register_value0_INTERVALDS_case" AS REGISTER OF (value0:int, "INTERVALDS":intervaldaysecond, "case":boolean);
+
+CREATE OR REPLACE TYPE "_register_value0_INTERVALYM_INTERVALDS_id_case" AS REGISTER OF (value0:int, "INTERVALYM":intervalyearmonth, "INTERVALDS":intervaldaysecond, id:int, "case":boolean);
+
+CREATE OR REPLACE TYPE "_register_value0_INTERVALYM_case" AS REGISTER OF (value0:int, "INTERVALYM":intervalyearmonth, "case":boolean);
+
+CREATE OR REPLACE TYPE _register_value0_date_type_case AS REGISTER OF (value0:int, date_type:localdate, "case":boolean);
+
+CREATE OR REPLACE TYPE _register_value0_date_type_datetime_type_timestamp_type_time_type_id_case AS REGISTER OF (value0:int, date_type:localdate, datetime_type:timestamp, timestamp_type:timestamptz, time_type:time, id:int, "case":boolean);
+
+CREATE OR REPLACE TYPE "PHONE_ARRAY_TABLE_PHONE_NUMBERS" AS ARRAY OF "PHONE_ARRAY_TABLE_PHONE_NUMBERS_ODATA_TEST.PHONE_ARRAY";
+
+CREATE OR REPLACE TYPE "_array_register_INTERVALDS" AS ARRAY OF "_register_INTERVALDS";
+
+CREATE OR REPLACE TYPE "_array_register_INTERVALYM" AS ARRAY OF "_register_INTERVALYM";
+
+CREATE OR REPLACE TYPE "_array_register_INTERVALYM_INTERVALDS_id" AS ARRAY OF "_register_INTERVALYM_INTERVALDS_id";
+
+CREATE OR REPLACE TYPE _array_register_city AS ARRAY OF _register_city;
+
+CREATE OR REPLACE TYPE _array_register_client_id_name_surname_client_type_company_code_ssn AS ARRAY OF _register_client_id_name_surname_client_type_company_code_ssn;
+
+CREATE OR REPLACE TYPE "_array_register_client_identifier_street日本_city_zip_state_primary_phone_country" AS ARRAY OF "_register_client_identifier_street日本_city_zip_state_primary_phone_country";
+
+CREATE OR REPLACE TYPE _array_register_date_type AS ARRAY OF _register_date_type;
+
+CREATE OR REPLACE TYPE _array_register_date_type_datetime_type_timestamp_type_time_type_id AS ARRAY OF _register_date_type_datetime_type_timestamp_type_time_type_id;
+
+CREATE OR REPLACE TYPE "_array_register_street日本" AS ARRAY OF "_register_street日本";
+
+CREATE OR REPLACE TYPE "_array_register_value0_INTERVALDS_case" AS ARRAY OF "_register_value0_INTERVALDS_case";
+
+CREATE OR REPLACE TYPE "_array_register_value0_INTERVALYM_INTERVALDS_id_case" AS ARRAY OF "_register_value0_INTERVALYM_INTERVALDS_id_case";
+
+CREATE OR REPLACE TYPE "_array_register_value0_INTERVALYM_case" AS ARRAY OF "_register_value0_INTERVALYM_case";
+
+CREATE OR REPLACE TYPE _array_register_value0_date_type_case AS ARRAY OF _register_value0_date_type_case;
+
+CREATE OR REPLACE TYPE _array_register_value0_date_type_datetime_type_timestamp_type_time_type_id_case AS ARRAY OF _register_value0_date_type_datetime_type_timestamp_type_time_type_id_case;
+
+CREATE OR REPLACE TYPE "_register_EMPLOYEE" AS REGISTER OF ("EMPLOYEE":"STRUCT_TABLE_EMPLOYEE");
+
+CREATE OR REPLACE TYPE "_register_ID_EMPLOYEE_id_film" AS REGISTER OF ("ID":text, "EMPLOYEE":"STRUCT_TABLE_EMPLOYEE", id_film:int);
+
+CREATE OR REPLACE TYPE "_register_value0_EMPLOYEE_case" AS REGISTER OF (value0:int, "EMPLOYEE":"STRUCT_TABLE_EMPLOYEE", "case":boolean);
+
+CREATE OR REPLACE TYPE "_register_value0_ID_EMPLOYEE_id_film_case" AS REGISTER OF (value0:int, "ID":text, "EMPLOYEE":"STRUCT_TABLE_EMPLOYEE", id_film:int, "case":boolean);
+
+CREATE OR REPLACE TYPE "_array_register_EMPLOYEE" AS ARRAY OF "_register_EMPLOYEE";
+
+CREATE OR REPLACE TYPE "_array_register_ID_EMPLOYEE_id_film" AS ARRAY OF "_register_ID_EMPLOYEE_id_film";
+
+CREATE OR REPLACE TYPE "_array_register_value0_EMPLOYEE_case" AS ARRAY OF "_register_value0_EMPLOYEE_case";
+
+CREATE OR REPLACE TYPE "_array_register_value0_ID_EMPLOYEE_id_film_case" AS ARRAY OF "_register_value0_ID_EMPLOYEE_id_film_case";
+
+CREATE OR REPLACE TYPE "_register_ID_EMPLOYEE_id_film_intervals" AS REGISTER OF ("ID":text, "EMPLOYEE":"STRUCT_TABLE_EMPLOYEE", id_film:int, intervals:"_array_register_INTERVALYM_INTERVALDS_id");
+
+CREATE OR REPLACE TYPE "_register_value0_ID_EMPLOYEE_id_film_intervals_case" AS REGISTER OF (value0:int, "ID":text, "EMPLOYEE":"STRUCT_TABLE_EMPLOYEE", id_film:int, intervals:"_array_register_INTERVALYM_INTERVALDS_id", "case":boolean);
+
+CREATE OR REPLACE TYPE "_array_register_ID_EMPLOYEE_id_film_intervals" AS ARRAY OF "_register_ID_EMPLOYEE_id_film_intervals";
+
+CREATE OR REPLACE TYPE "_array_register_value0_ID_EMPLOYEE_id_film_intervals_case" AS ARRAY OF "_register_value0_ID_EMPLOYEE_id_film_intervals_case";
+
+CREATE OR REPLACE TYPE "_register_INTERVALYM_INTERVALDS_id_structs" AS REGISTER OF ("INTERVALYM":intervalyearmonth, "INTERVALDS":intervaldaysecond, id:int, structs:"_array_register_ID_EMPLOYEE_id_film");
+
+CREATE OR REPLACE TYPE "_register_value0_INTERVALYM_INTERVALDS_id_structs_case" AS REGISTER OF (value0:int, "INTERVALYM":intervalyearmonth, "INTERVALDS":intervaldaysecond, id:int, structs:"_array_register_ID_EMPLOYEE_id_film", "case":boolean);
+
+CREATE OR REPLACE TYPE "_array_register_INTERVALYM_INTERVALDS_id_structs" AS ARRAY OF "_register_INTERVALYM_INTERVALDS_id_structs";
+
+CREATE OR REPLACE TYPE "_array_register_value0_INTERVALYM_INTERVALDS_id_structs_case" AS ARRAY OF "_register_value0_INTERVALYM_INTERVALDS_id_structs_case";
+
+# #######################################
+# MAPS
+# #######################################
+# No maps
+# #######################################
+# BASE VIEWS
+# #######################################
+CREATE OR REPLACE TABLE "DATETEST" I18N us_pst (
+        "NAME":text (sourcetypeid = '12', sourcetyperadix = '10', sourcetypesize = '40'), 
+        "STARTDATE":date (sourcetypeid = '93', sourcetyperadix = '10', sourcetypesize = '7')
+    )
+    CACHE OFF
+    TIMETOLIVEINCACHE DEFAULT
+    ADD SEARCHMETHOD "DATETEST"(
+        I18N us_pst
+        CONSTRAINTS (
+             ADD "NAME" (any) OPT ANY
+             ADD "STARTDATE" (any) OPT ANY
+        )
+        OUTPUTLIST ("NAME", "STARTDATE"
+        )
+        WRAPPER (jdbc "DATETEST")
+    );
+
+CHOWN admin VIEW "DATETEST" LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE TABLE "INTERVALTEST" I18N us_pst (
+        "INTERVALYM":intervalyearmonth (sourcetypeid = '2020', sourcetyperadix = '10', sourcetypedecimals = '0', sourcetypesize = '2'), 
+        "INTERVALDS":intervaldaysecond (sourcetypeid = '2021', sourcetyperadix = '10', sourcetypedecimals = '6', sourcetypesize = '2')
+    )
+    CACHE OFF
+    TIMETOLIVEINCACHE DEFAULT
+    ADD SEARCHMETHOD "INTERVALTEST"(
+        I18N us_pst
+        CONSTRAINTS (
+             ADD "INTERVALYM" (any) OPT ANY
+             ADD "INTERVALDS" (any) OPT ANY
+        )
+        OUTPUTLIST ("INTERVALDS", "INTERVALYM"
+        )
+        WRAPPER (jdbc "INTERVALTEST")
+    );
+
+CHOWN admin VIEW "INTERVALTEST" LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE TABLE "PHONE_ARRAY_TABLE" I18N us_pst (
+        "NAME":text (sourcetypeid = '12', sourcetyperadix = '10', sourcetypesize = '20'), 
+        "PHONE_NUMBERS":"PHONE_ARRAY_TABLE_PHONE_NUMBERS"
+    )
+    CACHE OFF
+    TIMETOLIVEINCACHE DEFAULT
+    ADD SEARCHMETHOD "PHONE_ARRAY_TABLE"(
+        I18N us_pst
+        CONSTRAINTS (
+             ADD "NAME" (any) OPT ANY
+             ADD "PHONE_NUMBERS" NOS ZERO ()
+             ADD "PHONE_NUMBERS" NOS ZERO ()
+             ADD "PHONE_NUMBERS".value NOS ZERO ()
+        )
+        OUTPUTLIST ("NAME", "PHONE_NUMBERS"
+        )
+        WRAPPER (jdbc "PHONE_ARRAY_TABLE")
+    );
+
+CHOWN admin VIEW "PHONE_ARRAY_TABLE" LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE TABLE "STRUCT7_TABLE" I18N us_pst (
+        id:decimal (sourcetypeid = '3', sourcetyperadix = '10'), 
+        "EMPLOYEE7":"STRUCT7_TABLE_EMPLOYEE7"
+    )
+    CACHE OFF
+    TIMETOLIVEINCACHE DEFAULT
+    ADD SEARCHMETHOD "STRUCT7_TABLE"(
+        I18N us_pst
+        CONSTRAINTS (
+             ADD id (any) OPT ANY
+             ADD "EMPLOYEE7" NOS ZERO ()
+             ADD "EMPLOYEE7"."NAME" NOS ZERO ()
+             ADD "EMPLOYEE7"."SALARY" NOS ZERO ()
+             ADD "EMPLOYEE7"."INTERVALYM" NOS ZERO ()
+             ADD "EMPLOYEE7"."INTERVALDS" NOS ZERO ()
+             ADD "EMPLOYEE7"."TIMESTAMPCONTZ" NOS ZERO ()
+             ADD "EMPLOYEE7"."DATEDATE" NOS ZERO ()
+             ADD "EMPLOYEE7"."TIMESTAMPTIMESTAMP" NOS ZERO ()
+        )
+        OUTPUTLIST ("EMPLOYEE7", id
+        )
+        WRAPPER (jdbc "STRUCT7_TABLE")
+    );
+
+CHOWN admin VIEW "STRUCT7_TABLE" LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE TABLE "STRUCT_TABLE" I18N us_pst (
+        "ID":text (sourcetypeid = '12', sourcetyperadix = '10', sourcetypesize = '4'), 
+        "EMPLOYEE":"STRUCT_TABLE_EMPLOYEE"
+    )
+    PRIMARY KEY ( 'ID' )
+    CACHE OFF
+    TIMETOLIVEINCACHE DEFAULT
+    ADD SEARCHMETHOD "STRUCT_TABLE"(
+        I18N us_pst
+        CONSTRAINTS (
+             ADD "ID" (any) OPT ANY
+             ADD "EMPLOYEE" NOS ZERO ()
+             ADD "EMPLOYEE"."NAME" NOS ZERO ()
+             ADD "EMPLOYEE"."SALARY" NOS ZERO ()
+        )
+        OUTPUTLIST ("EMPLOYEE", "ID"
+        )
+        WRAPPER (jdbc "STRUCT_TABLE")
+    );
+
+CHOWN admin VIEW "STRUCT_TABLE" LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE TABLE "STRUCT_TABLE_copy" I18N us_pst (
+        "ID":text (sourcetypeid = '12', sourcetyperadix = '10', sourcetypesize = '4'), 
+        "EMPLOYEE":"STRUCT_TABLE_EMPLOYEE"
+    )
+    CACHE OFF
+    TIMETOLIVEINCACHE DEFAULT
+    ADD SEARCHMETHOD "STRUCT_TABLE"(
+        I18N us_pst
+        CONSTRAINTS (
+             ADD "ID" (any) OPT ANY
+             ADD "EMPLOYEE" NOS ZERO ()
+             ADD "EMPLOYEE"."NAME" NOS ZERO ()
+             ADD "EMPLOYEE"."SALARY" NOS ZERO ()
+        )
+        OUTPUTLIST ("EMPLOYEE", "ID"
+        )
+        WRAPPER (jdbc "STRUCT_TABLE_copy")
+    );
+
+CHOWN admin VIEW "STRUCT_TABLE_copy" LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE TABLE "address_日本" I18N us_pst (
+        client_identifier:text (sourcetypeid = '12', sourcetyperadix = '10', sourcetypesize = '50', description = ''), 
+        "street日本":text (sourcetypeid = '12', sourcetyperadix = '10', sourcetypesize = '100', description = ''), 
+        city:text (sourcetypeid = '12', sourcetyperadix = '10', sourcetypesize = '100', description = ''), 
+        zip:text (sourcetypeid = '12', sourcetyperadix = '10', sourcetypesize = '100', description = ''), 
+        state:text (sourcetypeid = '12', sourcetyperadix = '10', sourcetypesize = '100', description = ''), 
+        primary_phone:text (sourcetypeid = '12', sourcetyperadix = '10', sourcetypesize = '100', description = ''), 
+        country:text (sourcetypeid = '12', sourcetyperadix = '10', sourcetypesize = '45', description = '')
+    )
+    CONSTRAINT 'PRIMARY' PRIMARY KEY ( 'client_identifier' )
+    CACHE OFF
+    TIMETOLIVEINCACHE DEFAULT
+    ADD SEARCHMETHOD address(
+        I18N us_pst
+        CONSTRAINTS (
+             ADD client_identifier (any) OPT ANY
+             ADD "street日本" (any) OPT ANY
+             ADD city (any) OPT ANY
+             ADD zip (any) OPT ANY
+             ADD state (any) OPT ANY
+             ADD primary_phone (any) OPT ANY
+             ADD country (any) OPT ANY
+        )
+        OUTPUTLIST (city, client_identifier, country, primary_phone, state, "street日本", zip
+        )
+        WRAPPER (jdbc address)
+    );
+
+CHOWN admin VIEW "address_日本" LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE TABLE client I18N us_pst (
+        client_id:text (sourcetypeid = '12', sourcetyperadix = '10', sourcetypesize = '50', description = ''), 
+        name:text (sourcetypeid = '12', sourcetyperadix = '10', sourcetypesize = '100', description = ''), 
+        surname:text (sourcetypeid = '12', sourcetyperadix = '10', sourcetypesize = '100', description = ''), 
+        client_type:text (sourcetypeid = '12', sourcetyperadix = '10', sourcetypesize = '2', description = ''), 
+        company_code:text (sourcetypeid = '12', sourcetyperadix = '10', sourcetypesize = '50', description = ''), 
+        ssn:text (sourcetypeid = '12', sourcetyperadix = '10', sourcetypesize = '45', description = '')
+    )
+    CONSTRAINT 'PRIMARY' PRIMARY KEY ( 'client_id' )
+    CACHE OFF
+    TIMETOLIVEINCACHE DEFAULT
+    ADD SEARCHMETHOD client(
+        I18N us_pst
+        CONSTRAINTS (
+             ADD client_id (any) OPT ANY
+             ADD name (any) OPT ANY
+             ADD surname (any) OPT ANY
+             ADD client_type (any) OPT ANY
+             ADD company_code (any) OPT ANY
+             ADD ssn (any) OPT ANY
+        )
+        OUTPUTLIST (client_id, client_type, company_code, name, ssn, surname
+        )
+        WRAPPER (jdbc client)
+    );
+
+CHOWN admin VIEW client LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE TABLE date_time_types I18N us_pst (
+        date_type:localdate (sourcetypeid = '91', sourcetyperadix = '10', sourcetypesize = '10', description = ''), 
+        datetime_type:timestamp (sourcetypeid = '93', sourcetyperadix = '10', sourcetypesize = '19', description = ''), 
+        timestamp_type:timestamptz (sourcetypeid = '2014', sourcetyperadix = '10', sourcetypesize = '19', description = ''), 
+        time_type:time (sourcetypeid = '92', sourcetyperadix = '10', sourcetypesize = '8', description = '')
+    )
+    CACHE OFF
+    TIMETOLIVEINCACHE DEFAULT
+    ADD SEARCHMETHOD date_time_types(
+        I18N us_pst
+        CONSTRAINTS (
+             ADD date_type (any) OPT ANY
+             ADD datetime_type (any) OPT ANY
+             ADD timestamp_type (any) OPT ANY
+             ADD time_type (any) OPT ANY
+        )
+        OUTPUTLIST (date_type, datetime_type, time_type, timestamp_type
+        )
+        WRAPPER (jdbc date_time_types)
+    );
+
+CHOWN admin VIEW date_time_types LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE TABLE film I18N es_euro (
+        film_id:int (sourcetypeid = '5', sourcetyperadix = '10', sourcetypedecimals = '0', sourcetypesize = '5'), 
+        title:text (sourcetypeid = '12', sourcetyperadix = '10', sourcetypesize = '255'), 
+        description:text (sourcetypeid = '-1', sourcetyperadix = '10', sourcetypesize = '65535'), 
+        release_year:date (sourcetypeid = '91', sourcetyperadix = '10'), 
+        language_id:int (sourcetypeid = '-6', sourcetyperadix = '10', sourcetypedecimals = '0', sourcetypesize = '3'), 
+        original_language_id:int (sourcetypeid = '-6', sourcetyperadix = '10', sourcetypedecimals = '0', sourcetypesize = '3'), 
+        rental_duration:int (sourcetypeid = '-6', sourcetyperadix = '10', sourcetypedecimals = '0', sourcetypesize = '3'), 
+        rental_rate:decimal (sourcetypeid = '3', sourcetyperadix = '10', sourcetypedecimals = '2', sourcetypesize = '4'), 
+        length:int (sourcetypeid = '5', sourcetyperadix = '10', sourcetypedecimals = '0', sourcetypesize = '5'), 
+        replacement_cost:decimal (sourcetypeid = '3', sourcetyperadix = '10', sourcetypedecimals = '2', sourcetypesize = '5'), 
+        rating:text (sourcetypeid = '1', sourcetyperadix = '10', sourcetypesize = '5'), 
+        special_features:text (sourcetypeid = '1', sourcetyperadix = '10', sourcetypesize = '54'), 
+        last_update:date (sourcetypeid = '93', sourcetyperadix = '10', sourcetypesize = '19')
+    )
+    CONSTRAINT 'PRIMARY' PRIMARY KEY ( 'film_id' )
+    CACHE OFF
+    TIMETOLIVEINCACHE DEFAULT
+    ADD SEARCHMETHOD film(
+        I18N es_euro
+        CONSTRAINTS (
+             ADD film_id (any) OPT ANY
+             ADD title (any) OPT ANY
+             ADD description (any) OPT ANY
+             ADD release_year (any) OPT ANY
+             ADD language_id (any) OPT ANY
+             ADD original_language_id (any) OPT ANY
+             ADD rental_duration (any) OPT ANY
+             ADD rental_rate (any) OPT ANY
+             ADD length (any) OPT ANY
+             ADD replacement_cost (any) OPT ANY
+             ADD rating (any) OPT ANY
+             ADD special_features (any) OPT ANY
+             ADD last_update (any) OPT ANY
+        )
+        OUTPUTLIST (description, film_id, language_id, last_update, length, original_language_id, rating, release_year, rental_duration, rental_rate, replacement_cost, special_features, title
+        )
+        WRAPPER (jdbc film)
+    );
+
+CHOWN admin VIEW film LASTMODIFICATIONUSER admin;
+
+# #######################################
+# VIEWS
+# #######################################
+CREATE OR REPLACE VIEW "p_INTERVALTEST" AS SELECT "INTERVALTEST"."INTERVALYM" AS "INTERVALYM", "INTERVALTEST"."INTERVALDS" AS "INTERVALDS", 1 AS id FROM "INTERVALTEST";
+
+CHOWN admin VIEW "p_INTERVALTEST" LASTMODIFICATIONUSER admin;
+
+ALTER VIEW "p_INTERVALTEST"
+ LAYOUT ("INTERVALTEST" = [20, 20, 240, 66]);
+
+CREATE OR REPLACE VIEW "p_STRUCT_TABLE" AS SELECT "STRUCT_TABLE"."ID" AS "ID", "STRUCT_TABLE"."EMPLOYEE" AS "EMPLOYEE", 1 AS id_film FROM "STRUCT_TABLE";
+
+CHOWN admin VIEW "p_STRUCT_TABLE" LASTMODIFICATIONUSER admin;
+
+ALTER VIEW "p_STRUCT_TABLE"
+ LAYOUT ("STRUCT_TABLE" = [20, 20, 320, 66]);
+
+CREATE OR REPLACE VIEW p_date_time_types AS SELECT date_time_types.date_type AS date_type, date_time_types.datetime_type AS datetime_type, date_time_types.timestamp_type AS timestamp_type, date_time_types.time_type AS time_type, 1 AS id FROM date_time_types;
+
+CHOWN admin VIEW p_date_time_types LASTMODIFICATIONUSER admin;
+
+ALTER VIEW p_date_time_types
+ LAYOUT (date_time_types = [20, 20, 222, 106]);
+
+# #######################################
+# ASSOCIATIONS
+# #######################################
+CREATE OR REPLACE ASSOCIATION "address_日本_client" REFERENTIAL CONSTRAINT 
+    ENDPOINT "rolename1日本" "address_日本" PRINCIPAL (1)
+    ENDPOINT rolename2 client (1)
+    ADD MAPPING client_identifier=client_id;
+
+ALTER ASSOCIATION "address_日本_client"
+ LAYOUT ("address_日本" = [20, 20, 200, 166], client = [402, 105, 200, 146]);
+
+CHOWN admin ASSOCIATION "address_日本_client" LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE ASSOCIATION "film_p_INTERVALTEST" REFERENTIAL CONSTRAINT 
+    ENDPOINT intervals film PRINCIPAL (1)
+    ENDPOINT films "p_INTERVALTEST" (0,*)
+    ADD MAPPING film_id=id;
+
+ALTER ASSOCIATION "film_p_INTERVALTEST"
+ LAYOUT (film = [20, 20, 200, 225], "p_INTERVALTEST" = [475, 355, 200, 86]);
+
+CHOWN admin ASSOCIATION "film_p_INTERVALTEST" LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE ASSOCIATION "film_p_STRUCT_TABLE" REFERENTIAL CONSTRAINT 
+    ENDPOINT structs film PRINCIPAL (1)
+    ENDPOINT films "p_STRUCT_TABLE" (0,*)
+    ADD MAPPING film_id=id_film;
+
+ALTER ASSOCIATION "film_p_STRUCT_TABLE"
+ LAYOUT (film = [20, 20, 200, 225], "p_STRUCT_TABLE" = [609, 177, 200, 86]);
+
+CHOWN admin ASSOCIATION "film_p_STRUCT_TABLE" LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE ASSOCIATION film_p_date_time_types REFERENTIAL CONSTRAINT 
+    ENDPOINT dates film PRINCIPAL (1)
+    ENDPOINT films p_date_time_types (0,*)
+    ADD MAPPING film_id=id;
+
+ALTER ASSOCIATION film_p_date_time_types
+ LAYOUT (film = [20, 20, 200, 225], p_date_time_types = [463, 103, 200, 126]);
+
+CHOWN admin ASSOCIATION film_p_date_time_types LASTMODIFICATIONUSER admin;
+
+CREATE OR REPLACE ASSOCIATION "p_INTERVALTEST_p_STRUCT_TABLE" REFERENTIAL CONSTRAINT 
+    ENDPOINT structs "p_INTERVALTEST" PRINCIPAL (1)
+    ENDPOINT intervals "p_STRUCT_TABLE" (0,*)
+    ADD MAPPING id="ID";
+
+ALTER ASSOCIATION "p_INTERVALTEST_p_STRUCT_TABLE"
+ LAYOUT ("p_INTERVALTEST" = [20, 20, 200, 99], "p_STRUCT_TABLE" = [450, 90, 210, 99]);
+
+CHOWN admin ASSOCIATION "p_INTERVALTEST_p_STRUCT_TABLE" LASTMODIFICATIONUSER admin;
+
+# #######################################
+# WEBSERVICES
+# #######################################
+# No web services
+# #######################################
+# WIDGETS
+# #######################################
+# No widgets
+# #######################################
+# WEBCONTAINER WEB SERVICE DEPLOYMENTS
+# #######################################
+# No deployed web services
+# #######################################
+# WEBCONTAINER WIDGET DEPLOYMENTS
+# #######################################
+# No deployed widgets
+# #######################################
+# USER PRIVILEGES
+# #######################################
+ALTER USER odata
+GRANT ROLE assignprivileges
+GRANT ADMIN ON DATABASE;
+
+# #######################################
+# ROLE PRIVILEGES
+# #######################################
+# #######################################
+# Closing connection with database 日本 OData Tests
+# #######################################
+CLOSE;
+
+
+
+
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+EXIT SINGLE USER MODE;

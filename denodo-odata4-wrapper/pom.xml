@@ -30,12 +30,13 @@
     <packaging>jar</packaging>
     <name>${project.artifactId}</name>
     <description>${project.artifactId}</description>
-    <version>20200428</version>
+    <version>20200505</version>
     <!-- *************************** -->
     <!-- PROFILES -->
     <!-- *************************** -->
     <properties>
-        <java.version>1.8</java.version>
+        <maven.compiler.target>11</maven.compiler.target>
+        <maven.compiler.source>11</maven.compiler.source>
         <errorprone.javac.version>9+181-r4173-1</errorprone.javac.version>
         <errorprone.core.version>2.3.2</errorprone.core.version>
     </properties>
@@ -52,8 +53,6 @@
                         <artifactId>maven-compiler-plugin</artifactId>
                         <version>3.8.0</version>
                         <configuration>
-                            <source>${java.version}</source>
-                            <target>${java.version}</target>
                             <fork>true</fork>
                             <compilerArgs>
                                 <arg>-XDcompilePolicy=simple</arg>
@@ -148,8 +147,6 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>2.3.2</version>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
                     <encoding>US-ASCII</encoding>
                 </configuration>
             </plugin>
@@ -367,7 +364,7 @@
             <groupId>com.denodo.vdp</groupId>
             <artifactId>denodo-vdp-server</artifactId>
             <!-- TODO denodo-vdp-jdbcdriver dependency version for Denodo 8 -->
-            <version>8.0.0-dev-20200428</version>
+            <version>8.0.0-Beta1</version>
             <scope>provided</scope>
         </dependency>
         <!-- *** -->

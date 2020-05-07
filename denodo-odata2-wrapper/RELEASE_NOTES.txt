@@ -1,6 +1,6 @@
 20200507
 ========
-- #48827 - Adapt metadata to new schema
+- #48836 - Adapt metadata to new schema
 
 20200505
 ========

@@ -1,3 +1,7 @@
+20200507
+========
+- #48827 - Adapt metadata to new schema
+
 20200505
 ========
 - Created first version of this component for Denodo 8.0
